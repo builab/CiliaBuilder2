@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BundleInfo
+    name="ChimeraX-CiliaBuilder2"
+    version="0.1.2"
+    package="ciliabuilder2"
+    minSessionVersion="1"
+    maxSessionVersion="999">
+
+  <Synopsis>CiliaBuilder2 command line skeleton</Synopsis>
+
+  <Description>
+    Minimal working skeleton for command registration and testing.
+  </Description>
+
+  <Author>a</Author>
+  <Email>e</Email>
+  <URL>u</URL>>
+
+  <Categories>
+    <Category name="Higher-Order Structure"/>
+  </Categories>
+
+  <Classifiers>
+    <ChimeraXClassifier>ChimeraX :: Command :: ciliabuilder2 ping :: General :: Ping test</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: ciliabuilder2 build straight :: General :: Build a straight test cylinder</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: ciliabuilder2 build curve :: General :: Placeholder for curved build</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: ciliabuilder2 export star :: General :: Placeholder for STAR export</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: ciliabuilder2 ui :: General :: Open the tool</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: cbstraight :: General :: Build a straight test cylinder</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: cbsubmap :: General :: Substitution of starfile by a map</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Tool :: CiliaBuilder2 :: Higher-Order Structure :: CiliaBuilder2 UI</ChimeraXClassifier>
+  </Classifiers>
+
+</BundleInfo>
