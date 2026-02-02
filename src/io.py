@@ -1,6 +1,9 @@
-import inspect
+# vim: set expandtab shiftwidth=4 softtabstop=4:
 
-_STAR_COLS = [
+import tempfile
+
+
+STAR_COLS = [
     "rlnTomoName",
     "rlnCoordinateX",
     "rlnCoordinateY",
@@ -13,90 +16,54 @@ _STAR_COLS = [
 ]
 
 
+def normalize_star_format(fmt):
+    """
+    Map UI text or user input to ChimeraX open format tokens.
+    Valid open tokens include relion and relion5.
+    """
+    if fmt is None:
+        return "relion"
+    s = str(fmt).strip().lower()
+
+    if s in ["relion", "rln"]:
+        return "relion"
+    if s in ["relion5", "rln5", "relion 5", "relion5 star file", "relion5 star"]:
+        return "relion5"
+
+    # UI often shows these labels
+    if "relion5" in s:
+        return "relion5"
+    if "relion" in s:
+        return "relion"
+
+    # fallback
+    return "relion"
+
+
 def rows_to_star_text(rows):
     lines = []
     lines.append("data_")
     lines.append("")
     lines.append("loop_")
-    for i, c in enumerate(_STAR_COLS, start=1):
+    for i, c in enumerate(STAR_COLS, start=1):
         lines.append(f"_{c} #{i}")
+
     for r in rows:
         vals = []
-        for c in _STAR_COLS:
+        for c in STAR_COLS:
             v = r.get(c, "")
             if isinstance(v, float):
                 vals.append(f"{v:.6f}")
             else:
                 vals.append(str(v))
         lines.append(" ".join(vals))
+
     return "\n".join(lines) + "\n"
 
 
-def parse_star_text(star_text):
-    lines = [ln.strip() for ln in star_text.splitlines() if ln.strip() != ""]
-    cols = []
-    data_rows = []
-    in_loop = False
-
-    for ln in lines:
-        if ln.lower().startswith("loop_"):
-            in_loop = True
-            continue
-        if not in_loop:
-            continue
-        if ln.startswith("_"):
-            parts = ln.split()
-            col = parts[0].lstrip("_")
-            cols.append(col)
-            continue
-        parts = ln.split()
-        if cols and len(parts) >= len(cols):
-            data_rows.append(parts[: len(cols)])
-
-    rows = []
-    for parts in data_rows:
-        r = {}
-        for c, v in zip(cols, parts):
-            if c in ("rlnTomoName",):
-                r[c] = v
-            else:
-                try:
-                    if "." in v or "e" in v.lower():
-                        r[c] = float(v)
-                    else:
-                        r[c] = int(v)
-                except Exception:
-                    r[c] = v
-        rows.append(r)
-
-    return cols, rows
-
-
-def filter_kwargs_for_func(func, kwargs):
-    sig = inspect.signature(func)
-    params = sig.parameters
-    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
-        return dict(kwargs)
-    allowed = set(params.keys())
-    return {k: v for k, v in kwargs.items() if k in allowed}
-
-
-def normalize_builder_return(ret):
-    root = None
-    beads = []
-    star_rows = None
-    star_text = None
-
-    if isinstance(ret, tuple):
-        if len(ret) >= 1:
-            root = ret[0]
-        if len(ret) >= 2:
-            beads = ret[1]
-        if len(ret) >= 3:
-            star_rows = ret[2]
-        if len(ret) >= 4:
-            star_text = ret[3]
-    else:
-        root = ret
-
-    return root, beads, star_rows, star_text
+def write_star_tempfile(star_text, suffix=".star"):
+    f = tempfile.NamedTemporaryFile("w", delete=False, suffix=suffix)
+    f.write(star_text)
+    f.flush()
+    f.close()
+    return f.name
