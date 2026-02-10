@@ -8,13 +8,13 @@ class _MyAPI(BundleAPI):
 
     @staticmethod
     def start_tool(session, bi, ti, **kw):
-        from .tool import CiliaBuilder2Tool
-        return CiliaBuilder2Tool(session, ti.name)
+        from .tool import start_tool
+        return start_tool(session, ti.name)
 
     @staticmethod
     def register_command(bi, ci, logger):
-        from . import cmd
         from chimerax.core.commands import register
+        from . import cmd
 
         command_name = ci.name
         base_name = command_name.replace(" ", "_")

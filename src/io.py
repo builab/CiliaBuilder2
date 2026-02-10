@@ -2,7 +2,6 @@
 
 import tempfile
 
-
 STAR_COLS = [
     "rlnTomoName",
     "rlnCoordinateX",
@@ -13,31 +12,8 @@ STAR_COLS = [
     "rlnAnglePsi",
     "rlnImagePixelSize",
     "rlnHelicalTubeID",
+    "rlnClassNumber",
 ]
-
-
-def normalize_star_format(fmt):
-    """
-    Map UI text or user input to ChimeraX open format tokens.
-    Valid open tokens include relion and relion5.
-    """
-    if fmt is None:
-        return "relion"
-    s = str(fmt).strip().lower()
-
-    if s in ["relion", "rln"]:
-        return "relion"
-    if s in ["relion5", "rln5", "relion 5", "relion5 star file", "relion5 star"]:
-        return "relion5"
-
-    # UI often shows these labels
-    if "relion5" in s:
-        return "relion5"
-    if "relion" in s:
-        return "relion"
-
-    # fallback
-    return "relion"
 
 
 def rows_to_star_text(rows):
@@ -47,7 +23,6 @@ def rows_to_star_text(rows):
     lines.append("loop_")
     for i, c in enumerate(STAR_COLS, start=1):
         lines.append(f"_{c} #{i}")
-
     for r in rows:
         vals = []
         for c in STAR_COLS:
@@ -57,7 +32,6 @@ def rows_to_star_text(rows):
             else:
                 vals.append(str(v))
         lines.append(" ".join(vals))
-
     return "\n".join(lines) + "\n"
 
 
