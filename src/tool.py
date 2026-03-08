@@ -26,14 +26,13 @@ class CiliaBuilder2Tool(ToolInstance):
             QWidget,
             QVBoxLayout,
             QHBoxLayout,
+            QScrollArea,
             QGroupBox,
             QLabel,
             QDoubleSpinBox,
             QSpinBox,
-            QLineEdit,
             QPushButton,
             QCheckBox,
-            QFileDialog,
         )
         from chimerax.ui import MainToolWindow
 
@@ -90,28 +89,11 @@ class CiliaBuilder2Tool(ToolInstance):
         self.spacing.setValue(400.0)
         outer_row_spin("Periodicity (spacing)", self.spacing)
 
-        self.z_offset = QDoubleSpinBox(main)
-        self.z_offset.setRange(-1e9, 1e9)
-        self.z_offset.setDecimals(2)
-        self.z_offset.setValue(0.0)
-        outer_row_spin("Z offset", self.z_offset)
-
         self.doublet_offset = QDoubleSpinBox(main)
         self.doublet_offset.setRange(-360.0, 360.0)
         self.doublet_offset.setDecimals(2)
         self.doublet_offset.setValue(0.0)
-        outer_row_spin("Doublet offset (deg)", self.doublet_offset)
-
-        outer_map_row = QWidget(main)
-        outer_map_lay = QHBoxLayout(outer_map_row)
-        outer_map_lay.setContentsMargins(0, 0, 0, 0)
-        outer_map_lay.addWidget(QLabel("Map path", outer_map_row))
-        self.outer_map_path = QLineEdit(outer_map_row)
-        outer_map_lay.addWidget(self.outer_map_path)
-        outer_browse = QPushButton("Browse", outer_map_row)
-        outer_browse.clicked.connect(lambda: self._browse_for_map(self.outer_map_path))
-        outer_map_lay.addWidget(outer_browse)
-        outer_layout.addWidget(outer_map_row)
+        outer_row_spin("Z offset", self.doublet_offset)
 
         rand_row = QWidget(main)
         rand_lay = QHBoxLayout(rand_row)
@@ -164,40 +146,19 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_tube_id.setValue(100)
         cent_row_spin("Tube id", self.centriole_tube_id)
 
-        cent_map_row = QWidget(main)
-        cent_map_lay = QHBoxLayout(cent_map_row)
-        cent_map_lay.setContentsMargins(0, 0, 0, 0)
-        cent_map_lay.addWidget(QLabel("Map path", cent_map_row))
-        self.cent_map_path = QLineEdit(cent_map_row)
-        cent_map_lay.addWidget(self.cent_map_path)
-        cent_browse = QPushButton("Browse", cent_map_row)
-        cent_browse.clicked.connect(lambda: self._browse_for_map(self.cent_map_path))
-        cent_map_lay.addWidget(cent_browse)
-        cent_layout.addWidget(cent_map_row)
-
         panels.addWidget(cent_box)
 
-        # Bottom controls
-        bottom = QWidget(main)
-        bottom_lay = QHBoxLayout(bottom)
-        bottom_lay.setContentsMargins(0, 0, 0, 0)
-
-        bottom_lay.addWidget(QLabel("Pixel size", bottom))
-        self.pixel_size = QDoubleSpinBox(bottom)
+        pixel_row = QWidget(main)
+        pixel_lay = QHBoxLayout(pixel_row)
+        pixel_lay.setContentsMargins(0, 0, 0, 0)
+        pixel_lay.addWidget(QLabel("Pixel size (A/px)", pixel_row))
+        self.pixel_size = QDoubleSpinBox(pixel_row)
         self.pixel_size.setRange(1e-6, 1e9)
         self.pixel_size.setDecimals(6)
         self.pixel_size.setValue(10.0)
-        bottom_lay.addWidget(self.pixel_size)
-
-        self.open_star = QCheckBox("Open STAR", bottom)
-        self.open_star.setChecked(True)
-        bottom_lay.addWidget(self.open_star)
-
-        self.show_arrows = QCheckBox("Show arrows", bottom)
-        self.show_arrows.setChecked(False)
-        bottom_lay.addWidget(self.show_arrows)
-
-        main_layout.addWidget(bottom)
+        pixel_lay.addWidget(self.pixel_size)
+        pixel_lay.addStretch(1)
+        main_layout.addWidget(pixel_row)
 
         # Buttons
         btn_row = QWidget(main)
@@ -216,32 +177,47 @@ class CiliaBuilder2Tool(ToolInstance):
         build_cent_btn.clicked.connect(self._build_centriole)
         btn_lay.addWidget(build_cent_btn)
 
-        attach_outer_btn = QPushButton("Attach map to outer", btn_row)
-        attach_outer_btn.clicked.connect(self._attach_map_to_outer)
-        btn_lay.addWidget(attach_outer_btn)
-
-        attach_cent_btn = QPushButton("Attach map to centriole", btn_row)
-        attach_cent_btn.clicked.connect(self._attach_map_to_centriole)
-        btn_lay.addWidget(attach_cent_btn)
-
         main_layout.addWidget(btn_row)
 
-        parent.layout().addWidget(main)
+        # Selection-based attachment controls
+        attach_select = QGroupBox("Attach by selected/open models", main)
+        attach_select_lay = QVBoxLayout(attach_select)
+
+        sel_ids_row = QWidget(main)
+        sel_ids_lay = QHBoxLayout(sel_ids_row)
+        sel_ids_lay.setContentsMargins(0, 0, 0, 0)
+        sel_ids_lay.addWidget(QLabel("STAR model id", sel_ids_row))
+        self.sel_star_model_id = QSpinBox(sel_ids_row)
+        self.sel_star_model_id.setRange(1, 999999)
+        sel_ids_lay.addWidget(self.sel_star_model_id)
+        sel_ids_lay.addWidget(QLabel("Map model id", sel_ids_row))
+        self.sel_map_model_id = QSpinBox(sel_ids_row)
+        self.sel_map_model_id.setRange(1, 999999)
+        sel_ids_lay.addWidget(self.sel_map_model_id)
+        attach_select_lay.addWidget(sel_ids_row)
+
+        sel_btn_row = QWidget(main)
+        sel_btn_lay = QHBoxLayout(sel_btn_row)
+        sel_btn_lay.setContentsMargins(0, 0, 0, 0)
+        attach_selected_btn = QPushButton("Attach selected STAR + map", sel_btn_row)
+        attach_selected_btn.clicked.connect(self._attach_selected_models)
+        sel_btn_lay.addWidget(attach_selected_btn)
+        sel_btn_lay.addStretch(1)
+        attach_select_lay.addWidget(sel_btn_row)
+
+        main_layout.addWidget(attach_select)
+
+        scroll = QScrollArea(parent)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(main)
+        parent.layout().addWidget(scroll)
 
         self.tool_window.manage(placement="side")
         self.tool_window.shown = True
-
-    def _browse_for_map(self, line_edit):
-        from Qt.QtWidgets import QFileDialog
-
-        path, _ = QFileDialog.getOpenFileName(
-            self.tool_window.ui_area,
-            "Select map file",
-            "",
-            "Map files (*.mrc *.map *.ccp4 *.em);;All files (*)",
-        )
-        if path:
-            line_edit.setText(path)
+        try:
+            _run(self.session, "ui tool show Models")
+        except Exception:
+            pass
 
     def _top_level_id(self, model):
         mid = getattr(model, "id", None)
@@ -251,6 +227,17 @@ class CiliaBuilder2Tool(ToolInstance):
             return int(mid[0])
         except Exception:
             return None
+
+    def _top_level_model_by_id(self, model_id):
+        try:
+            want = int(model_id)
+        except Exception:
+            return None
+        for m in self.session.models.list():
+            tid = self._top_level_id(m)
+            if tid is not None and tid == want:
+                return m
+        return None
 
     def _is_volume_like(self, model):
         name = model.__class__.__name__.lower()
@@ -264,86 +251,6 @@ class CiliaBuilder2Tool(ToolInstance):
             pass
         return False
 
-    def _ensure_map_open(self, path):
-        import os
-
-        path = str(path).strip()
-        if not path:
-            self.session.logger.error("Map path field is empty")
-            return None
-
-        path = os.path.expanduser(path)
-        path = os.path.abspath(path)
-
-        if not os.path.exists(path):
-            self.session.logger.error(f'Map path does not exist: "{path}"')
-            return None
-
-        # Reuse already opened map if possible
-        for m in self.session.models.list():
-            try:
-                mp = getattr(m, "path", None)
-                if mp and os.path.abspath(os.path.expanduser(str(mp))) == path:
-                    tid = self._top_level_id(m)
-                    if tid is not None:
-                        return tid
-            except Exception:
-                pass
-            try:
-                dp = getattr(getattr(m, "data", None), "path", None)
-                if dp and os.path.abspath(os.path.expanduser(str(dp))) == path:
-                    tid = self._top_level_id(m)
-                    if tid is not None:
-                        return tid
-            except Exception:
-                pass
-
-        before = set(self.session.models.list())
-
-        try:
-            _run(self.session, f'open "{path}"')
-        except Exception as e:
-            self.session.logger.error(f'open failed for "{path}": {e}')
-            return None
-
-        after = [m for m in self.session.models.list() if m not in before]
-        if not after:
-            # Sometimes open does not add models in a way we detect, try to locate by data.path
-            for m in self.session.models.list():
-                try:
-                    dp = getattr(getattr(m, "data", None), "path", None)
-                    if dp and os.path.abspath(os.path.expanduser(str(dp))) == path:
-                        tid = self._top_level_id(m)
-                        if tid is not None:
-                            return tid
-                except Exception:
-                    pass
-            self.session.logger.error(f'open created no new models for "{path}"')
-            return None
-
-        # Prefer a volume model among newly opened ones
-        chosen = None
-        for m in reversed(after):
-            if self._is_volume_like(m):
-                chosen = m
-                break
-        if chosen is None:
-            chosen = after[-1]
-
-        tid = self._top_level_id(chosen)
-        if tid is None:
-            for m in reversed(after):
-                tid = self._top_level_id(m)
-                if tid is not None:
-                    break
-
-        if tid is None:
-            self.session.logger.error(f'Could not determine map model id for "{path}"')
-            return None
-
-        self.session.logger.info(f'Opened map "{path}" as top level model #{tid}')
-        return tid
-
     def _build_outer(self, continue_mode=False):
         from Qt.QtWidgets import QMessageBox
         from . import cmd
@@ -354,7 +261,6 @@ class CiliaBuilder2Tool(ToolInstance):
             n_doublet = int(self.n_doublet.value())
             radius = float(self.radius.value())
             spacing = float(self.spacing.value())
-            z_offset = float(self.z_offset.value())
             doublet_offset = float(self.doublet_offset.value())
 
             random_spacing = bool(self.random_enable.isChecked())
@@ -362,14 +268,7 @@ class CiliaBuilder2Tool(ToolInstance):
             if random_max_diff < 0.0:
                 random_max_diff = -random_max_diff
 
-            if continue_mode:
-                if self._last_outer_end_z_ang is not None:
-                    z_offset = float(self._last_outer_end_z_ang) + float(spacing)
-                self.z_offset.setValue(float(z_offset))
-
             pixel_size = float(self.pixel_size.value())
-            show_arrows = bool(self.show_arrows.isChecked())
-
             model = cmd.cbstraight(
                 self.session,
                 angle_set=angle_set,
@@ -377,17 +276,23 @@ class CiliaBuilder2Tool(ToolInstance):
                 n_doublet=n_doublet,
                 radius=radius,
                 spacing=spacing,
-                z_offset=z_offset,
+                z_offset=0.0,
                 doublet_offset=doublet_offset,
                 pixel_size=pixel_size,
                 random_spacing=random_spacing,
                 random_max_diff=random_max_diff,
-                show_arrows=show_arrows,
-                open_star=bool(self.open_star.isChecked()),
+                show_arrows=True,
+                open_star=True,
                 print_star=False,
             )
 
             self._last_outer_star_model = model
+            try:
+                tid = self._top_level_id(model)
+                if tid is not None:
+                    self.sel_star_model_id.setValue(int(tid))
+            except Exception:
+                pass
 
             # Update last outer end z
             try:
@@ -420,8 +325,6 @@ class CiliaBuilder2Tool(ToolInstance):
             tube_id = int(self.centriole_tube_id.value())
 
             pixel_size = float(self.pixel_size.value())
-            show_arrows = bool(self.show_arrows.isChecked())
-
             model = cmd.buildcentriole(
                 self.session,
                 length=length,
@@ -429,8 +332,8 @@ class CiliaBuilder2Tool(ToolInstance):
                 z_offset=z_offset,
                 tube_id=tube_id,
                 pixel_size=pixel_size,
-                show_arrows=show_arrows,
-                open_star=bool(self.open_star.isChecked()),
+                show_arrows=True,
+                open_star=True,
                 print_star=False,
             )
 
@@ -456,51 +359,77 @@ class CiliaBuilder2Tool(ToolInstance):
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
-    def _attach_map_to_outer(self):
+    def _use_selected_models_for_attach(self):
         from Qt.QtWidgets import QMessageBox
-        from .map import cbsubmap_impl
 
         try:
-            if self._last_outer_star_model is None:
-                raise RuntimeError("Build outer first")
+            selected = list(self.session.selection.models())
+            if not selected:
+                raise RuntimeError("Select one STAR model and one map model first")
 
-            path = str(self.outer_map_path.text()).strip()
-            mid = self._ensure_map_open(path)
-            if mid is None:
-                raise RuntimeError("Outer map path is empty or failed to open")
+            top_by_id = {}
+            for m in selected:
+                tid = self._top_level_id(m)
+                if tid is None:
+                    continue
+                if tid not in top_by_id:
+                    topm = self._top_level_model_by_id(tid)
+                    if topm is not None:
+                        top_by_id[tid] = topm
 
-            cbsubmap_impl(
-                session=self.session,
-                star_model_obj=self._last_outer_star_model,
-                map_model_id=int(mid),
-                close_source=False,
-                show_result=True,
-            )
+            star_tid = None
+            map_tid = None
+            for tid, m in top_by_id.items():
+                if star_tid is None and hasattr(m, "_cb_star_rows"):
+                    star_tid = tid
+                if map_tid is None and self._is_volume_like(m):
+                    map_tid = tid
+
+            if star_tid is None or map_tid is None:
+                raise RuntimeError("Could not detect both STAR and map from selected models")
+
+            self.sel_star_model_id.setValue(int(star_tid))
+            self.sel_map_model_id.setValue(int(map_tid))
+            self.session.logger.info(f"Selected STAR #{star_tid}, map #{map_tid}")
 
         except Exception as e:
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
-    def _attach_map_to_centriole(self):
+    def _attach_selected_models(self):
         from Qt.QtWidgets import QMessageBox
         from .map import cbsubmap_impl
 
         try:
-            if self._last_cent_star_model is None:
-                raise RuntimeError("Build centriole first")
+            star_id = int(self.sel_star_model_id.value())
+            map_id = int(self.sel_map_model_id.value())
 
-            path = str(self.cent_map_path.text()).strip()
-            mid = self._ensure_map_open(path)
-            if mid is None:
-                raise RuntimeError("Centriole map path is empty or failed to open")
+            star_model = self._top_level_model_by_id(star_id)
+            if star_model is None:
+                raise RuntimeError(f"STAR model #{star_id} not found")
+            if not hasattr(star_model, "_cb_star_rows"):
+                raise RuntimeError(f"Model #{star_id} is not a CiliaBuilder2 STAR model")
+
+            map_model = self._top_level_model_by_id(map_id)
+            if map_model is None:
+                raise RuntimeError(f"Map model #{map_id} not found")
+            if not self._is_volume_like(map_model):
+                raise RuntimeError(f"Model #{map_id} is not volume-like")
 
             cbsubmap_impl(
                 session=self.session,
-                star_model_obj=self._last_cent_star_model,
-                map_model_id=int(mid),
+                star_model_obj=star_model,
+                map_model_id=map_id,
                 close_source=False,
                 show_result=True,
+                rotate_xy_90=True,
+                single_big_object=True,
             )
+            # Delete original source map after successful attachment.
+            try:
+                self.session.models.close([map_model])
+            except Exception:
+                pass
 
         except Exception as e:
             self.session.logger.error(str(e))

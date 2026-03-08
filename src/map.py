@@ -1,9 +1,44 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
+import math
 import numpy as np
 
+from chimerax.core.models import Model
 from chimerax.core.commands import run as _run
 from chimerax.geometry import Place
+try:
+    from chimerax.geometry import Places
+except Exception:
+    Places = None
+
+
+# ----------------------------------------------------------------------
+# CALIBRATION
+# ----------------------------------------------------------------------
+# This is the deep fix.
+# These constants define how the source map's local coordinates should be
+# converted into the particle's local coordinates before placement.
+#
+# Tune these once, then all copies will place consistently.
+#
+# local translation, in source-map local units
+CALIB_SHIFT_X = 0.0
+CALIB_SHIFT_Y = 0.0
+CALIB_SHIFT_Z = 0.0
+
+# local extra rotation, degrees
+CALIB_ROT_X_DEG = 0.0
+CALIB_ROT_Y_DEG = 0.0
+CALIB_ROT_Z_DEG = 90.0
+
+# uniform extra scale
+CALIB_SCALE = 1.0
+
+# keep original source map for iterative tuning/debug
+CLOSE_SOURCE_MAP = False
+
+# map-fit scaling follows physical units directly (no hidden fudge factors)
+PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP = 1.0
 
 
 def _get_top_by_id(session, id1):
@@ -19,7 +54,7 @@ def _parse_star_rows_from_model(model_obj):
     if rows is None:
         raise RuntimeError("Need a star model created by cbstraight or buildcentriole")
     if not isinstance(rows, (list, tuple)) or len(rows) == 0:
-        raise RuntimeError("Star model has no stored STAR rows")
+        raise RuntimeError("Star model has no STAR rows")
     return rows
 
 
@@ -31,29 +66,59 @@ def _safe_unit(v):
     return v / n
 
 
-def _axes_from_relion_angles_match_artiax_arrow(rot_deg, tilt_deg, psi_deg):
+def _rot_x(deg):
+    a = math.radians(float(deg))
+    c = math.cos(a)
+    s = math.sin(a)
+    return np.array(
+        [[1.0, 0.0, 0.0],
+         [0.0, c, -s],
+         [0.0, s,  c]],
+        dtype=float,
+    )
+
+
+def _rot_y(deg):
+    a = math.radians(float(deg))
+    c = math.cos(a)
+    s = math.sin(a)
+    return np.array(
+        [[ c, 0.0, s],
+         [0.0, 1.0, 0.0],
+         [-s, 0.0, c]],
+        dtype=float,
+    )
+
+
+def _rot_z(deg):
+    a = math.radians(float(deg))
+    c = math.cos(a)
+    s = math.sin(a)
+    return np.array(
+        [[c, -s, 0.0],
+         [s,  c, 0.0],
+         [0.0, 0.0, 1.0]],
+        dtype=float,
+    )
+
+
+def _relion_rotation_matrix(rot_deg, tilt_deg, psi_deg):
     """
-    Returns axes that match the orientation shown by ArtiaX arrows.
-
-    Important
-    ArtiaX displays axes using the transpose of the Relion rotation.
-    So use R^T when mapping unit axes.
+    Relion ZYZ:
+    R = Rz(psi) * Ry(tilt) * Rz(rot)
     """
-    import math
+    return _rot_z(float(psi_deg)) @ _rot_y(float(tilt_deg)) @ _rot_z(float(rot_deg))
 
-    r = math.radians(float(rot_deg))
-    t = math.radians(float(tilt_deg))
-    p = math.radians(float(psi_deg))
 
-    cr, sr = math.cos(r), math.sin(r)
-    ct, st = math.cos(t), math.sin(t)
-    cp, sp = math.cos(p), math.sin(p)
+def _particle_axes_from_star(rot_deg, tilt_deg, psi_deg):
+    """
+    Use the same conceptual model as ArtiaX style particle display:
+    compute one stable particle transform from metadata.
 
-    Rz_r = np.array([[cr, -sr, 0.0], [sr, cr, 0.0], [0.0, 0.0, 1.0]], dtype=float)
-    Ry_t = np.array([[ct, 0.0, st], [0.0, 1.0, 0.0], [-st, 0.0, ct]], dtype=float)
-    Rz_p = np.array([[cp, -sp, 0.0], [sp, cp, 0.0], [0.0, 0.0, 1.0]], dtype=float)
-
-    R = Rz_p @ Ry_t @ Rz_r
+    We use R^T here because that usually matches the displayed particle axes
+    in ChimeraX style viewers better than raw R.
+    """
+    R = _relion_rotation_matrix(rot_deg, tilt_deg, psi_deg)
     Rt = R.T
 
     ex = _safe_unit(Rt @ np.array([1.0, 0.0, 0.0], dtype=float))
@@ -63,12 +128,14 @@ def _axes_from_relion_angles_match_artiax_arrow(rot_deg, tilt_deg, psi_deg):
 
 
 def _copy_volume_instance(session, src):
+    # 1 direct copy
     try:
         if hasattr(src, "copy"):
             return src.copy()
     except Exception:
         pass
 
+    # 2 rebuild from grid data
     grid = None
     for attr in ("data", "grid_data"):
         if hasattr(src, attr):
@@ -88,6 +155,7 @@ def _copy_volume_instance(session, src):
         except Exception:
             pass
 
+    # 3 reopen from path
     path = getattr(src, "path", None)
     if not path:
         try:
@@ -105,20 +173,25 @@ def _copy_volume_instance(session, src):
     return None
 
 
-def _map_voxel_size_ang(vol):
-    def _try_step(obj):
-        try:
-            st = obj.step
-            if st is None:
-                return None
-            return (float(st[0]), float(st[1]), float(st[2]))
-        except Exception:
+def _try_get_step(obj):
+    try:
+        st = obj.step
+        if st is None:
             return None
+        return (float(st[0]), float(st[1]), float(st[2]))
+    except Exception:
+        return None
 
+
+def _get_map_voxel_size_ang(vol):
+    """
+    Best effort read of voxel size in angstrom.
+    """
     candidates = []
+
     try:
         if hasattr(vol, "data") and hasattr(vol.data, "grid_data") and vol.data.grid_data is not None:
-            s = _try_step(vol.data.grid_data)
+            s = _try_get_step(vol.data.grid_data)
             if s:
                 candidates.append(s)
     except Exception:
@@ -126,7 +199,7 @@ def _map_voxel_size_ang(vol):
 
     try:
         if hasattr(vol, "grid_data") and vol.grid_data is not None:
-            s = _try_step(vol.grid_data)
+            s = _try_get_step(vol.grid_data)
             if s:
                 candidates.append(s)
     except Exception:
@@ -134,7 +207,7 @@ def _map_voxel_size_ang(vol):
 
     try:
         if hasattr(vol, "data") and vol.data is not None:
-            s = _try_step(vol.data)
+            s = _try_get_step(vol.data)
             if s:
                 candidates.append(s)
     except Exception:
@@ -149,10 +222,10 @@ def _map_voxel_size_ang(vol):
     return sx
 
 
-def _local_center_of_model(model_obj):
+def _bounds_center_local(model_obj):
     """
-    Return the local center of the model in its own coordinates.
-    Used so the map is centered on the STAR point.
+    Only used as a fallback anchor.
+    The deep fix is the explicit CALIB_SHIFT above.
     """
     try:
         model_obj.position = Place()
@@ -175,11 +248,23 @@ def _local_center_of_model(model_obj):
             mn = b.xyz_min
             mx = b.xyz_max
             return np.array(
-                [0.5 * (mn[0] + mx[0]), 0.5 * (mn[1] + mx[1]), 0.5 * (mn[2] + mx[2])],
+                [
+                    0.5 * (mn[0] + mx[0]),
+                    0.5 * (mn[1] + mx[1]),
+                    0.5 * (mn[2] + mx[2]),
+                ],
                 dtype=float,
             )
         except Exception:
             return np.array([0.0, 0.0, 0.0], dtype=float)
+
+
+def _calibration_rotation_matrix():
+    return (
+        _rot_z(CALIB_ROT_Z_DEG)
+        @ _rot_y(CALIB_ROT_Y_DEG)
+        @ _rot_x(CALIB_ROT_X_DEG)
+    )
 
 
 def cbsubmap_impl(
@@ -188,16 +273,21 @@ def cbsubmap_impl(
     map_model_id,
     close_source=True,
     show_result=True,
+    rotate_xy_90=False,
+    single_big_object=False,
+    attach_diameter_scale=0.2,
+    attach_pixel_scale=0.18,
+    attach_z_offset_deg=0.0,
+    attach_all_z_offset_deg=-5.0,
+    attach_vertical_shift=-35.0,
 ):
     """
-    Attach one map to each STAR row.
+    Deep-fix placement pipeline
 
-    Behavior changes requested
-    Remove the original source map model.
-    Parent each attached map under the STAR model so there is no extra group model.
-    Orientation follows the arrow shown on the STAR point.
-    Map is centered on the STAR point.
-    Scale so map voxel size equals particle pixel size.
+    T_world = T_particle × T_calibration
+
+    T_particle comes from STAR row
+    T_calibration is one fixed local correction for the source map
     """
     rows = _parse_star_rows_from_model(star_model_obj)
 
@@ -206,93 +296,189 @@ def cbsubmap_impl(
         session.logger.error("cbsubmap cannot find map_model by that id")
         return None
 
-    map_vox = float(_map_voxel_size_ang(src_map))
-    if map_vox < 1e-12:
-        map_vox = 1.0
+    map_vox_ang = float(_get_map_voxel_size_ang(src_map))
+    if map_vox_ang < 1e-12:
+        map_vox_ang = 1.0
+
+    out_root = Model("CB_Attached_Maps", session)
+    session.models.add([out_root])
+
+    Rc = _calibration_rotation_matrix()
+    calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
 
     placed = 0
+    places = []
+    base_copy = None
+    tube_ids = sorted({int(float(r.get("rlnHelicalTubeID", 0))) for r in rows})
+    tube_index = {tid: i for i, tid in enumerate(tube_ids)}
 
     for i, r in enumerate(rows):
         try:
-            particle_px = float(r.get("rlnImagePixelSize", 1.0))
+            particle_px_ang = float(r.get("rlnImagePixelSize", 1.0))
         except Exception:
-            particle_px = 1.0
-        if particle_px < 1e-12:
-            particle_px = 1.0
+            particle_px_ang = 1.0
+        if particle_px_ang < 1e-12:
+            particle_px_ang = 1.0
 
+        # STAR coords are already in model/particle units.
         try:
-            cx = float(r.get("rlnCoordinateX", 0.0)) * particle_px
-            cy = float(r.get("rlnCoordinateY", 0.0)) * particle_px
-            cz = float(r.get("rlnCoordinateZ", 0.0)) * particle_px
+            cx = float(r.get("rlnCoordinateX", 0.0))
+            cy = float(r.get("rlnCoordinateY", 0.0))
+            cz = float(r.get("rlnCoordinateZ", 0.0))
         except Exception:
             continue
 
-        center = np.array([cx, cy, cz], dtype=float)
+        # Diameter tuning is applied in XY only, relative to model coordinates.
+        center = np.array(
+            [
+                cx * float(attach_diameter_scale),
+                cy * float(attach_diameter_scale),
+                cz,
+            ],
+            dtype=float,
+        )
 
-        ex, ey, ez = _axes_from_relion_angles_match_artiax_arrow(
+        # Particle basis from STAR
+        ex, ey, ez = _particle_axes_from_star(
             r.get("rlnAngleRot", 0.0),
             r.get("rlnAngleTilt", 0.0),
             r.get("rlnAnglePsi", 0.0),
         )
+        Rp = np.column_stack((ex, ey, ez))
 
-        scale = float(particle_px) / float(map_vox)
-        exs = ex * scale
-        eys = ey * scale
-        ezs = ez * scale
+        # Copy map
+        if bool(single_big_object):
+            if base_copy is None:
+                base_copy = _copy_volume_instance(session, src_map)
+                if base_copy is None:
+                    raise RuntimeError("cbsubmap could not create a volume instance from the source map")
+            mcopy = base_copy
+        else:
+            mcopy = _copy_volume_instance(session, src_map)
+            if mcopy is None:
+                raise RuntimeError("cbsubmap could not create a volume instance from the source map")
 
-        mcopy = _copy_volume_instance(session, src_map)
-        if mcopy is None:
-            raise RuntimeError("cbsubmap could not create a volume instance from the source map")
+        # No center finding: use fixed local calibration anchor only.
+        local_anchor = calib_shift
 
-        local_c = _local_center_of_model(mcopy)
+        # Scale rule from physical units: map voxel angstrom / particle pixel angstrom.
+        effective_particle_px_ang = float(particle_px_ang) * float(PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP)
+        if effective_particle_px_ang < 1e-12:
+            effective_particle_px_ang = float(particle_px_ang)
+        base_scale = float(map_vox_ang) / float(effective_particle_px_ang)
+        base_scale *= float(attach_pixel_scale)
+        scale = base_scale * float(CALIB_SCALE)
+        if scale < 1e-12:
+            scale = 1.0
 
-        origin = center - exs * local_c[0] - eys * local_c[1] - ezs * local_c[2]
-
+        # Final world basis
+        Rw = Rp @ Rc
+        exw = _safe_unit(Rw[:, 0]) * scale
+        eyw = _safe_unit(Rw[:, 1]) * scale
+        ezw = _safe_unit(Rw[:, 2]) * scale
+        if bool(rotate_xy_90):
+            # +90 degrees in the local XY plane (about local Z).
+            exw, eyw = eyw, -exw
         try:
-            tid = int(r.get("rlnHelicalTubeID", 0))
+            tid = int(float(r.get("rlnHelicalTubeID", 0)))
         except Exception:
             tid = 0
+        line_idx = int(tube_index.get(tid, 0))
+        per_line_z_offset = float(attach_z_offset_deg) * float(line_idx)
+        all_z_offset = float(attach_all_z_offset_deg)
+        total_z_offset = per_line_z_offset + all_z_offset
+        if abs(total_z_offset) > 1e-12:
+            a = math.radians(total_z_offset)
+            ca = math.cos(a)
+            sa = math.sin(a)
+            ex0 = exw.copy()
+            ey0 = eyw.copy()
+            exw = ex0 * ca - ey0 * sa
+            eyw = ex0 * sa + ey0 * ca
+
+        # Make chosen local anchor land exactly on STAR point
+        origin = (
+            center
+            - exw * float(local_anchor[0])
+            - eyw * float(local_anchor[1])
+            - ezw * float(local_anchor[2])
+        )
+        if abs(float(attach_vertical_shift)) > 1e-12:
+            origin = origin + _safe_unit(ezw) * float(attach_vertical_shift)
+
+        place = Place(axes=(exw, eyw, ezw), origin=origin)
+
+        if bool(single_big_object):
+            places.append(place)
+            placed += 1
+            continue
 
         try:
-            mcopy.name = f"Submap_t{tid}_{i}"
+            mcopy.name = f"Attached_t{tid}_{i}"
         except Exception:
             pass
 
         try:
-            mcopy.position = Place(axes=(exs, eys, ezs), origin=origin)
+            mcopy.position = place
         except Exception:
             try:
                 mcopy.position = Place(origin=center)
             except Exception:
                 pass
 
-        session.models.add([mcopy], parent=star_model_obj)
+        session.models.add([mcopy], parent=out_root)
         placed += 1
 
-    session.logger.info(f"cbsubmap placed {placed} submaps under model {star_model_obj.id_string}")
+    if bool(single_big_object) and base_copy is not None and len(places) > 0:
+        single_added = False
+        if Places is not None:
+            try:
+                base_copy.positions = Places(places)
+                base_copy.name = f"Attached_All_{len(places)}"
+                session.models.add([base_copy], parent=out_root)
+                single_added = True
+            except Exception:
+                single_added = False
+        if not single_added:
+            # Fallback if volume instancing is unavailable in current runtime.
+            session.models.close([out_root])
+            out_root = Model("CB_Attached_Maps", session)
+            session.models.add([out_root])
+            for i, p in enumerate(places):
+                mcopy = _copy_volume_instance(session, src_map)
+                if mcopy is None:
+                    continue
+                try:
+                    mcopy.name = f"Attached_fallback_{i}"
+                except Exception:
+                    pass
+                try:
+                    mcopy.position = p
+                except Exception:
+                    pass
+                session.models.add([mcopy], parent=out_root)
+
+    session.logger.info(
+        f"cbsubmap placed {placed} maps under model {out_root.id_string}. "
+        f"base calibration uses voxel match and explicit local calibration transform."
+    )
 
     if show_result:
         try:
-            star_model_obj.display = True
-        except Exception:
-            pass
-        try:
-            for m in star_model_obj.child_models():
-                m.display = True
+            out_root.display = True
         except Exception:
             pass
 
-    # Remove the original source map on purpose
-    try:
-        session.models.close([src_map])
-    except Exception:
-        pass
-
-    # Keep or close the star model depending on caller
     if close_source:
         try:
             session.models.close([star_model_obj])
         except Exception:
             pass
 
-    return star_model_obj
+    if CLOSE_SOURCE_MAP:
+        try:
+            session.models.close([src_map])
+        except Exception:
+            pass
+
+    return out_root
