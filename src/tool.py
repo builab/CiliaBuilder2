@@ -196,6 +196,40 @@ class CiliaBuilder2Tool(ToolInstance):
         sel_ids_lay.addWidget(self.sel_map_model_id)
         attach_select_lay.addWidget(sel_ids_row)
 
+        attach_tune_row = QWidget(main)
+        attach_tune_lay = QHBoxLayout(attach_tune_row)
+        attach_tune_lay.setContentsMargins(0, 0, 0, 0)
+        attach_tune_lay.addWidget(QLabel("Attach px scale", attach_tune_row))
+        self.attach_pixel_scale = QDoubleSpinBox(attach_tune_row)
+        self.attach_pixel_scale.setRange(1e-6, 1000.0)
+        self.attach_pixel_scale.setDecimals(3)
+        self.attach_pixel_scale.setSingleStep(0.01)
+        self.attach_pixel_scale.setValue(0.100)
+        attach_tune_lay.addWidget(self.attach_pixel_scale)
+        attach_tune_lay.addWidget(QLabel("Map axis X", attach_tune_row))
+        self.attach_axis_x = QDoubleSpinBox(attach_tune_row)
+        self.attach_axis_x.setRange(-360.0, 360.0)
+        self.attach_axis_x.setDecimals(2)
+        self.attach_axis_x.setSingleStep(1.0)
+        self.attach_axis_x.setValue(0.0)
+        attach_tune_lay.addWidget(self.attach_axis_x)
+        attach_tune_lay.addWidget(QLabel("Y", attach_tune_row))
+        self.attach_axis_y = QDoubleSpinBox(attach_tune_row)
+        self.attach_axis_y.setRange(-360.0, 360.0)
+        self.attach_axis_y.setDecimals(2)
+        self.attach_axis_y.setSingleStep(1.0)
+        self.attach_axis_y.setValue(0.0)
+        attach_tune_lay.addWidget(self.attach_axis_y)
+        attach_tune_lay.addWidget(QLabel("Z", attach_tune_row))
+        self.attach_axis_z = QDoubleSpinBox(attach_tune_row)
+        self.attach_axis_z.setRange(-360.0, 360.0)
+        self.attach_axis_z.setDecimals(2)
+        self.attach_axis_z.setSingleStep(1.0)
+        self.attach_axis_z.setValue(0.0)
+        attach_tune_lay.addWidget(self.attach_axis_z)
+        attach_tune_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_tune_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -424,6 +458,10 @@ class CiliaBuilder2Tool(ToolInstance):
                 show_result=True,
                 rotate_xy_90=True,
                 single_big_object=True,
+                attach_pixel_scale=float(self.attach_pixel_scale.value()),
+                attach_axis_rot_x_deg=float(self.attach_axis_x.value()),
+                attach_axis_rot_y_deg=float(self.attach_axis_y.value()),
+                attach_axis_rot_z_deg=float(self.attach_axis_z.value()),
             )
             # Delete original source map after successful attachment.
             try:

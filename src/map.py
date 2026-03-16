@@ -29,7 +29,7 @@ CALIB_SHIFT_Z = 0.0
 # local extra rotation, degrees
 CALIB_ROT_X_DEG = 0.0
 CALIB_ROT_Y_DEG = 0.0
-CALIB_ROT_Z_DEG = 90.0
+CALIB_ROT_Z_DEG = 0.0
 
 # uniform extra scale
 CALIB_SCALE = 1.0
@@ -259,11 +259,57 @@ def _bounds_center_local(model_obj):
             return np.array([0.0, 0.0, 0.0], dtype=float)
 
 
-def _calibration_rotation_matrix():
+def _map_data_origin_local(vol):
+    for owner in (getattr(vol, "data", None), getattr(vol, "grid_data", None)):
+        if owner is None:
+            continue
+        o = getattr(owner, "origin", None)
+        if o is None:
+            continue
+        try:
+            return np.array([float(o[0]), float(o[1]), float(o[2])], dtype=float)
+        except Exception:
+            pass
+    return None
+
+
+def _shared_map_anchor_local(session, src_map):
+    """
+    Use the map's own offset if it has one; otherwise use ChimeraX's built-in
+    density center-of-mass for the selected map. Compute once and reuse.
+    """
+    probe = _copy_volume_instance(session, src_map)
+    if probe is None:
+        return np.array([0.0, 0.0, 0.0], dtype=float)
+    try:
+        try:
+            probe.position = Place()
+        except Exception:
+            pass
+
+        origin = _map_data_origin_local(probe)
+        if origin is not None and float(np.linalg.norm(origin)) > 1e-12:
+            return origin
+
+        try:
+            from chimerax.map.measure import volume_center_of_mass
+
+            center = volume_center_of_mass(probe)
+            return np.array([float(center[0]), float(center[1]), float(center[2])], dtype=float)
+        except Exception:
+            return _bounds_center_local(probe)
+    finally:
+        try:
+            session.models.close([probe])
+        except Exception:
+            pass
+
+
+def _calibration_rotation_matrix(rx_deg=CALIB_ROT_X_DEG, ry_deg=CALIB_ROT_Y_DEG, rz_deg=CALIB_ROT_Z_DEG):
     return (
-        _rot_z(CALIB_ROT_Z_DEG)
-        @ _rot_y(CALIB_ROT_Y_DEG)
-        @ _rot_x(CALIB_ROT_X_DEG)
+        _rot_z(rz_deg)
+        @ _rot_y(ry_deg)
+        @ _rot_x(rx_deg)
     )
 
 
@@ -275,11 +321,14 @@ def cbsubmap_impl(
     show_result=True,
     rotate_xy_90=False,
     single_big_object=False,
-    attach_diameter_scale=0.2,
-    attach_pixel_scale=0.18,
+    attach_diameter_scale=1.0,
+    attach_pixel_scale=0.1,
     attach_z_offset_deg=0.0,
-    attach_all_z_offset_deg=-5.0,
-    attach_vertical_shift=-35.0,
+    attach_all_z_offset_deg=0.0,
+    attach_vertical_shift=0.0,
+    attach_axis_rot_x_deg=CALIB_ROT_X_DEG,
+    attach_axis_rot_y_deg=CALIB_ROT_Y_DEG,
+    attach_axis_rot_z_deg=CALIB_ROT_Z_DEG,
 ):
     """
     Deep-fix placement pipeline
@@ -303,8 +352,13 @@ def cbsubmap_impl(
     out_root = Model("CB_Attached_Maps", session)
     session.models.add([out_root])
 
-    Rc = _calibration_rotation_matrix()
+    Rc = _calibration_rotation_matrix(
+        rx_deg=float(attach_axis_rot_x_deg),
+        ry_deg=float(attach_axis_rot_y_deg),
+        rz_deg=float(attach_axis_rot_z_deg),
+    )
     calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
+    shared_anchor = _shared_map_anchor_local(session, src_map)
 
     placed = 0
     places = []
@@ -358,8 +412,8 @@ def cbsubmap_impl(
             if mcopy is None:
                 raise RuntimeError("cbsubmap could not create a volume instance from the source map")
 
-        # No center finding: use fixed local calibration anchor only.
-        local_anchor = calib_shift
+        # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
+        local_anchor = shared_anchor + calib_shift
 
         # Scale rule from physical units: map voxel angstrom / particle pixel angstrom.
         effective_particle_px_ang = float(particle_px_ang) * float(PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP)
