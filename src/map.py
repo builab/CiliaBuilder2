@@ -517,11 +517,10 @@ def cbsubmap_impl(
         f"base calibration uses voxel match and explicit local calibration transform."
     )
 
-    if show_result:
-        try:
-            out_root.display = True
-        except Exception:
-            pass
+    try:
+        out_root.display = bool(show_result)
+    except Exception:
+        pass
 
     if close_source:
         try:

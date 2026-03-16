@@ -48,8 +48,8 @@ class CiliaBuilder2Tool(ToolInstance):
         panels = QHBoxLayout()
         main_layout.addLayout(panels)
 
-        # Outer panel
-        outer_box = QGroupBox("Outer cilia", main)
+        # Microtubules panel
+        outer_box = QGroupBox("Microtubules", main)
         outer_layout = QVBoxLayout(outer_box)
 
         def outer_row_spin(label, spin):
@@ -111,8 +111,8 @@ class CiliaBuilder2Tool(ToolInstance):
 
         panels.addWidget(outer_box)
 
-        # Centriole panel
-        cent_box = QGroupBox("Centriole", main)
+        # Central apparatus panel
+        cent_box = QGroupBox("Central apparatus", main)
         cent_layout = QVBoxLayout(cent_box)
 
         def cent_row_spin(label, spin):
@@ -148,6 +148,37 @@ class CiliaBuilder2Tool(ToolInstance):
 
         panels.addWidget(cent_box)
 
+        # IFT panel
+        ift_box = QGroupBox("IFT particles", main)
+        ift_layout = QVBoxLayout(ift_box)
+
+        def ift_row_spin(label, spin):
+            w = QWidget(main)
+            lay = QHBoxLayout(w)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(QLabel(label, w))
+            lay.addWidget(spin)
+            ift_layout.addWidget(w)
+
+        self.ift_count = QSpinBox(main)
+        self.ift_count.setRange(1, 1000000)
+        self.ift_count.setValue(100)
+        ift_row_spin("No. of particles", self.ift_count)
+
+        self.ift_radial_offset = QDoubleSpinBox(main)
+        self.ift_radial_offset.setRange(-1e9, 1e9)
+        self.ift_radial_offset.setDecimals(2)
+        self.ift_radial_offset.setValue(0.0)
+        ift_row_spin("Radial offset", self.ift_radial_offset)
+
+        self.ift_z_offset = QDoubleSpinBox(main)
+        self.ift_z_offset.setRange(-1e9, 1e9)
+        self.ift_z_offset.setDecimals(2)
+        self.ift_z_offset.setValue(0.0)
+        ift_row_spin("Z offset", self.ift_z_offset)
+
+        panels.addWidget(ift_box)
+
         pixel_row = QWidget(main)
         pixel_lay = QHBoxLayout(pixel_row)
         pixel_lay.setContentsMargins(0, 0, 0, 0)
@@ -165,17 +196,21 @@ class CiliaBuilder2Tool(ToolInstance):
         btn_lay = QHBoxLayout(btn_row)
         btn_lay.setContentsMargins(0, 0, 0, 0)
 
-        build_outer_btn = QPushButton("Build outer", btn_row)
+        build_outer_btn = QPushButton("Build microtubules", btn_row)
         build_outer_btn.clicked.connect(lambda: self._build_outer(continue_mode=False))
         btn_lay.addWidget(build_outer_btn)
 
-        cont_outer_btn = QPushButton("Continue outer", btn_row)
+        cont_outer_btn = QPushButton("Continue microtubules", btn_row)
         cont_outer_btn.clicked.connect(lambda: self._build_outer(continue_mode=True))
         btn_lay.addWidget(cont_outer_btn)
 
-        build_cent_btn = QPushButton("Build centriole", btn_row)
+        build_cent_btn = QPushButton("Build central apparatus", btn_row)
         build_cent_btn.clicked.connect(self._build_centriole)
         btn_lay.addWidget(build_cent_btn)
+
+        build_ift_btn = QPushButton("Build IFT", btn_row)
+        build_ift_btn.clicked.connect(self._build_ift)
+        btn_lay.addWidget(build_ift_btn)
 
         main_layout.addWidget(btn_row)
 
@@ -430,6 +465,36 @@ class CiliaBuilder2Tool(ToolInstance):
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
+    def _build_ift(self):
+        from Qt.QtWidgets import QMessageBox
+        from . import cmd
+
+        try:
+            model = cmd.buildift(
+                self.session,
+                n_particles=int(self.ift_count.value()),
+                length=float(self.length.value()),
+                n_doublet=int(self.n_doublet.value()),
+                radius=float(self.radius.value()),
+                radial_offset=float(self.ift_radial_offset.value()),
+                angle_set=float(self.angle_set.value()),
+                z_offset=float(self.ift_z_offset.value()),
+                pixel_size=float(self.pixel_size.value()),
+                open_star=True,
+                print_star=False,
+            )
+
+            try:
+                tid = self._top_level_id(model)
+                if tid is not None:
+                    self.sel_star_model_id.setValue(int(tid))
+            except Exception:
+                pass
+
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+
     def _attach_selected_models(self):
         from Qt.QtWidgets import QMessageBox
         from .map import cbsubmap_impl
@@ -455,7 +520,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 star_model_obj=star_model,
                 map_model_id=map_id,
                 close_source=False,
-                show_result=True,
+                show_result=False,
                 rotate_xy_90=True,
                 single_big_object=True,
                 attach_pixel_scale=float(self.attach_pixel_scale.value()),

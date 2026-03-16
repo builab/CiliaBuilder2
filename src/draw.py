@@ -174,3 +174,71 @@ def buildcentriole_star_rows(
         )
 
     return rows
+
+
+def build_ift_star_rows(
+    n_lines,
+    n_particles,
+    length_ang,
+    outer_radius_ang,
+    radial_offset_ang,
+    tomo_name,
+    pixel_size_ang,
+    angle_set_deg=0.0,
+    z_offset_ang=0.0,
+    class_number=1,
+    rng_seed=None,
+):
+    """
+    Random IFT particles distributed across the microtubules.
+    """
+
+    n = int(max(1, min(9, n_lines)))
+    n_particles = int(max(1, n_particles))
+    length_ang = float(length_ang)
+    outer_radius_ang = float(outer_radius_ang)
+    radial_offset_ang = float(radial_offset_ang)
+    pixel_size_ang = float(pixel_size_ang)
+    angle_set_deg = float(angle_set_deg)
+    z_offset_ang = float(z_offset_ang)
+    class_number = int(class_number)
+
+    if pixel_size_ang <= 0.0:
+        raise ValueError("pixel_size_ang must be > 0")
+
+    if rng_seed is None:
+        rng = random.Random()
+    else:
+        rng = random.Random(int(rng_seed))
+
+    step_deg = 360.0 / float(n)
+    radius_ang = outer_radius_ang + radial_offset_ang
+    rows = []
+
+    for _ in range(n_particles):
+        k = rng.randrange(n)
+        phi_deg = angle_set_deg + k * step_deg
+        phi = math.radians(phi_deg)
+
+        x_ang = radius_ang * math.cos(phi)
+        y_ang = radius_ang * math.sin(phi)
+        z_ang = z_offset_ang + rng.uniform(0.0, max(0.0, length_ang))
+        tube_id = k + 1
+        rot_deg = -phi_deg
+
+        rows.append(
+            {
+                "rlnTomoName": str(tomo_name),
+                "rlnCoordinateX": float(x_ang) / pixel_size_ang,
+                "rlnCoordinateY": float(y_ang) / pixel_size_ang,
+                "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
+                "rlnAngleRot": float(rot_deg),
+                "rlnAngleTilt": 0.0,
+                "rlnAnglePsi": 0.0,
+                "rlnImagePixelSize": float(pixel_size_ang),
+                "rlnHelicalTubeID": int(tube_id),
+                "rlnClassNumber": int(class_number),
+            }
+        )
+
+    return rows

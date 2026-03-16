@@ -5,7 +5,7 @@ from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
 
 from .io import rows_to_star_text, write_star_tempfile
-from .draw import build_cilia_lines_star_rows, buildcentriole_star_rows
+from .draw import build_cilia_lines_star_rows, buildcentriole_star_rows, build_ift_star_rows
 
 
 _CB_CLASS_COUNTER = 0
@@ -183,4 +183,76 @@ buildcentriole_desc = CmdDesc(
         ("print_star", BoolArg),
     ],
     synopsis="Build centriole STAR only (single center line).",
+)
+
+
+def buildift(
+    session,
+    n_particles=100,
+    length=9000.0,
+    n_doublet=9,
+    radius=700.0,
+    radial_offset=0.0,
+    angle_set=0.0,
+    z_offset=0.0,
+    tomo_name="TS_001",
+    pixel_size=10.0,
+    open_star=True,
+    star_format="relion",
+    print_star=False,
+):
+    class_num = _next_class_number()
+
+    rows = build_ift_star_rows(
+        n_lines=int(n_doublet),
+        n_particles=int(n_particles),
+        length_ang=float(length),
+        outer_radius_ang=float(radius),
+        radial_offset_ang=float(radial_offset),
+        tomo_name=str(tomo_name),
+        pixel_size_ang=float(pixel_size),
+        angle_set_deg=float(angle_set),
+        z_offset_ang=float(z_offset),
+        class_number=int(class_num),
+        rng_seed=None,
+    )
+
+    star_text = rows_to_star_text(rows)
+
+    if print_star:
+        session.logger.info("===== CiliaBuilder2 STAR output =====")
+        for ln in star_text.splitlines():
+            session.logger.info(ln)
+        session.logger.info("===== end STAR output =====")
+
+    created = Model(f"CB_STAR_IFT_{class_num}", session)
+    session.models.add([created])
+    created._cb_star_rows = rows
+    created._cb_star_text = star_text
+
+    if bool(open_star):
+        try:
+            created._cb_star_path = _open_star(session, star_text, star_format)
+        except Exception as e:
+            session.logger.warning(f"open STAR failed: {e}")
+
+    return created
+
+
+buildift_desc = CmdDesc(
+    keyword=[
+        ("n_particles", IntArg),
+        ("length", FloatArg),
+        ("n_doublet", IntArg),
+        ("radius", FloatArg),
+        ("radial_offset", FloatArg),
+        ("angle_set", FloatArg),
+        ("z_offset", FloatArg),
+        ("tomo_name", StringArg),
+        ("pixel_size", FloatArg),
+        ("open_star", BoolArg),
+        ("star_format", StringArg),
+        ("print_star", BoolArg),
+    ],
+    synopsis="Build random IFT particle STAR on microtubules.",
 )
