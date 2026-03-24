@@ -29,7 +29,7 @@ CALIB_SHIFT_Z = 0.0
 # local extra rotation, degrees
 CALIB_ROT_X_DEG = 0.0
 CALIB_ROT_Y_DEG = 0.0
-CALIB_ROT_Z_DEG = 0.0
+CALIB_ROT_Z_DEG = -90.0
 
 # uniform extra scale
 CALIB_SCALE = 1.0

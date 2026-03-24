@@ -1,5 +1,7 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
+import math
+
 from chimerax.core.tools import ToolInstance
 from chimerax.core.commands import run as _run
 
@@ -31,10 +33,23 @@ class CiliaBuilder2Tool(ToolInstance):
             QLabel,
             QDoubleSpinBox,
             QSpinBox,
+            QComboBox,
             QPushButton,
             QCheckBox,
         )
         from chimerax.ui import MainToolWindow
+
+        class RefreshingComboBox(QComboBox):
+            def __init__(self, refresh_cb, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._refresh_cb = refresh_cb
+
+            def showPopup(self):
+                try:
+                    self._refresh_cb()
+                except Exception:
+                    pass
+                super().showPopup()
 
         self.tool_window = MainToolWindow(self)
         parent = self.tool_window.ui_area
@@ -45,7 +60,7 @@ class CiliaBuilder2Tool(ToolInstance):
         main = QWidget(parent)
         main_layout = QVBoxLayout(main)
 
-        panels = QHBoxLayout()
+        panels = QVBoxLayout()
         main_layout.addLayout(panels)
 
         # Microtubules panel
@@ -160,22 +175,41 @@ class CiliaBuilder2Tool(ToolInstance):
             lay.addWidget(spin)
             ift_layout.addWidget(w)
 
+        ift_origin_row = QWidget(main)
+        ift_origin_lay = QHBoxLayout(ift_origin_row)
+        ift_origin_lay.setContentsMargins(0, 0, 0, 0)
+        ift_origin_lay.addWidget(QLabel("Origin model", ift_origin_row))
+        self.ift_origin_model = RefreshingComboBox(self._refresh_model_selectors, ift_origin_row)
+        self.ift_origin_model.setMinimumContentsLength(24)
+        self.ift_origin_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        ift_origin_lay.addWidget(self.ift_origin_model, 1)
+        ift_layout.addWidget(ift_origin_row)
+
         self.ift_count = QSpinBox(main)
         self.ift_count.setRange(1, 1000000)
         self.ift_count.setValue(100)
         ift_row_spin("No. of particles", self.ift_count)
 
-        self.ift_radial_offset = QDoubleSpinBox(main)
-        self.ift_radial_offset.setRange(-1e9, 1e9)
-        self.ift_radial_offset.setDecimals(2)
-        self.ift_radial_offset.setValue(0.0)
-        ift_row_spin("Radial offset", self.ift_radial_offset)
+        self.ift_distance = QDoubleSpinBox(main)
+        self.ift_distance.setRange(-1e9, 1e9)
+        self.ift_distance.setDecimals(2)
+        self.ift_distance.setValue(100.0)
+        ift_row_spin("Distance from model", self.ift_distance)
 
         self.ift_z_offset = QDoubleSpinBox(main)
         self.ift_z_offset.setRange(-1e9, 1e9)
         self.ift_z_offset.setDecimals(2)
         self.ift_z_offset.setValue(0.0)
         ift_row_spin("Z offset", self.ift_z_offset)
+
+        ift_line_row = QWidget(main)
+        ift_line_lay = QHBoxLayout(ift_line_row)
+        ift_line_lay.setContentsMargins(0, 0, 0, 0)
+        ift_line_lay.addWidget(QLabel("Line mode", ift_line_row))
+        self.ift_line_mode = QCheckBox("One by one", ift_line_row)
+        ift_line_lay.addWidget(self.ift_line_mode)
+        ift_line_lay.addStretch(1)
+        ift_layout.addWidget(ift_line_row)
 
         panels.addWidget(ift_box)
 
@@ -193,7 +227,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
         # Buttons
         btn_row = QWidget(main)
-        btn_lay = QHBoxLayout(btn_row)
+        btn_lay = QVBoxLayout(btn_row)
         btn_lay.setContentsMargins(0, 0, 0, 0)
 
         build_outer_btn = QPushButton("Build microtubules", btn_row)
@@ -211,6 +245,7 @@ class CiliaBuilder2Tool(ToolInstance):
         build_ift_btn = QPushButton("Build IFT", btn_row)
         build_ift_btn.clicked.connect(self._build_ift)
         btn_lay.addWidget(build_ift_btn)
+        btn_lay.addStretch(1)
 
         main_layout.addWidget(btn_row)
 
@@ -218,59 +253,32 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_select = QGroupBox("Attach by selected/open models", main)
         attach_select_lay = QVBoxLayout(attach_select)
 
-        sel_ids_row = QWidget(main)
-        sel_ids_lay = QHBoxLayout(sel_ids_row)
-        sel_ids_lay.setContentsMargins(0, 0, 0, 0)
-        sel_ids_lay.addWidget(QLabel("STAR model id", sel_ids_row))
-        self.sel_star_model_id = QSpinBox(sel_ids_row)
-        self.sel_star_model_id.setRange(1, 999999)
-        sel_ids_lay.addWidget(self.sel_star_model_id)
-        sel_ids_lay.addWidget(QLabel("Map model id", sel_ids_row))
-        self.sel_map_model_id = QSpinBox(sel_ids_row)
-        self.sel_map_model_id.setRange(1, 999999)
-        sel_ids_lay.addWidget(self.sel_map_model_id)
-        attach_select_lay.addWidget(sel_ids_row)
+        star_row = QWidget(main)
+        star_lay = QHBoxLayout(star_row)
+        star_lay.setContentsMargins(0, 0, 0, 0)
+        star_lay.addWidget(QLabel("STAR model", star_row))
+        self.sel_star_model = RefreshingComboBox(self._refresh_model_selectors, star_row)
+        self.sel_star_model.setMinimumContentsLength(24)
+        self.sel_star_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        star_lay.addWidget(self.sel_star_model, 1)
+        attach_select_lay.addWidget(star_row)
 
-        attach_tune_row = QWidget(main)
-        attach_tune_lay = QHBoxLayout(attach_tune_row)
-        attach_tune_lay.setContentsMargins(0, 0, 0, 0)
-        attach_tune_lay.addWidget(QLabel("Attach px scale", attach_tune_row))
-        self.attach_pixel_scale = QDoubleSpinBox(attach_tune_row)
-        self.attach_pixel_scale.setRange(1e-6, 1000.0)
-        self.attach_pixel_scale.setDecimals(3)
-        self.attach_pixel_scale.setSingleStep(0.01)
-        self.attach_pixel_scale.setValue(0.100)
-        attach_tune_lay.addWidget(self.attach_pixel_scale)
-        attach_tune_lay.addWidget(QLabel("Map axis X", attach_tune_row))
-        self.attach_axis_x = QDoubleSpinBox(attach_tune_row)
-        self.attach_axis_x.setRange(-360.0, 360.0)
-        self.attach_axis_x.setDecimals(2)
-        self.attach_axis_x.setSingleStep(1.0)
-        self.attach_axis_x.setValue(0.0)
-        attach_tune_lay.addWidget(self.attach_axis_x)
-        attach_tune_lay.addWidget(QLabel("Y", attach_tune_row))
-        self.attach_axis_y = QDoubleSpinBox(attach_tune_row)
-        self.attach_axis_y.setRange(-360.0, 360.0)
-        self.attach_axis_y.setDecimals(2)
-        self.attach_axis_y.setSingleStep(1.0)
-        self.attach_axis_y.setValue(0.0)
-        attach_tune_lay.addWidget(self.attach_axis_y)
-        attach_tune_lay.addWidget(QLabel("Z", attach_tune_row))
-        self.attach_axis_z = QDoubleSpinBox(attach_tune_row)
-        self.attach_axis_z.setRange(-360.0, 360.0)
-        self.attach_axis_z.setDecimals(2)
-        self.attach_axis_z.setSingleStep(1.0)
-        self.attach_axis_z.setValue(0.0)
-        attach_tune_lay.addWidget(self.attach_axis_z)
-        attach_tune_lay.addStretch(1)
-        attach_select_lay.addWidget(attach_tune_row)
+        map_row = QWidget(main)
+        map_lay = QHBoxLayout(map_row)
+        map_lay.setContentsMargins(0, 0, 0, 0)
+        map_lay.addWidget(QLabel("Map model", map_row))
+        self.sel_map_model = RefreshingComboBox(self._refresh_model_selectors, map_row)
+        self.sel_map_model.setMinimumContentsLength(24)
+        self.sel_map_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        map_lay.addWidget(self.sel_map_model, 1)
+        attach_select_lay.addWidget(map_row)
 
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
-        attach_selected_btn = QPushButton("Attach selected STAR + map", sel_btn_row)
-        attach_selected_btn.clicked.connect(self._attach_selected_models)
-        sel_btn_lay.addWidget(attach_selected_btn)
+        self.attach_selected_btn = QPushButton("Attach selected STAR + map", sel_btn_row)
+        self.attach_selected_btn.clicked.connect(self._attach_selected_models)
+        sel_btn_lay.addWidget(self.attach_selected_btn)
         sel_btn_lay.addStretch(1)
         attach_select_lay.addWidget(sel_btn_row)
 
@@ -287,6 +295,7 @@ class CiliaBuilder2Tool(ToolInstance):
             _run(self.session, "ui tool show Models")
         except Exception:
             pass
+        self._refresh_model_selectors()
 
     def _top_level_id(self, model):
         mid = getattr(model, "id", None)
@@ -307,6 +316,97 @@ class CiliaBuilder2Tool(ToolInstance):
             if tid is not None and tid == want:
                 return m
         return None
+
+    def _refresh_model_selectors(self):
+        star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+        ift_origin_current = self.ift_origin_model.currentData() if hasattr(self, "ift_origin_model") else None
+        star_has_models = False
+        map_has_models = False
+        star_items = []
+
+        if hasattr(self, "sel_star_model"):
+            self.sel_star_model.blockSignals(True)
+            self.sel_star_model.clear()
+            self.sel_star_model.addItem("No STAR models", None)
+            for m in self.session.models.list():
+                tid = self._top_level_id(m)
+                if tid is None or not hasattr(m, "_cb_star_rows"):
+                    continue
+                label = f"{m.name} (#{tid})"
+                star_items.append((label, int(tid)))
+                self.sel_star_model.addItem(label, int(tid))
+                star_has_models = True
+            if star_current is not None:
+                idx = self.sel_star_model.findData(int(star_current))
+                if idx >= 0:
+                    self.sel_star_model.setCurrentIndex(idx)
+                else:
+                    self.sel_star_model.setCurrentIndex(1 if self.sel_star_model.count() > 1 else 0)
+            else:
+                self.sel_star_model.setCurrentIndex(1 if self.sel_star_model.count() > 1 else 0)
+            self.sel_star_model.setEnabled(star_has_models)
+            self.sel_star_model.blockSignals(False)
+
+        if hasattr(self, "sel_map_model"):
+            self.sel_map_model.blockSignals(True)
+            self.sel_map_model.clear()
+            self.sel_map_model.addItem("No map models", None)
+            for m in self.session.models.list():
+                tid = self._top_level_id(m)
+                if tid is None or not self._is_volume_like(m):
+                    continue
+                label = f"{m.name} (#{tid})"
+                self.sel_map_model.addItem(label, int(tid))
+                map_has_models = True
+            if map_current is not None:
+                idx = self.sel_map_model.findData(int(map_current))
+                if idx >= 0:
+                    self.sel_map_model.setCurrentIndex(idx)
+                else:
+                    self.sel_map_model.setCurrentIndex(1 if self.sel_map_model.count() > 1 else 0)
+            else:
+                self.sel_map_model.setCurrentIndex(1 if self.sel_map_model.count() > 1 else 0)
+            self.sel_map_model.setEnabled(map_has_models)
+            self.sel_map_model.blockSignals(False)
+
+        if hasattr(self, "ift_origin_model"):
+            self.ift_origin_model.blockSignals(True)
+            self.ift_origin_model.clear()
+            self.ift_origin_model.addItem("No origin models", None)
+            for label, tid in star_items:
+                self.ift_origin_model.addItem(label, int(tid))
+            if ift_origin_current is not None:
+                idx = self.ift_origin_model.findData(int(ift_origin_current))
+                if idx >= 0:
+                    self.ift_origin_model.setCurrentIndex(idx)
+                else:
+                    self.ift_origin_model.setCurrentIndex(1 if self.ift_origin_model.count() > 1 else 0)
+            else:
+                self.ift_origin_model.setCurrentIndex(1 if self.ift_origin_model.count() > 1 else 0)
+            self.ift_origin_model.setEnabled(bool(star_items))
+            self.ift_origin_model.blockSignals(False)
+
+        if hasattr(self, "attach_selected_btn"):
+            self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
+
+    def _select_star_model(self, model):
+        self._refresh_model_selectors()
+        tid = self._top_level_id(model)
+        if tid is None:
+            return
+        idx = self.sel_star_model.findData(int(tid))
+        if idx >= 0:
+            self.sel_star_model.setCurrentIndex(idx)
+
+    def _select_map_model(self, model):
+        self._refresh_model_selectors()
+        tid = self._top_level_id(model)
+        if tid is None:
+            return
+        idx = self.sel_map_model.findData(int(tid))
+        if idx >= 0:
+            self.sel_map_model.setCurrentIndex(idx)
 
     def _is_volume_like(self, model):
         name = model.__class__.__name__.lower()
@@ -357,9 +457,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
             self._last_outer_star_model = model
             try:
-                tid = self._top_level_id(model)
-                if tid is not None:
-                    self.sel_star_model_id.setValue(int(tid))
+                self._select_star_model(model)
             except Exception:
                 pass
 
@@ -407,6 +505,10 @@ class CiliaBuilder2Tool(ToolInstance):
             )
 
             self._last_cent_star_model = model
+            try:
+                self._select_star_model(model)
+            except Exception:
+                pass
 
             # Update last centriole end z
             try:
@@ -428,66 +530,38 @@ class CiliaBuilder2Tool(ToolInstance):
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
-    def _use_selected_models_for_attach(self):
-        from Qt.QtWidgets import QMessageBox
-
-        try:
-            selected = list(self.session.selection.models())
-            if not selected:
-                raise RuntimeError("Select one STAR model and one map model first")
-
-            top_by_id = {}
-            for m in selected:
-                tid = self._top_level_id(m)
-                if tid is None:
-                    continue
-                if tid not in top_by_id:
-                    topm = self._top_level_model_by_id(tid)
-                    if topm is not None:
-                        top_by_id[tid] = topm
-
-            star_tid = None
-            map_tid = None
-            for tid, m in top_by_id.items():
-                if star_tid is None and hasattr(m, "_cb_star_rows"):
-                    star_tid = tid
-                if map_tid is None and self._is_volume_like(m):
-                    map_tid = tid
-
-            if star_tid is None or map_tid is None:
-                raise RuntimeError("Could not detect both STAR and map from selected models")
-
-            self.sel_star_model_id.setValue(int(star_tid))
-            self.sel_map_model_id.setValue(int(map_tid))
-            self.session.logger.info(f"Selected STAR #{star_tid}, map #{map_tid}")
-
-        except Exception as e:
-            self.session.logger.error(str(e))
-            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
-
     def _build_ift(self):
         from Qt.QtWidgets import QMessageBox
         from . import cmd
 
         try:
+            self._refresh_model_selectors()
+            origin_id = self.ift_origin_model.currentData()
+            if origin_id is None:
+                raise RuntimeError("Select an origin STAR model for IFT first")
+            origin_model = self._top_level_model_by_id(origin_id)
+            if origin_model is None or not hasattr(origin_model, "_cb_star_rows"):
+                raise RuntimeError("Selected IFT origin model is not available")
+
+            geo = self._star_geometry(origin_model)
             model = cmd.buildift(
                 self.session,
                 n_particles=int(self.ift_count.value()),
-                length=float(self.length.value()),
-                n_doublet=int(self.n_doublet.value()),
-                radius=float(self.radius.value()),
-                radial_offset=float(self.ift_radial_offset.value()),
-                angle_set=float(self.angle_set.value()),
+                length=float(geo["length_ang"]),
+                n_doublet=int(geo["n_lines"]),
+                radius=float(geo["radius_ang"]),
+                radial_offset=float(self.ift_distance.value()),
+                angle_set=float(geo["angle_set_deg"]),
                 z_offset=float(self.ift_z_offset.value()),
-                pixel_size=float(self.pixel_size.value()),
+                tomo_name=str(geo["tomo_name"]),
+                pixel_size=float(geo["pixel_size_ang"]),
+                line_mode=bool(self.ift_line_mode.isChecked()),
                 open_star=True,
                 print_star=False,
             )
 
             try:
-                tid = self._top_level_id(model)
-                if tid is not None:
-                    self.sel_star_model_id.setValue(int(tid))
+                self._select_star_model(model)
             except Exception:
                 pass
 
@@ -495,13 +569,65 @@ class CiliaBuilder2Tool(ToolInstance):
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
+    def _star_geometry(self, model):
+        rows = getattr(model, "_cb_star_rows", None) or []
+        if not rows:
+            raise RuntimeError("Origin STAR model has no STAR rows")
+
+        px = float(rows[0].get("rlnImagePixelSize", 0.0) or 0.0)
+        if px <= 0.0:
+            raise RuntimeError("Origin STAR model has invalid pixel size")
+
+        coords = []
+        tube_ids = set()
+        for row in rows:
+            x = float(row.get("rlnCoordinateX", 0.0)) * px
+            y = float(row.get("rlnCoordinateY", 0.0)) * px
+            z = float(row.get("rlnCoordinateZ", 0.0)) * px
+            coords.append((x, y, z, row))
+            try:
+                tube_ids.add(int(row.get("rlnHelicalTubeID", 0)))
+            except Exception:
+                pass
+        if not coords:
+            raise RuntimeError("Origin STAR model has no coordinates")
+
+        radii = [((x * x) + (y * y)) ** 0.5 for x, y, _z, _row in coords]
+        radius_ang = sum(radii) / float(len(radii))
+        z_values = [z for _x, _y, z, _row in coords]
+        length_ang = max(0.0, max(z_values) - min(z_values))
+
+        first = None
+        for x, y, _z, row in coords:
+            if abs(x) > 1e-6 or abs(y) > 1e-6:
+                first = (x, y, row)
+                break
+        if first is None:
+            angle_set_deg = 0.0
+        else:
+            angle_set_deg = math.degrees(math.atan2(first[1], first[0]))
+
+        return {
+            "pixel_size_ang": px,
+            "radius_ang": radius_ang,
+            "length_ang": length_ang,
+            "n_lines": max(1, len([tid for tid in tube_ids if tid > 0])),
+            "angle_set_deg": angle_set_deg,
+            "tomo_name": str(rows[0].get("rlnTomoName", "TS_001")),
+        }
+
     def _attach_selected_models(self):
         from Qt.QtWidgets import QMessageBox
         from .map import cbsubmap_impl
 
         try:
-            star_id = int(self.sel_star_model_id.value())
-            map_id = int(self.sel_map_model_id.value())
+            self._refresh_model_selectors()
+            star_id = self.sel_star_model.currentData()
+            map_id = self.sel_map_model.currentData()
+            if star_id is None:
+                raise RuntimeError("Select a STAR model first")
+            if map_id is None:
+                raise RuntimeError("Select a map model first")
 
             star_model = self._top_level_model_by_id(star_id)
             if star_model is None:
@@ -520,19 +646,17 @@ class CiliaBuilder2Tool(ToolInstance):
                 star_model_obj=star_model,
                 map_model_id=map_id,
                 close_source=False,
-                show_result=False,
+                show_result=True,
                 rotate_xy_90=True,
                 single_big_object=True,
-                attach_pixel_scale=float(self.attach_pixel_scale.value()),
-                attach_axis_rot_x_deg=float(self.attach_axis_x.value()),
-                attach_axis_rot_y_deg=float(self.attach_axis_y.value()),
-                attach_axis_rot_z_deg=float(self.attach_axis_z.value()),
+                attach_axis_rot_z_deg=-90.0,
             )
-            # Delete original source map after successful attachment.
+            # Keep the original source map loaded for reference, but hide it.
             try:
-                self.session.models.close([map_model])
+                map_model.display = False
             except Exception:
                 pass
+            self._refresh_model_selectors()
 
         except Exception as e:
             self.session.logger.error(str(e))

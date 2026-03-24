@@ -68,7 +68,7 @@ class CiliaBuilder2Panel(ToolInstance):
         self.tool_window.ui_area.layout().addWidget(wrapper)
 
     def _make_outer_panel(self):
-        box = QGroupBox("Outer cilia")
+        box = QGroupBox("Microtubules")
         form = QFormLayout()
         box.setLayout(form)
 
@@ -142,11 +142,11 @@ class CiliaBuilder2Panel(ToolInstance):
         return box
 
     def _make_centriole_panel(self):
-        box = QGroupBox("Centriole")
+        box = QGroupBox("Central apparatus")
         form = QFormLayout()
         box.setLayout(form)
 
-        self.cen_enable = QCheckBox("Build centriole in center")
+        self.cen_enable = QCheckBox("Build central apparatus in center")
         self.cen_enable.setChecked(False)
 
         self.cen_length = QDoubleSpinBox()

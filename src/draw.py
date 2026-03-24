@@ -62,8 +62,9 @@ def build_cilia_lines_star_rows(
         y_ang = outer_radius_ang * math.sin(phi)
         tube_id = int(tube_id_offset) + (k + 1)
 
-        # outward-facing red axis
-        rot_deg = -(phi_deg + doublet_offset_deg)
+        # Interpret 180 degrees in the UI as neutral, then rotate each line
+        # an additional 90 degrees clockwise.
+        rot_deg = -(phi_deg + (doublet_offset_deg - 180.0) + 90.0)
 
         z_list = [float(z_offset_ang)]
         current_z = float(z_offset_ang)
@@ -187,10 +188,11 @@ def build_ift_star_rows(
     angle_set_deg=0.0,
     z_offset_ang=0.0,
     class_number=1,
+    line_mode=False,
     rng_seed=None,
 ):
     """
-    Random IFT particles distributed across the microtubules.
+    IFT particles distributed on a larger circle around an origin ring.
     """
 
     n = int(max(1, min(9, n_lines)))
@@ -215,30 +217,64 @@ def build_ift_star_rows(
     radius_ang = outer_radius_ang + radial_offset_ang
     rows = []
 
-    for _ in range(n_particles):
-        k = rng.randrange(n)
-        phi_deg = angle_set_deg + k * step_deg
-        phi = math.radians(phi_deg)
+    if bool(line_mode):
+        per_line = max(1, int(math.ceil(float(n_particles) / float(n))))
+        spacing = max(1e-6, float(length_ang) / float(max(1, per_line)))
+        created = 0
+        for k in range(n):
+            phi_deg = angle_set_deg + k * step_deg
+            phi = math.radians(phi_deg)
+            x_ang = radius_ang * math.cos(phi)
+            y_ang = radius_ang * math.sin(phi)
+            tube_id = k + 1
+            rot_deg = -phi_deg + 90.0
+            start_shift = rng.uniform(0.0, max(0.0, min(spacing, length_ang)))
+            for j in range(per_line):
+                if created >= n_particles:
+                    break
+                z_ang = z_offset_ang + start_shift + j * spacing
+                if z_ang > z_offset_ang + length_ang:
+                    break
+                rows.append(
+                    {
+                        "rlnTomoName": str(tomo_name),
+                        "rlnCoordinateX": float(x_ang) / pixel_size_ang,
+                        "rlnCoordinateY": float(y_ang) / pixel_size_ang,
+                        "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
+                        "rlnAngleRot": float(rot_deg),
+                        "rlnAngleTilt": 0.0,
+                        "rlnAnglePsi": 0.0,
+                        "rlnImagePixelSize": float(pixel_size_ang),
+                        "rlnHelicalTubeID": int(tube_id),
+                        "rlnClassNumber": int(class_number),
+                    }
+                )
+                created += 1
+    else:
+        for _ in range(n_particles):
+            k = rng.randrange(n)
+            phi_deg = angle_set_deg + k * step_deg
+            phi = math.radians(phi_deg)
 
-        x_ang = radius_ang * math.cos(phi)
-        y_ang = radius_ang * math.sin(phi)
-        z_ang = z_offset_ang + rng.uniform(0.0, max(0.0, length_ang))
-        tube_id = k + 1
-        rot_deg = -phi_deg
+            x_ang = radius_ang * math.cos(phi)
+            y_ang = radius_ang * math.sin(phi)
+            z_ang = z_offset_ang + rng.uniform(0.0, max(0.0, length_ang))
+            tube_id = k + 1
+            rot_deg = -phi_deg + 90.0
 
-        rows.append(
-            {
-                "rlnTomoName": str(tomo_name),
-                "rlnCoordinateX": float(x_ang) / pixel_size_ang,
-                "rlnCoordinateY": float(y_ang) / pixel_size_ang,
-                "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
-                "rlnAngleRot": float(rot_deg),
-                "rlnAngleTilt": 0.0,
-                "rlnAnglePsi": 0.0,
-                "rlnImagePixelSize": float(pixel_size_ang),
-                "rlnHelicalTubeID": int(tube_id),
-                "rlnClassNumber": int(class_number),
-            }
-        )
+            rows.append(
+                {
+                    "rlnTomoName": str(tomo_name),
+                    "rlnCoordinateX": float(x_ang) / pixel_size_ang,
+                    "rlnCoordinateY": float(y_ang) / pixel_size_ang,
+                    "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
+                    "rlnAngleRot": float(rot_deg),
+                    "rlnAngleTilt": 0.0,
+                    "rlnAnglePsi": 0.0,
+                    "rlnImagePixelSize": float(pixel_size_ang),
+                    "rlnHelicalTubeID": int(tube_id),
+                    "rlnClassNumber": int(class_number),
+                }
+            )
 
     return rows

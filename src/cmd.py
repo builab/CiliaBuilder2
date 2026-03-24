@@ -22,7 +22,15 @@ def _open_star(session, star_text, star_format):
     if fmt not in ("relion", "relion5"):
         fmt = "relion"
     star_path = write_star_tempfile(star_text, suffix=".star")
+    before_ids = {m.id_string for m in session.models.list()}
     _run(session, f'open "{star_path}" format {fmt}')
+    opened = [m for m in session.models.list() if m.id_string not in before_ids]
+    if opened:
+        top = opened[-1]
+        try:
+            _run(session, f"artiax particles #{top.id_string} originScaleFactor 10.0")
+        except Exception:
+            pass
     return star_path
 
 
@@ -79,7 +87,7 @@ def cbstraight(
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"CB_STAR_Outer_{class_num}", session)
+    created = Model(f"Microtubules STAR {class_num}", session)
     session.models.add([created])
     created._cb_star_rows = rows
     created._cb_star_text = star_text
@@ -153,7 +161,7 @@ def buildcentriole(
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"CB_STAR_Centriole_{class_num}", session)
+    created = Model(f"Central apparatus STAR {class_num}", session)
     session.models.add([created])
     created._cb_star_rows = rows
     created._cb_star_text = star_text
@@ -197,6 +205,7 @@ def buildift(
     z_offset=0.0,
     tomo_name="TS_001",
     pixel_size=10.0,
+    line_mode=False,
     open_star=True,
     star_format="relion",
     print_star=False,
@@ -214,6 +223,7 @@ def buildift(
         angle_set_deg=float(angle_set),
         z_offset_ang=float(z_offset),
         class_number=int(class_num),
+        line_mode=bool(line_mode),
         rng_seed=None,
     )
 
@@ -225,7 +235,7 @@ def buildift(
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"CB_STAR_IFT_{class_num}", session)
+    created = Model(f"IFT STAR {class_num}", session)
     session.models.add([created])
     created._cb_star_rows = rows
     created._cb_star_text = star_text
@@ -250,6 +260,7 @@ buildift_desc = CmdDesc(
         ("z_offset", FloatArg),
         ("tomo_name", StringArg),
         ("pixel_size", FloatArg),
+        ("line_mode", BoolArg),
         ("open_star", BoolArg),
         ("star_format", StringArg),
         ("print_star", BoolArg),
