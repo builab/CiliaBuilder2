@@ -1,5 +1,7 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
+import math
+
 from chimerax.core.commands import CmdDesc, FloatArg, IntArg, BoolArg, StringArg
 from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
@@ -17,21 +19,201 @@ def _next_class_number():
     return _CB_CLASS_COUNTER
 
 
+def _safe_unit(v):
+    n = math.sqrt(sum(float(c) * float(c) for c in v))
+    if n < 1e-12:
+        return (0.0, 0.0, 1.0)
+    return tuple(float(c) / n for c in v)
+
+
+def _rot_x(deg):
+    a = math.radians(float(deg))
+    c, s = math.cos(a), math.sin(a)
+    return ((1.0, 0.0, 0.0), (0.0, c, -s), (0.0, s, c))
+
+
+def _rot_y(deg):
+    a = math.radians(float(deg))
+    c, s = math.cos(a), math.sin(a)
+    return ((c, 0.0, s), (0.0, 1.0, 0.0), (-s, 0.0, c))
+
+
+def _rot_z(deg):
+    a = math.radians(float(deg))
+    c, s = math.cos(a), math.sin(a)
+    return ((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0))
+
+
+def _matmul(a, b):
+    return tuple(
+        tuple(sum(a[r][k] * b[k][c] for k in range(3)) for c in range(3))
+        for r in range(3)
+    )
+
+
+def _matvec(a, v):
+    return tuple(sum(a[r][k] * v[k] for k in range(3)) for r in range(3))
+
+
+def _particle_axes_from_row(row):
+    rot = float(row.get("rlnAngleRot", 0.0))
+    tilt = float(row.get("rlnAngleTilt", 0.0))
+    psi = float(row.get("rlnAnglePsi", 0.0))
+    r = _matmul(_rot_z(psi), _matmul(_rot_y(tilt), _rot_z(rot)))
+    rt = tuple(tuple(r[c][rr] for c in range(3)) for rr in range(3))
+    ex = _safe_unit(_matvec(rt, (1.0, 0.0, 0.0)))
+    ey = _safe_unit(_matvec(rt, (0.0, 1.0, 0.0)))
+    ez = _safe_unit(_matvec(rt, (0.0, 0.0, 1.0)))
+    return ex, ey, ez
+
+
+def _cross(a, b):
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    )
+
+
+def _arrow_head_basis(axis):
+    axis = _safe_unit(axis)
+    ref = (0.0, 0.0, 1.0)
+    if abs(sum(axis[i] * ref[i] for i in range(3))) > 0.95:
+        ref = (0.0, 1.0, 0.0)
+    side = _safe_unit(_cross(axis, ref))
+    return side
+
+
+def _find_child_group(parent, tag):
+    for child in parent.child_models():
+        if getattr(child, "_cb_group_tag", None) == tag:
+            return child
+    return None
+
+
+def _ensure_cb_root(session):
+    for model in session.models.list():
+        if getattr(model, "_cb_root", False):
+            return model
+    root = Model("CiliaBuilder2", session)
+    root._cb_root = True
+    session.models.add([root])
+    return root
+
+
+def _ensure_cb_group(session, tag, name):
+    root = _ensure_cb_root(session)
+    group = _find_child_group(root, tag)
+    if group is not None:
+        return group
+    group = Model(name, session)
+    group._cb_group_tag = tag
+    root.add([group])
+    return group
+
+
+def _ensure_cb_star_group(session):
+    return _ensure_cb_group(session, "star_models", "STAR Models")
+
+
+def _ensure_cb_map_group(session):
+    return _ensure_cb_group(session, "maps", "Maps")
+
+
+def _add_to_cb_star_group(session, model):
+    _ensure_cb_star_group(session).add([model])
+    return model
+
+
+def _add_to_cb_map_group(session, model):
+    _ensure_cb_map_group(session).add([model])
+    return model
+
+
+def _render_star_model(session, parent_model, rows, show_arrows):
+    try:
+        from chimerax.markers.markers import MarkerSet, create_link
+    except Exception:
+        return None
+
+    for child in list(parent_model.child_models()):
+        if getattr(child, "_cb_rendered_particles", False):
+            try:
+                session.models.close([child])
+            except Exception:
+                pass
+
+    marker_set = MarkerSet(session, name="Particles")
+    marker_set._cb_rendered_particles = True
+    parent_model.add([marker_set])
+
+    for row in rows:
+        px = float(row.get("rlnImagePixelSize", 1.0) or 1.0)
+        cx = float(row.get("rlnCoordinateX", 0.0))
+        cy = float(row.get("rlnCoordinateY", 0.0))
+        cz = float(row.get("rlnCoordinateZ", 0.0))
+        center = (cx, cy, cz)
+        glyph_scale = max(0.25, min(4.0, 10.0 / max(px, 1e-6)))
+        center_radius = 8.0 * glyph_scale
+        axis_len = 24.0 * glyph_scale
+        link_radius = 2.4 * glyph_scale
+        base = marker_set.create_marker(center, (50, 80, 255, 255), center_radius)
+        if not bool(show_arrows):
+            continue
+        ex, ey, ez = _particle_axes_from_row(row)
+        axes = (
+            ((255, 0, 0, 255), ex),
+            ((255, 255, 0, 255), ey),
+            ((0, 0, 255, 255), ez),
+        )
+        for color, vec in axes:
+            tip_xyz = (
+                center[0] + axis_len * vec[0],
+                center[1] + axis_len * vec[1],
+                center[2] + axis_len * vec[2],
+            )
+            shaft_len = 0.78 * axis_len
+            shaft_xyz = (
+                center[0] + shaft_len * vec[0],
+                center[1] + shaft_len * vec[1],
+                center[2] + shaft_len * vec[2],
+            )
+            shaft = marker_set.create_marker(shaft_xyz, color, max(0.6, 1.4 * glyph_scale))
+            tip = marker_set.create_marker(tip_xyz, color, max(0.2, 0.5 * glyph_scale))
+            create_link(base, shaft, rgba=color, radius=link_radius)
+            create_link(shaft, tip, rgba=color, radius=max(0.8, 1.4 * glyph_scale))
+
+            side = _arrow_head_basis(vec)
+            head_back = 0.18 * axis_len
+            head_side = 0.10 * axis_len
+            for sign in (-1.0, 1.0):
+                head_xyz = (
+                    tip_xyz[0] - head_back * vec[0] + sign * head_side * side[0],
+                    tip_xyz[1] - head_back * vec[1] + sign * head_side * side[1],
+                    tip_xyz[2] - head_back * vec[2] + sign * head_side * side[2],
+                )
+                head = marker_set.create_marker(head_xyz, color, max(0.2, 0.4 * glyph_scale))
+                create_link(tip, head, rgba=color, radius=max(0.7, 1.1 * glyph_scale))
+    return marker_set
+
+
 def _open_star(session, star_text, star_format):
-    fmt = str(star_format).strip().lower()
-    if fmt not in ("relion", "relion5"):
-        fmt = "relion"
-    star_path = write_star_tempfile(star_text, suffix=".star")
-    before_ids = {m.id_string for m in session.models.list()}
-    _run(session, f'open "{star_path}" format {fmt}')
-    opened = [m for m in session.models.list() if m.id_string not in before_ids]
-    if opened:
-        top = opened[-1]
+    return write_star_tempfile(star_text, suffix=".star")
+
+
+def _create_star_model(session, name, rows, star_text, open_star, star_format, show_arrows):
+    created = Model(name, session)
+    _add_to_cb_star_group(session, created)
+    created._cb_star_rows = rows
+    created._cb_star_text = star_text
+    if bool(open_star):
+        created._cb_star_path = _open_star(session, star_text, star_format)
+        _render_star_model(session, created, rows, show_arrows)
         try:
-            _run(session, f"artiax particles #{top.id_string} originScaleFactor 10.0")
+            _run(session, "view orient")
         except Exception:
             pass
-    return star_path
+    return created
 
 
 def cbui(session):
@@ -80,25 +262,21 @@ def cbstraight(
     )
 
     star_text = rows_to_star_text(rows)
-
     if print_star:
         session.logger.info("===== CiliaBuilder2 STAR output =====")
         for ln in star_text.splitlines():
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"Microtubules STAR {class_num}", session)
-    session.models.add([created])
-    created._cb_star_rows = rows
-    created._cb_star_text = star_text
-
-    if bool(open_star):
-        try:
-            created._cb_star_path = _open_star(session, star_text, star_format)
-        except Exception as e:
-            session.logger.warning(f"open STAR failed: {e}")
-
-    return created
+    return _create_star_model(
+        session,
+        f"Microtubules STAR {class_num}",
+        rows,
+        star_text,
+        open_star,
+        star_format,
+        show_arrows,
+    )
 
 
 cbstraight_desc = CmdDesc(
@@ -154,25 +332,21 @@ def buildcentriole(
     )
 
     star_text = rows_to_star_text(rows)
-
     if print_star:
         session.logger.info("===== CiliaBuilder2 STAR output =====")
         for ln in star_text.splitlines():
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"Central apparatus STAR {class_num}", session)
-    session.models.add([created])
-    created._cb_star_rows = rows
-    created._cb_star_text = star_text
-
-    if bool(open_star):
-        try:
-            created._cb_star_path = _open_star(session, star_text, star_format)
-        except Exception as e:
-            session.logger.warning(f"open STAR failed: {e}")
-
-    return created
+    return _create_star_model(
+        session,
+        f"Central apparatus STAR {class_num}",
+        rows,
+        star_text,
+        open_star,
+        star_format,
+        show_arrows,
+    )
 
 
 buildcentriole_desc = CmdDesc(
@@ -228,25 +402,21 @@ def buildift(
     )
 
     star_text = rows_to_star_text(rows)
-
     if print_star:
         session.logger.info("===== CiliaBuilder2 STAR output =====")
         for ln in star_text.splitlines():
             session.logger.info(ln)
         session.logger.info("===== end STAR output =====")
 
-    created = Model(f"IFT STAR {class_num}", session)
-    session.models.add([created])
-    created._cb_star_rows = rows
-    created._cb_star_text = star_text
-
-    if bool(open_star):
-        try:
-            created._cb_star_path = _open_star(session, star_text, star_format)
-        except Exception as e:
-            session.logger.warning(f"open STAR failed: {e}")
-
-    return created
+    return _create_star_model(
+        session,
+        f"IFT STAR {class_num}",
+        rows,
+        star_text,
+        open_star,
+        star_format,
+        True,
+    )
 
 
 buildift_desc = CmdDesc(

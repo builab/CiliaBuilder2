@@ -41,7 +41,11 @@ CLOSE_SOURCE_MAP = False
 PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP = 1.0
 
 
-def _get_top_by_id(session, id1):
+def _get_model_by_ref(session, id1):
+    want = str(id1)
+    for m in session.models.list():
+        if m.id_string == want:
+            return m
     id1 = int(id1)
     for m in session.models.list():
         if getattr(m, "id", None) and len(m.id) == 1 and int(m.id[0]) == id1:
@@ -340,17 +344,26 @@ def cbsubmap_impl(
     """
     rows = _parse_star_rows_from_model(star_model_obj)
 
-    src_map = _get_top_by_id(session, map_model_id)
+    src_map = _get_model_by_ref(session, map_model_id)
     if src_map is None:
         session.logger.error("cbsubmap cannot find map_model by that id")
         return None
+    try:
+        from .cmd import _add_to_cb_map_group
+        _add_to_cb_map_group(session, src_map)
+    except Exception:
+        pass
 
     map_vox_ang = float(_get_map_voxel_size_ang(src_map))
     if map_vox_ang < 1e-12:
         map_vox_ang = 1.0
 
-    out_root = Model("CB_Attached_Maps", session)
-    session.models.add([out_root])
+    out_root = Model(f"{star_model_obj.name} maps", session)
+    try:
+        from .cmd import _add_to_cb_map_group
+        _add_to_cb_map_group(session, out_root)
+    except Exception:
+        session.models.add([out_root])
 
     Rc = _calibration_rotation_matrix(
         rx_deg=float(attach_axis_rot_x_deg),
@@ -496,8 +509,12 @@ def cbsubmap_impl(
         if not single_added:
             # Fallback if volume instancing is unavailable in current runtime.
             session.models.close([out_root])
-            out_root = Model("CB_Attached_Maps", session)
-            session.models.add([out_root])
+            out_root = Model(f"{star_model_obj.name} maps", session)
+            try:
+                from .cmd import _add_to_cb_map_group
+                _add_to_cb_map_group(session, out_root)
+            except Exception:
+                session.models.add([out_root])
             for i, p in enumerate(places):
                 mcopy = _copy_volume_instance(session, src_map)
                 if mcopy is None:

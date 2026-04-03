@@ -1,9 +1,11 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
+import json
 import math
 
 from chimerax.core.tools import ToolInstance
 from chimerax.core.commands import run as _run
+from chimerax.core.models import Model
 
 
 class CiliaBuilder2Tool(ToolInstance):
@@ -36,6 +38,7 @@ class CiliaBuilder2Tool(ToolInstance):
             QComboBox,
             QPushButton,
             QCheckBox,
+            QFileDialog,
         )
         from chimerax.ui import MainToolWindow
 
@@ -245,6 +248,15 @@ class CiliaBuilder2Tool(ToolInstance):
         build_ift_btn = QPushButton("Build IFT", btn_row)
         build_ift_btn.clicked.connect(self._build_ift)
         btn_lay.addWidget(build_ift_btn)
+
+        save_session_btn = QPushButton("Save session JSON", btn_row)
+        save_session_btn.clicked.connect(self._save_session_json)
+        btn_lay.addWidget(save_session_btn)
+
+        load_session_btn = QPushButton("Load session JSON", btn_row)
+        load_session_btn.clicked.connect(self._load_session_json)
+        btn_lay.addWidget(load_session_btn)
+
         btn_lay.addStretch(1)
 
         main_layout.addWidget(btn_row)
@@ -297,23 +309,14 @@ class CiliaBuilder2Tool(ToolInstance):
             pass
         self._refresh_model_selectors()
 
-    def _top_level_id(self, model):
-        mid = getattr(model, "id", None)
-        if not mid:
-            return None
-        try:
-            return int(mid[0])
-        except Exception:
-            return None
+    def _model_ref(self, model):
+        ref = getattr(model, "id_string", "")
+        return str(ref) if ref else None
 
-    def _top_level_model_by_id(self, model_id):
-        try:
-            want = int(model_id)
-        except Exception:
-            return None
+    def _model_by_ref(self, model_id):
+        want = str(model_id)
         for m in self.session.models.list():
-            tid = self._top_level_id(m)
-            if tid is not None and tid == want:
+            if m.id_string == want:
                 return m
         return None
 
@@ -330,15 +333,15 @@ class CiliaBuilder2Tool(ToolInstance):
             self.sel_star_model.clear()
             self.sel_star_model.addItem("No STAR models", None)
             for m in self.session.models.list():
-                tid = self._top_level_id(m)
-                if tid is None or not hasattr(m, "_cb_star_rows"):
+                ref = self._model_ref(m)
+                if ref is None or not hasattr(m, "_cb_star_rows"):
                     continue
-                label = f"{m.name} (#{tid})"
-                star_items.append((label, int(tid)))
-                self.sel_star_model.addItem(label, int(tid))
+                label = f"{m.name} (#{ref})"
+                star_items.append((label, str(ref)))
+                self.sel_star_model.addItem(label, str(ref))
                 star_has_models = True
             if star_current is not None:
-                idx = self.sel_star_model.findData(int(star_current))
+                idx = self.sel_star_model.findData(str(star_current))
                 if idx >= 0:
                     self.sel_star_model.setCurrentIndex(idx)
                 else:
@@ -353,14 +356,14 @@ class CiliaBuilder2Tool(ToolInstance):
             self.sel_map_model.clear()
             self.sel_map_model.addItem("No map models", None)
             for m in self.session.models.list():
-                tid = self._top_level_id(m)
-                if tid is None or not self._is_volume_like(m):
+                ref = self._model_ref(m)
+                if ref is None or not self._is_volume_like(m):
                     continue
-                label = f"{m.name} (#{tid})"
-                self.sel_map_model.addItem(label, int(tid))
+                label = f"{m.name} (#{ref})"
+                self.sel_map_model.addItem(label, str(ref))
                 map_has_models = True
             if map_current is not None:
-                idx = self.sel_map_model.findData(int(map_current))
+                idx = self.sel_map_model.findData(str(map_current))
                 if idx >= 0:
                     self.sel_map_model.setCurrentIndex(idx)
                 else:
@@ -374,10 +377,10 @@ class CiliaBuilder2Tool(ToolInstance):
             self.ift_origin_model.blockSignals(True)
             self.ift_origin_model.clear()
             self.ift_origin_model.addItem("No origin models", None)
-            for label, tid in star_items:
-                self.ift_origin_model.addItem(label, int(tid))
+            for label, ref in star_items:
+                self.ift_origin_model.addItem(label, str(ref))
             if ift_origin_current is not None:
-                idx = self.ift_origin_model.findData(int(ift_origin_current))
+                idx = self.ift_origin_model.findData(str(ift_origin_current))
                 if idx >= 0:
                     self.ift_origin_model.setCurrentIndex(idx)
                 else:
@@ -392,25 +395,184 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _select_star_model(self, model):
         self._refresh_model_selectors()
-        tid = self._top_level_id(model)
-        if tid is None:
+        ref = self._model_ref(model)
+        if ref is None:
             return
-        idx = self.sel_star_model.findData(int(tid))
+        idx = self.sel_star_model.findData(str(ref))
         if idx >= 0:
             self.sel_star_model.setCurrentIndex(idx)
 
     def _select_map_model(self, model):
         self._refresh_model_selectors()
-        tid = self._top_level_id(model)
-        if tid is None:
+        ref = self._model_ref(model)
+        if ref is None:
             return
-        idx = self.sel_map_model.findData(int(tid))
+        idx = self.sel_map_model.findData(str(ref))
         if idx >= 0:
             self.sel_map_model.setCurrentIndex(idx)
 
+    def _select_combo_saved(self, combo, saved):
+        if combo is None or saved is None:
+            return False
+        want_id = saved.get("id", None)
+        if want_id is not None:
+            idx = combo.findData(str(want_id))
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+                return True
+        want_text = str(saved.get("text", "") or "").strip()
+        if want_text:
+            for idx in range(combo.count()):
+                if combo.itemText(idx) == want_text:
+                    combo.setCurrentIndex(idx)
+                    return True
+        return False
+
+    def _combo_state(self, combo):
+        if combo is None:
+            return {"id": None, "text": ""}
+        return {
+            "id": combo.currentData(),
+            "text": combo.currentText(),
+        }
+
+    def _generated_star_models(self):
+        out = []
+        for model in self.session.models.list():
+            rows = getattr(model, "_cb_star_rows", None)
+            if rows is None:
+                continue
+            out.append(
+                {
+                    "name": str(model.name),
+                    "rows": rows,
+                    "star_text": getattr(model, "_cb_star_text", None),
+                }
+            )
+        return out
+
+    def _ui_state(self):
+        return {
+            "angle_set": float(self.angle_set.value()),
+            "length": float(self.length.value()),
+            "n_doublet": int(self.n_doublet.value()),
+            "radius": float(self.radius.value()),
+            "spacing": float(self.spacing.value()),
+            "doublet_offset": float(self.doublet_offset.value()),
+            "random_enable": bool(self.random_enable.isChecked()),
+            "random_max_diff": float(self.random_max_diff.value()),
+            "centriole_length": float(self.centriole_length.value()),
+            "centriole_spacing": float(self.centriole_spacing.value()),
+            "centriole_z_offset": float(self.centriole_z_offset.value()),
+            "centriole_tube_id": int(self.centriole_tube_id.value()),
+            "ift_count": int(self.ift_count.value()),
+            "ift_distance": float(self.ift_distance.value()),
+            "ift_z_offset": float(self.ift_z_offset.value()),
+            "ift_line_mode": bool(self.ift_line_mode.isChecked()),
+            "pixel_size": float(self.pixel_size.value()),
+        }
+
+    def _apply_ui_state(self, state):
+        self.angle_set.setValue(float(state.get("angle_set", self.angle_set.value())))
+        self.length.setValue(float(state.get("length", self.length.value())))
+        self.n_doublet.setValue(int(state.get("n_doublet", self.n_doublet.value())))
+        self.radius.setValue(float(state.get("radius", self.radius.value())))
+        self.spacing.setValue(float(state.get("spacing", self.spacing.value())))
+        self.doublet_offset.setValue(float(state.get("doublet_offset", self.doublet_offset.value())))
+        self.random_enable.setChecked(bool(state.get("random_enable", self.random_enable.isChecked())))
+        self.random_max_diff.setValue(float(state.get("random_max_diff", self.random_max_diff.value())))
+        self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
+        self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
+        self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
+        self.centriole_tube_id.setValue(int(state.get("centriole_tube_id", self.centriole_tube_id.value())))
+        self.ift_count.setValue(int(state.get("ift_count", self.ift_count.value())))
+        self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
+        self.ift_z_offset.setValue(float(state.get("ift_z_offset", self.ift_z_offset.value())))
+        self.ift_line_mode.setChecked(bool(state.get("ift_line_mode", self.ift_line_mode.isChecked())))
+        self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
+
+    def _restore_generated_star_models(self, models_state):
+        from . import cmd
+        for item in models_state or []:
+            name = str(item.get("name", "") or "").strip()
+            rows = item.get("rows", None)
+            if not name or not rows:
+                continue
+            exists = False
+            for model in self.session.models.list():
+                if hasattr(model, "_cb_star_rows") and str(model.name) == name:
+                    exists = True
+                    break
+            if exists:
+                continue
+            created = Model(name, self.session)
+            cmd._add_to_cb_star_group(self.session, created)
+            created._cb_star_rows = rows
+            created._cb_star_text = item.get("star_text", None)
+            cmd._render_star_model(self.session, created, rows, True)
+
+    def _save_session_json(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+
+        try:
+            path, _ = QFileDialog.getSaveFileName(
+                self.tool_window.ui_area,
+                "Save CiliaBuilder2 session",
+                "ciliabuilder2_session.json",
+                "JSON files (*.json);;All files (*)",
+            )
+            if not path:
+                return
+            payload = {
+                "version": 1,
+                "ui": self._ui_state(),
+                "selected": {
+                    "star_model": self._combo_state(self.sel_star_model),
+                    "map_model": self._combo_state(self.sel_map_model),
+                    "ift_origin_model": self._combo_state(self.ift_origin_model),
+                },
+                "generated_star_models": self._generated_star_models(),
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+            self.session.logger.info(f"Saved CiliaBuilder2 session JSON: {path}")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+
+    def _load_session_json(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+
+        try:
+            path, _ = QFileDialog.getOpenFileName(
+                self.tool_window.ui_area,
+                "Load CiliaBuilder2 session",
+                "",
+                "JSON files (*.json);;All files (*)",
+            )
+            if not path:
+                return
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+
+            self._apply_ui_state(payload.get("ui", {}))
+            self._restore_generated_star_models(payload.get("generated_star_models", []))
+            self._refresh_model_selectors()
+
+            selected = payload.get("selected", {})
+            self._select_combo_saved(self.sel_star_model, selected.get("star_model"))
+            self._select_combo_saved(self.sel_map_model, selected.get("map_model"))
+            self._select_combo_saved(self.ift_origin_model, selected.get("ift_origin_model"))
+
+            self.session.logger.info(f"Loaded CiliaBuilder2 session JSON: {path}")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+
     def _is_volume_like(self, model):
-        name = model.__class__.__name__.lower()
-        if "volume" in name:
+        cls_name = model.__class__.__name__.lower()
+        model_name = str(getattr(model, "name", "") or "").lower()
+        if "volume" in cls_name or "map" in cls_name:
             return True
         try:
             d = getattr(model, "data", None)
@@ -418,6 +580,15 @@ class CiliaBuilder2Tool(ToolInstance):
                 return True
         except Exception:
             pass
+        try:
+            gd = getattr(model, "grid_data", None)
+            if gd is not None:
+                return True
+        except Exception:
+            pass
+        for ext in (".mrc", ".map", ".ccp4", ".mrcs"):
+            if model_name.endswith(ext):
+                return True
         return False
 
     def _build_outer(self, continue_mode=False):
@@ -539,7 +710,7 @@ class CiliaBuilder2Tool(ToolInstance):
             origin_id = self.ift_origin_model.currentData()
             if origin_id is None:
                 raise RuntimeError("Select an origin STAR model for IFT first")
-            origin_model = self._top_level_model_by_id(origin_id)
+            origin_model = self._model_by_ref(origin_id)
             if origin_model is None or not hasattr(origin_model, "_cb_star_rows"):
                 raise RuntimeError("Selected IFT origin model is not available")
 
@@ -629,13 +800,13 @@ class CiliaBuilder2Tool(ToolInstance):
             if map_id is None:
                 raise RuntimeError("Select a map model first")
 
-            star_model = self._top_level_model_by_id(star_id)
+            star_model = self._model_by_ref(star_id)
             if star_model is None:
                 raise RuntimeError(f"STAR model #{star_id} not found")
             if not hasattr(star_model, "_cb_star_rows"):
                 raise RuntimeError(f"Model #{star_id} is not a CiliaBuilder2 STAR model")
 
-            map_model = self._top_level_model_by_id(map_id)
+            map_model = self._model_by_ref(map_id)
             if map_model is None:
                 raise RuntimeError(f"Map model #{map_id} not found")
             if not self._is_volume_like(map_model):
@@ -646,7 +817,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 star_model_obj=star_model,
                 map_model_id=map_id,
                 close_source=False,
-                show_result=True,
+                show_result=False,
                 rotate_xy_90=True,
                 single_big_object=True,
                 attach_axis_rot_z_deg=-90.0,
