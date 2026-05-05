@@ -264,7 +264,7 @@ def _is_volume_like(model_obj):
 
 def _is_surface_like(model_obj):
     cls_name = model_obj.__class__.__name__.lower()
-    if "surface" in cls_name or "stl" in cls_name:
+    if "surface" in cls_name or "stl" in cls_name or "gltf" in cls_name or "glb" in cls_name or "mesh" in cls_name:
         return True
     try:
         vertices = getattr(model_obj, "vertices", None)
@@ -274,7 +274,7 @@ def _is_surface_like(model_obj):
     except Exception:
         pass
     model_name = str(getattr(model_obj, "name", "") or "").lower()
-    return model_name.endswith(".stl")
+    return model_name.endswith((".stl", ".glb", ".gltf"))
 
 
 def _matching_volume_for_surface(session, src_surface):

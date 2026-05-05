@@ -363,7 +363,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
-            self.sel_map_model.addItem("No map/STL models", None)
+            self.sel_map_model.addItem("No map/STL/GLB models", None)
             for m in self.session.models.list():
                 ref = self._model_ref(m)
                 if ref is None or not self._is_attach_source(m):
@@ -580,7 +580,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _is_surface_like(self, model):
         cls_name = model.__class__.__name__.lower()
-        if "surface" in cls_name or "stl" in cls_name:
+        if "surface" in cls_name or "stl" in cls_name or "gltf" in cls_name or "glb" in cls_name or "mesh" in cls_name:
             return True
         try:
             vertices = getattr(model, "vertices", None)
@@ -590,7 +590,7 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             pass
         model_name = str(getattr(model, "name", "") or "").lower()
-        return model_name.endswith(".stl")
+        return model_name.endswith((".stl", ".glb", ".gltf"))
 
     def _is_volume_like(self, model):
         cls_name = model.__class__.__name__.lower()
@@ -836,7 +836,7 @@ class CiliaBuilder2Tool(ToolInstance):
             if map_model is None:
                 raise RuntimeError(f"Map model #{map_id} not found")
             if not self._is_attach_source(map_model):
-                raise RuntimeError(f"Model #{map_id} is not a map/STL attach source")
+                raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB attach source")
 
             cbsubmap_impl(
                 session=self.session,
