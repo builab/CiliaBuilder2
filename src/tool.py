@@ -317,6 +317,18 @@ class CiliaBuilder2Tool(ToolInstance):
         tweak_source_lay.addWidget(tweak_source_browse)
         tweak_layout.addWidget(tweak_source_row)
 
+        tweak_template_row = QWidget(main)
+        tweak_template_lay = QHBoxLayout(tweak_template_row)
+        tweak_template_lay.setContentsMargins(0, 0, 0, 0)
+        tweak_template_lay.addWidget(QLabel("Template map path", tweak_template_row))
+        self.tweak_template_path = QLineEdit(tweak_template_row)
+        self.tweak_template_path.setText("/Users/qs/Downloads/triplet.mrc")
+        tweak_template_lay.addWidget(self.tweak_template_path, 1)
+        tweak_template_browse = QPushButton("Browse", tweak_template_row)
+        tweak_template_browse.clicked.connect(self._browse_tweak_template)
+        tweak_template_lay.addWidget(tweak_template_browse)
+        tweak_layout.addWidget(tweak_template_row)
+
         tweak_save_row = QWidget(main)
         tweak_save_lay = QHBoxLayout(tweak_save_row)
         tweak_save_lay.setContentsMargins(0, 0, 0, 0)
@@ -508,6 +520,17 @@ class CiliaBuilder2Tool(ToolInstance):
         if path:
             self.tweak_save_path.setText(path)
 
+    def _browse_tweak_template(self):
+        from Qt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self.tool_window.ui_area,
+            "Choose template map",
+            self.tweak_template_path.text().strip() or "",
+            "Maps (*.mrc *.map *.ccp4 *.mrcs);;All files (*)",
+        )
+        if path:
+            self.tweak_template_path.setText(path)
+
     def _restore_manual_tweak_scene(self):
         for model, visible in self._manual_tweak_hidden:
             try:
@@ -573,6 +596,46 @@ class CiliaBuilder2Tool(ToolInstance):
             or model_name.endswith((".pdb", ".cif", ".mmcif"))
         )
 
+    def _volume_voxel_size(self, model):
+        try:
+            data = getattr(model, "data", None)
+            step = getattr(data, "step", None)
+            if step is not None:
+                vals = tuple(float(s) for s in step[:3])
+                if all(abs(v) > 1e-12 for v in vals):
+                    return vals
+        except Exception:
+            pass
+        try:
+            grid = getattr(model, "grid_data", None)
+            step = getattr(grid, "step", None)
+            if step is not None:
+                vals = tuple(float(s) for s in step[:3])
+                if all(abs(v) > 1e-12 for v in vals):
+                    return vals
+        except Exception:
+            pass
+        return None
+
+    def _match_template_voxel_size_to_source(self):
+        src = self._manual_tweak_source
+        tmpl = self._manual_tweak_template
+        if src is None or tmpl is None:
+            return
+        if not self._is_volume_like(src) or not self._is_volume_like(tmpl):
+            return
+        src_step = self._volume_voxel_size(src)
+        tmpl_step = self._volume_voxel_size(tmpl)
+        if src_step is None or tmpl_step is None:
+            return
+        if all(abs(a - b) < 1e-9 for a, b in zip(src_step, tmpl_step)):
+            return
+        step_text = ",".join(f"{v:.6g}" for v in src_step)
+        _run(self.session, f"volume #{tmpl.id_string} voxelSize {step_text}")
+        self.session.logger.info(
+            f"Adjusted template voxel size from {tmpl_step} to match source voxel size {src_step}."
+        )
+
     def _prepare_manual_tweak_fit_source(self):
         src = self._manual_tweak_source
         tmpl = self._manual_tweak_template
@@ -619,11 +682,13 @@ class CiliaBuilder2Tool(ToolInstance):
 
         try:
             source_path = os.path.expanduser(self.tweak_source_path.text().strip())
-            template_path = "/Users/qs/Downloads/triplet.mrc"
+            template_path = os.path.expanduser(self.tweak_template_path.text().strip())
             if not source_path:
                 raise RuntimeError("Choose a user model path first")
             if not os.path.exists(source_path):
                 raise RuntimeError(f"User model path does not exist: {source_path}")
+            if not template_path:
+                raise RuntimeError("Choose a template map path first")
             if not os.path.exists(template_path):
                 raise RuntimeError(f"Template map not found: {template_path}")
 
@@ -658,6 +723,7 @@ class CiliaBuilder2Tool(ToolInstance):
             )
             if self._manual_tweak_source is None:
                 raise RuntimeError("Could not find opened user model geometry")
+            self._match_template_voxel_size_to_source()
 
             try:
                 self._manual_tweak_template.display = True
