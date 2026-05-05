@@ -285,6 +285,15 @@ class CiliaBuilder2Tool(ToolInstance):
         map_lay.addWidget(self.sel_map_model, 1)
         attach_select_lay.addWidget(map_row)
 
+        attach_opts_row = QWidget(main)
+        attach_opts_lay = QHBoxLayout(attach_opts_row)
+        attach_opts_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_inout_flip = QCheckBox("In/out flip", attach_opts_row)
+        self.attach_inout_flip.setChecked(False)
+        attach_opts_lay.addWidget(self.attach_inout_flip)
+        attach_opts_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_opts_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -354,10 +363,10 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
-            self.sel_map_model.addItem("No map models", None)
+            self.sel_map_model.addItem("No map/STL models", None)
             for m in self.session.models.list():
                 ref = self._model_ref(m)
-                if ref is None or not self._is_volume_like(m):
+                if ref is None or not self._is_attach_source(m):
                     continue
                 label = f"{m.name} (#{ref})"
                 self.sel_map_model.addItem(label, str(ref))
@@ -569,6 +578,20 @@ class CiliaBuilder2Tool(ToolInstance):
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
+    def _is_surface_like(self, model):
+        cls_name = model.__class__.__name__.lower()
+        if "surface" in cls_name or "stl" in cls_name:
+            return True
+        try:
+            vertices = getattr(model, "vertices", None)
+            triangles = getattr(model, "triangles", None)
+            if vertices is not None and triangles is not None:
+                return True
+        except Exception:
+            pass
+        model_name = str(getattr(model, "name", "") or "").lower()
+        return model_name.endswith(".stl")
+
     def _is_volume_like(self, model):
         cls_name = model.__class__.__name__.lower()
         model_name = str(getattr(model, "name", "") or "").lower()
@@ -590,6 +613,9 @@ class CiliaBuilder2Tool(ToolInstance):
             if model_name.endswith(ext):
                 return True
         return False
+
+    def _is_attach_source(self, model):
+        return self._is_volume_like(model) or self._is_surface_like(model)
 
     def _build_outer(self, continue_mode=False):
         from Qt.QtWidgets import QMessageBox
@@ -809,17 +835,20 @@ class CiliaBuilder2Tool(ToolInstance):
             map_model = self._model_by_ref(map_id)
             if map_model is None:
                 raise RuntimeError(f"Map model #{map_id} not found")
-            if not self._is_volume_like(map_model):
-                raise RuntimeError(f"Model #{map_id} is not volume-like")
+            if not self._is_attach_source(map_model):
+                raise RuntimeError(f"Model #{map_id} is not a map/STL attach source")
 
             cbsubmap_impl(
                 session=self.session,
                 star_model_obj=star_model,
                 map_model_id=map_id,
                 close_source=False,
-                show_result=False,
+                show_result=True,
                 rotate_xy_90=True,
                 single_big_object=True,
+                attach_auto_align_long_axis=True,
+                attach_inout_flip=bool(self.attach_inout_flip.isChecked()),
+                attach_updown_flip=True,
                 attach_axis_rot_z_deg=-90.0,
             )
             # Keep the original source map loaded for reference, but hide it.

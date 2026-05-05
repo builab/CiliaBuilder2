@@ -1,6 +1,7 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
 import math
+import os
 import numpy as np
 
 from chimerax.core.models import Model
@@ -106,6 +107,46 @@ def _rot_z(deg):
     )
 
 
+def _rotation_align_vector_to_vector(v_from, v_to):
+    v = _safe_unit(v_from)
+    z = _safe_unit(v_to)
+    c = float(np.clip(np.dot(v, z), -1.0, 1.0))
+    if c > 1.0 - 1e-8:
+        return np.eye(3, dtype=float)
+    if c < -1.0 + 1e-8:
+        return _rot_x(180.0)
+    axis = _safe_unit(np.cross(v, z))
+    x, y, zz = axis
+    s = float(np.linalg.norm(np.cross(v, z)))
+    K = np.array(
+        [
+            [0.0, -zz, y],
+            [zz, 0.0, -x],
+            [-y, x, 0.0],
+        ],
+        dtype=float,
+    )
+    return np.eye(3, dtype=float) + K + (K @ K) * ((1.0 - c) / (s * s))
+
+
+def _rotation_about_axis(axis, deg):
+    axis = _safe_unit(axis)
+    a = math.radians(float(deg))
+    c = math.cos(a)
+    s = math.sin(a)
+    x, y, z = axis
+    K = np.array(
+        [
+            [0.0, -z, y],
+            [z, 0.0, -x],
+            [-y, x, 0.0],
+        ],
+        dtype=float,
+    )
+    outer = np.outer(axis, axis)
+    return c * np.eye(3, dtype=float) + s * K + (1.0 - c) * outer
+
+
 def _relion_rotation_matrix(rot_deg, tilt_deg, psi_deg):
     """
     Relion ZYZ:
@@ -131,7 +172,7 @@ def _particle_axes_from_star(rot_deg, tilt_deg, psi_deg):
     return ex, ey, ez
 
 
-def _copy_volume_instance(session, src):
+def _copy_source_instance(session, src):
     # 1 direct copy
     try:
         if hasattr(src, "copy"):
@@ -139,31 +180,55 @@ def _copy_volume_instance(session, src):
     except Exception:
         pass
 
-    # 2 rebuild from grid data
-    grid = None
-    for attr in ("data", "grid_data"):
-        if hasattr(src, attr):
-            try:
-                grid = getattr(src, attr)
-                break
-            except Exception:
-                grid = None
-
-    if grid is not None:
+    # 1b direct surface geometry clone for STL / generic surfaces
+    if _is_surface_like(src):
         try:
-            try:
-                from chimerax.map import volume_from_grid_data
-            except Exception:
-                from chimerax.map.volume import volume_from_grid_data
-            return volume_from_grid_data(grid, session)
+            surf_type = src.__class__
+            clone = surf_type(str(getattr(src, "name", "surface copy")), session)
+            va = getattr(src, "vertices", None)
+            na = getattr(src, "normals", None)
+            ta = getattr(src, "triangles", None)
+            if va is not None and ta is not None:
+                clone.set_geometry(va, na, ta)
+                try:
+                    clone.color = src.color
+                except Exception:
+                    pass
+                return clone
         except Exception:
             pass
+
+    # 2 rebuild from grid data if this is a volume-like model
+    if _is_volume_like(src):
+        grid = None
+        for attr in ("data", "grid_data"):
+            if hasattr(src, attr):
+                try:
+                    grid = getattr(src, attr)
+                    break
+                except Exception:
+                    grid = None
+
+        if grid is not None:
+            try:
+                try:
+                    from chimerax.map import volume_from_grid_data
+                except Exception:
+                    from chimerax.map.volume import volume_from_grid_data
+                return volume_from_grid_data(grid, session)
+            except Exception:
+                pass
 
     # 3 reopen from path
     path = getattr(src, "path", None)
     if not path:
         try:
             path = src.data.path
+        except Exception:
+            path = None
+    if not path:
+        try:
+            path = src.filename
         except Exception:
             path = None
 
@@ -174,6 +239,67 @@ def _copy_volume_instance(session, src):
         except Exception:
             return None
 
+    return None
+
+
+def _is_volume_like(model_obj):
+    cls_name = model_obj.__class__.__name__.lower()
+    if "volume" in cls_name or "map" in cls_name:
+        return True
+    try:
+        d = getattr(model_obj, "data", None)
+        if d is not None and hasattr(d, "matrix"):
+            return True
+    except Exception:
+        pass
+    try:
+        gd = getattr(model_obj, "grid_data", None)
+        if gd is not None:
+            return True
+    except Exception:
+        pass
+    model_name = str(getattr(model_obj, "name", "") or "").lower()
+    return model_name.endswith((".mrc", ".map", ".ccp4", ".mrcs"))
+
+
+def _is_surface_like(model_obj):
+    cls_name = model_obj.__class__.__name__.lower()
+    if "surface" in cls_name or "stl" in cls_name:
+        return True
+    try:
+        vertices = getattr(model_obj, "vertices", None)
+        triangles = getattr(model_obj, "triangles", None)
+        if vertices is not None and triangles is not None:
+            return True
+    except Exception:
+        pass
+    model_name = str(getattr(model_obj, "name", "") or "").lower()
+    return model_name.endswith(".stl")
+
+
+def _matching_volume_for_surface(session, src_surface):
+    names = []
+    src_name = str(getattr(src_surface, "name", "") or "")
+    if src_name:
+        names.append(os.path.splitext(os.path.basename(src_name))[0].lower())
+    src_path = getattr(src_surface, "path", None)
+    if src_path:
+        names.append(os.path.splitext(os.path.basename(str(src_path)))[0].lower())
+    want = {n for n in names if n}
+    if not want:
+        return None
+    for model in session.models.list():
+        if model is src_surface or not _is_volume_like(model):
+            continue
+        candidates = []
+        model_name = str(getattr(model, "name", "") or "")
+        if model_name:
+            candidates.append(os.path.splitext(os.path.basename(model_name))[0].lower())
+        model_path = getattr(model, "path", None)
+        if model_path:
+            candidates.append(os.path.splitext(os.path.basename(str(model_path)))[0].lower())
+        if any(c in want for c in candidates if c):
+            return model
     return None
 
 
@@ -263,6 +389,48 @@ def _bounds_center_local(model_obj):
             return np.array([0.0, 0.0, 0.0], dtype=float)
 
 
+def _bounds_size_local(model_obj):
+    try:
+        model_obj.position = Place()
+    except Exception:
+        pass
+    try:
+        b = model_obj.bounds()
+    except Exception:
+        b = None
+    if b is None:
+        return np.array([1.0, 1.0, 1.0], dtype=float)
+    try:
+        mn = np.array([float(v) for v in b.xyz_min], dtype=float)
+        mx = np.array([float(v) for v in b.xyz_max], dtype=float)
+        d = mx - mn
+        if np.all(np.isfinite(d)):
+            return np.abs(d)
+    except Exception:
+        pass
+    return np.array([1.0, 1.0, 1.0], dtype=float)
+
+
+def _long_axis_vector_local(model_obj):
+    try:
+        vertices = getattr(model_obj, "vertices", None)
+        if vertices is not None and len(vertices) >= 3:
+            va = np.array(vertices, dtype=float)
+            center = va.mean(axis=0)
+            dv = va - center
+            cov = dv.T @ dv
+            evals, evecs = np.linalg.eigh(cov)
+            axis = evecs[:, int(np.argmax(evals))]
+            return _safe_unit(axis)
+    except Exception:
+        pass
+
+    size = _bounds_size_local(model_obj)
+    axis = int(np.argmax(size))
+    basis = np.eye(3, dtype=float)
+    return basis[:, axis]
+
+
 def _map_data_origin_local(vol):
     for owner in (getattr(vol, "data", None), getattr(vol, "grid_data", None)):
         if owner is None:
@@ -282,7 +450,7 @@ def _shared_map_anchor_local(session, src_map):
     Use the map's own offset if it has one; otherwise use ChimeraX's built-in
     density center-of-mass for the selected map. Compute once and reuse.
     """
-    probe = _copy_volume_instance(session, src_map)
+    probe = _copy_source_instance(session, src_map)
     if probe is None:
         return np.array([0.0, 0.0, 0.0], dtype=float)
     try:
@@ -309,12 +477,48 @@ def _shared_map_anchor_local(session, src_map):
             pass
 
 
+def _shared_source_anchor_local(session, src_model):
+    if _is_volume_like(src_model):
+        return _shared_map_anchor_local(session, src_model)
+
+    if _is_surface_like(src_model):
+        match = _matching_volume_for_surface(session, src_model)
+        if match is not None:
+            return _shared_map_anchor_local(session, match)
+        probe = _copy_source_instance(session, src_model)
+        if probe is not None:
+            try:
+                return _bounds_center_local(probe)
+            finally:
+                try:
+                    session.models.close([probe])
+                except Exception:
+                    pass
+        return _bounds_center_local(src_model)
+
+    return np.array([0.0, 0.0, 0.0], dtype=float)
+
+
 def _calibration_rotation_matrix(rx_deg=CALIB_ROT_X_DEG, ry_deg=CALIB_ROT_Y_DEG, rz_deg=CALIB_ROT_Z_DEG):
     return (
         _rot_z(rz_deg)
         @ _rot_y(ry_deg)
         @ _rot_x(rx_deg)
     )
+
+
+def _source_long_axis_local(session, src_model):
+    probe = _copy_source_instance(session, src_model)
+    if probe is None:
+        return np.array([0.0, 0.0, 1.0], dtype=float)
+    try:
+        axis = _long_axis_vector_local(probe)
+    finally:
+        try:
+            session.models.close([probe])
+        except Exception:
+            pass
+    return _safe_unit(axis)
 
 
 def cbsubmap_impl(
@@ -330,6 +534,9 @@ def cbsubmap_impl(
     attach_z_offset_deg=0.0,
     attach_all_z_offset_deg=0.0,
     attach_vertical_shift=0.0,
+    attach_auto_align_long_axis=False,
+    attach_inout_flip=False,
+    attach_updown_flip=False,
     attach_axis_rot_x_deg=CALIB_ROT_X_DEG,
     attach_axis_rot_y_deg=CALIB_ROT_Y_DEG,
     attach_axis_rot_z_deg=CALIB_ROT_Z_DEG,
@@ -354,7 +561,8 @@ def cbsubmap_impl(
     except Exception:
         pass
 
-    map_vox_ang = float(_get_map_voxel_size_ang(src_map))
+    source_is_volume = _is_volume_like(src_map)
+    map_vox_ang = float(_get_map_voxel_size_ang(src_map)) if source_is_volume else 1.0
     if map_vox_ang < 1e-12:
         map_vox_ang = 1.0
 
@@ -371,7 +579,8 @@ def cbsubmap_impl(
         rz_deg=float(attach_axis_rot_z_deg),
     )
     calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
-    shared_anchor = _shared_map_anchor_local(session, src_map)
+    shared_anchor = _shared_source_anchor_local(session, src_map)
+    source_long_axis = _source_long_axis_local(session, src_map) if bool(attach_auto_align_long_axis) else None
 
     placed = 0
     places = []
@@ -411,19 +620,20 @@ def cbsubmap_impl(
             r.get("rlnAngleTilt", 0.0),
             r.get("rlnAnglePsi", 0.0),
         )
+        display_blue_axis = _safe_unit(ez)
         Rp = np.column_stack((ex, ey, ez))
 
         # Copy map
         if bool(single_big_object):
             if base_copy is None:
-                base_copy = _copy_volume_instance(session, src_map)
+                base_copy = _copy_source_instance(session, src_map)
                 if base_copy is None:
-                    raise RuntimeError("cbsubmap could not create a volume instance from the source map")
+                    raise RuntimeError("cbsubmap could not create an instance from the source model")
             mcopy = base_copy
         else:
-            mcopy = _copy_volume_instance(session, src_map)
+            mcopy = _copy_source_instance(session, src_map)
             if mcopy is None:
-                raise RuntimeError("cbsubmap could not create a volume instance from the source map")
+                raise RuntimeError("cbsubmap could not create an instance from the source model")
 
         # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
         local_anchor = shared_anchor + calib_shift
@@ -432,8 +642,11 @@ def cbsubmap_impl(
         effective_particle_px_ang = float(particle_px_ang) * float(PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP)
         if effective_particle_px_ang < 1e-12:
             effective_particle_px_ang = float(particle_px_ang)
-        base_scale = float(map_vox_ang) / float(effective_particle_px_ang)
-        base_scale *= float(attach_pixel_scale)
+        if source_is_volume:
+            base_scale = float(map_vox_ang) / float(effective_particle_px_ang)
+            base_scale *= float(attach_pixel_scale)
+        else:
+            base_scale = 1.0
         scale = base_scale * float(CALIB_SCALE)
         if scale < 1e-12:
             scale = 1.0
@@ -446,6 +659,8 @@ def cbsubmap_impl(
         if bool(rotate_xy_90):
             # +90 degrees in the local XY plane (about local Z).
             exw, eyw = eyw, -exw
+        if bool(attach_inout_flip):
+            exw, eyw = -exw, -eyw
         try:
             tid = int(float(r.get("rlnHelicalTubeID", 0)))
         except Exception:
@@ -462,6 +677,17 @@ def cbsubmap_impl(
             ey0 = eyw.copy()
             exw = ex0 * ca - ey0 * sa
             eyw = ex0 * sa + ey0 * ca
+        if source_long_axis is not None:
+            current_long_world = _safe_unit(
+                source_long_axis[0] * exw
+                + source_long_axis[1] * eyw
+                + source_long_axis[2] * ezw
+            )
+            target_long_world = -display_blue_axis if bool(attach_updown_flip) else display_blue_axis
+            Ralign = _rotation_align_vector_to_vector(current_long_world, target_long_world)
+            exw = Ralign @ exw
+            eyw = Ralign @ eyw
+            ezw = Ralign @ ezw
 
         # Make chosen local anchor land exactly on STAR point
         origin = (
@@ -516,7 +742,7 @@ def cbsubmap_impl(
             except Exception:
                 session.models.add([out_root])
             for i, p in enumerate(places):
-                mcopy = _copy_volume_instance(session, src_map)
+                mcopy = _copy_source_instance(session, src_map)
                 if mcopy is None:
                     continue
                 try:
@@ -536,6 +762,10 @@ def cbsubmap_impl(
 
     try:
         out_root.display = bool(show_result)
+    except Exception:
+        pass
+    try:
+        out_root.set_selected(True)
     except Exception:
         pass
 
