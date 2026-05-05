@@ -2,6 +2,7 @@
 
 import json
 import math
+import os
 
 from chimerax.core.tools import ToolInstance
 from chimerax.core.commands import run as _run
@@ -21,6 +22,11 @@ class CiliaBuilder2Tool(ToolInstance):
 
         self._last_outer_star_model = None
         self._last_cent_star_model = None
+        self._manual_tweak_hidden = []
+        self._manual_tweak_template = None
+        self._manual_tweak_source = None
+        self._manual_tweak_fit_source = None
+        self._manual_tweak_resampled = None
 
         self.tool_window = None
         self._build_ui()
@@ -39,6 +45,7 @@ class CiliaBuilder2Tool(ToolInstance):
             QPushButton,
             QCheckBox,
             QFileDialog,
+            QLineEdit,
         )
         from chimerax.ui import MainToolWindow
 
@@ -285,15 +292,6 @@ class CiliaBuilder2Tool(ToolInstance):
         map_lay.addWidget(self.sel_map_model, 1)
         attach_select_lay.addWidget(map_row)
 
-        attach_opts_row = QWidget(main)
-        attach_opts_lay = QHBoxLayout(attach_opts_row)
-        attach_opts_lay.setContentsMargins(0, 0, 0, 0)
-        self.attach_inout_flip = QCheckBox("In/out flip", attach_opts_row)
-        self.attach_inout_flip.setChecked(False)
-        attach_opts_lay.addWidget(self.attach_inout_flip)
-        attach_opts_lay.addStretch(1)
-        attach_select_lay.addWidget(attach_opts_row)
-
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -304,6 +302,45 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_select_lay.addWidget(sel_btn_row)
 
         main_layout.addWidget(attach_select)
+
+        tweak_box = QGroupBox("Manual tweak to template", main)
+        tweak_layout = QVBoxLayout(tweak_box)
+
+        tweak_source_row = QWidget(main)
+        tweak_source_lay = QHBoxLayout(tweak_source_row)
+        tweak_source_lay.setContentsMargins(0, 0, 0, 0)
+        tweak_source_lay.addWidget(QLabel("User model path", tweak_source_row))
+        self.tweak_source_path = QLineEdit(tweak_source_row)
+        tweak_source_lay.addWidget(self.tweak_source_path, 1)
+        tweak_source_browse = QPushButton("Browse", tweak_source_row)
+        tweak_source_browse.clicked.connect(self._browse_tweak_source)
+        tweak_source_lay.addWidget(tweak_source_browse)
+        tweak_layout.addWidget(tweak_source_row)
+
+        tweak_save_row = QWidget(main)
+        tweak_save_lay = QHBoxLayout(tweak_save_row)
+        tweak_save_lay.setContentsMargins(0, 0, 0, 0)
+        tweak_save_lay.addWidget(QLabel("Save tweaked path", tweak_save_row))
+        self.tweak_save_path = QLineEdit(tweak_save_row)
+        tweak_save_lay.addWidget(self.tweak_save_path, 1)
+        tweak_save_browse = QPushButton("Browse", tweak_save_row)
+        tweak_save_browse.clicked.connect(self._browse_tweak_save)
+        tweak_save_lay.addWidget(tweak_save_browse)
+        tweak_layout.addWidget(tweak_save_row)
+
+        tweak_btn_row = QWidget(main)
+        tweak_btn_lay = QHBoxLayout(tweak_btn_row)
+        tweak_btn_lay.setContentsMargins(0, 0, 0, 0)
+        tweak_start_btn = QPushButton("Start tweak", tweak_btn_row)
+        tweak_start_btn.clicked.connect(self._start_manual_tweak)
+        tweak_btn_lay.addWidget(tweak_start_btn)
+        tweak_finish_btn = QPushButton("Finish tweak", tweak_btn_row)
+        tweak_finish_btn.clicked.connect(self._finish_manual_tweak)
+        tweak_btn_lay.addWidget(tweak_finish_btn)
+        tweak_btn_lay.addStretch(1)
+        tweak_layout.addWidget(tweak_btn_row)
+
+        main_layout.addWidget(tweak_box)
 
         scroll = QScrollArea(parent)
         scroll.setWidgetResizable(True)
@@ -321,6 +358,33 @@ class CiliaBuilder2Tool(ToolInstance):
     def _model_ref(self, model):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
+
+    def _model_parent(self, model):
+        try:
+            return model.parent
+        except Exception:
+            return None
+
+    def _is_generated_attached_model(self, model):
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_generated_attached", False):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
+    def _is_selector_attach_source(self, model):
+        if not self._is_attach_source(model):
+            return False
+        if self._is_generated_attached_model(model):
+            return False
+        if self._is_surface_like(model):
+            parent = self._model_parent(model)
+            if parent is not None and self._is_attach_source(parent):
+                return False
+        return True
 
     def _model_by_ref(self, model_id):
         want = str(model_id)
@@ -363,10 +427,10 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
-            self.sel_map_model.addItem("No map/STL/GLB models", None)
+            self.sel_map_model.addItem("No original map/STL/GLB models", None)
             for m in self.session.models.list():
                 ref = self._model_ref(m)
-                if ref is None or not self._is_attach_source(m):
+                if ref is None or not self._is_selector_attach_source(m):
                     continue
                 label = f"{m.name} (#{ref})"
                 self.sel_map_model.addItem(label, str(ref))
@@ -419,6 +483,258 @@ class CiliaBuilder2Tool(ToolInstance):
         idx = self.sel_map_model.findData(str(ref))
         if idx >= 0:
             self.sel_map_model.setCurrentIndex(idx)
+
+    def _browse_tweak_source(self):
+        from Qt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self.tool_window.ui_area,
+            "Choose user model to tweak",
+            "",
+            "Models (*.mrc *.map *.ccp4 *.mrcs *.stl *.glb *.gltf *.pdb *.cif *.mmcif);;All files (*)",
+        )
+        if path:
+            self.tweak_source_path.setText(path)
+            base = os.path.splitext(os.path.basename(path))[0]
+            self.tweak_save_path.setText(os.path.expanduser(f"~/{base}_tweaked.mrc"))
+
+    def _browse_tweak_save(self):
+        from Qt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getSaveFileName(
+            self.tool_window.ui_area,
+            "Save tweaked model",
+            self.tweak_save_path.text().strip() or os.path.expanduser("~/tweaked_model.mrc"),
+            "MRC files (*.mrc);;All files (*)",
+        )
+        if path:
+            self.tweak_save_path.setText(path)
+
+    def _restore_manual_tweak_scene(self):
+        for model, visible in self._manual_tweak_hidden:
+            try:
+                model.display = bool(visible)
+            except Exception:
+                pass
+        self._manual_tweak_hidden = []
+
+    def _close_manual_tweak_models(self):
+        for model in (
+            self._manual_tweak_template,
+            self._manual_tweak_source,
+            self._manual_tweak_fit_source,
+            self._manual_tweak_resampled,
+        ):
+            if model is None:
+                continue
+            try:
+                self.session.models.close([model])
+            except Exception:
+                pass
+        self._manual_tweak_template = None
+        self._manual_tweak_source = None
+        self._manual_tweak_fit_source = None
+        self._manual_tweak_resampled = None
+
+    def _command_created_models(self, command):
+        before = set(self.session.models.list())
+        _run(self.session, command)
+        return [m for m in self.session.models.list() if m not in before]
+
+    def _iter_model_tree(self, model):
+        yield model
+        try:
+            children = list(model.child_models())
+        except Exception:
+            children = []
+        for child in children:
+            yield from self._iter_model_tree(child)
+
+    def _pick_opened_model(self, opened_models, predicate):
+        for model in opened_models:
+            for candidate in self._iter_model_tree(model):
+                try:
+                    if predicate(candidate):
+                        return candidate
+                except Exception:
+                    pass
+        return None
+
+    def _is_atomic_like(self, model):
+        try:
+            atoms = getattr(model, "atoms", None)
+            if atoms is not None and len(atoms) > 0:
+                return True
+        except Exception:
+            pass
+        cls_name = model.__class__.__name__.lower()
+        model_name = str(getattr(model, "name", "") or "").lower()
+        return (
+            "structure" in cls_name
+            or "atomic" in cls_name
+            or model_name.endswith((".pdb", ".cif", ".mmcif"))
+        )
+
+    def _prepare_manual_tweak_fit_source(self):
+        src = self._manual_tweak_source
+        tmpl = self._manual_tweak_template
+        if src is None or tmpl is None:
+            raise RuntimeError("Manual tweak models are not loaded")
+
+        if self._is_volume_like(src):
+            return src
+
+        if self._is_atomic_like(src):
+            created = self._command_created_models(
+                f"molmap #{src.id_string} 10 onGrid #{tmpl.id_string} replace false"
+            )
+            if not created:
+                raise RuntimeError("molmap did not create a temporary fit map")
+            fit_src = self._pick_opened_model(created, self._is_volume_like)
+            if fit_src is None:
+                raise RuntimeError("molmap did not create a usable temporary fit map")
+            try:
+                fit_src.display = True
+            except Exception:
+                pass
+            return fit_src
+
+        if self._is_surface_like(src):
+            created = self._command_created_models(
+                f"volume onesmask #{src.id_string} onGrid #{tmpl.id_string}"
+            )
+            if not created:
+                raise RuntimeError("volume onesmask did not create a temporary fit map")
+            fit_src = self._pick_opened_model(created, self._is_volume_like)
+            if fit_src is None:
+                raise RuntimeError("volume onesmask did not create a usable temporary fit map")
+            try:
+                fit_src.display = True
+            except Exception:
+                pass
+            return fit_src
+
+        raise RuntimeError("Manual tweak supports map, STL/GLB surface, and PDB-like atomic models")
+
+    def _start_manual_tweak(self):
+        from Qt.QtWidgets import QMessageBox
+
+        try:
+            source_path = os.path.expanduser(self.tweak_source_path.text().strip())
+            template_path = "/Users/qs/Downloads/triplet.mrc"
+            if not source_path:
+                raise RuntimeError("Choose a user model path first")
+            if not os.path.exists(source_path):
+                raise RuntimeError(f"User model path does not exist: {source_path}")
+            if not os.path.exists(template_path):
+                raise RuntimeError(f"Template map not found: {template_path}")
+
+            self._close_manual_tweak_models()
+            self._restore_manual_tweak_scene()
+
+            self._manual_tweak_hidden = []
+            for model in self.session.models.list():
+                try:
+                    self._manual_tweak_hidden.append((model, bool(model.display)))
+                    model.display = False
+                except Exception:
+                    pass
+
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{template_path}"')
+            template_new = [m for m in self.session.models.list() if m not in before]
+            if not template_new:
+                raise RuntimeError("Could not open template map")
+            self._manual_tweak_template = self._pick_opened_model(template_new, self._is_volume_like)
+            if self._manual_tweak_template is None:
+                raise RuntimeError("Could not find opened template map volume")
+
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{source_path}"')
+            source_new = [m for m in self.session.models.list() if m not in before]
+            if not source_new:
+                raise RuntimeError("Could not open user model")
+            self._manual_tweak_source = self._pick_opened_model(
+                source_new,
+                lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
+            )
+            if self._manual_tweak_source is None:
+                raise RuntimeError("Could not find opened user model geometry")
+
+            try:
+                self._manual_tweak_template.display = True
+                self._manual_tweak_source.display = True
+            except Exception:
+                pass
+
+            _run(self.session, f"select #{self._manual_tweak_source.id_string}")
+            _run(self.session, "view")
+            self.session.logger.info(
+                "Manual tweak started. Rotate the selected user model with right mouse, then click Finish tweak."
+            )
+        except Exception as e:
+            self._close_manual_tweak_models()
+            self._restore_manual_tweak_scene()
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+
+    def _finish_manual_tweak(self):
+        from Qt.QtWidgets import QMessageBox
+
+        try:
+            if self._manual_tweak_template is None or self._manual_tweak_source is None:
+                raise RuntimeError("Start manual tweak first")
+            if not self._is_volume_like(self._manual_tweak_template):
+                raise RuntimeError("Template model must be a volume map")
+
+            save_path = os.path.expanduser(self.tweak_save_path.text().strip())
+            if not save_path:
+                raise RuntimeError("Choose a save path for the tweaked model")
+
+            self._manual_tweak_fit_source = self._prepare_manual_tweak_fit_source()
+
+            _run(
+                self.session,
+                f"fitmap #{self._manual_tweak_fit_source.id_string} inMap #{self._manual_tweak_template.id_string}",
+            )
+
+            resampled_new = self._command_created_models(
+                f"volume resample #{self._manual_tweak_fit_source.id_string} onGrid #{self._manual_tweak_template.id_string}"
+            )
+            if not resampled_new:
+                raise RuntimeError("volume resample did not create a new model")
+            self._manual_tweak_resampled = self._pick_opened_model(resampled_new, self._is_volume_like)
+            if self._manual_tweak_resampled is None:
+                raise RuntimeError("volume resample did not create a usable map")
+
+            save_dir = os.path.dirname(save_path)
+            if save_dir and not os.path.exists(save_dir):
+                os.makedirs(save_dir, exist_ok=True)
+
+            _run(self.session, f'save "{save_path}" #{self._manual_tweak_resampled.id_string}')
+
+            self._close_manual_tweak_models()
+            self._restore_manual_tweak_scene()
+
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{save_path}"')
+            reopened = [m for m in self.session.models.list() if m not in before]
+            if reopened:
+                tweaked_model = reopened[-1]
+                try:
+                    from .cmd import _add_to_cb_map_group
+                    _add_to_cb_map_group(self.session, tweaked_model)
+                except Exception:
+                    pass
+                tweaked_model._cb_attach_source = True
+                try:
+                    tweaked_model.display = True
+                except Exception:
+                    pass
+                self._select_map_model(tweaked_model)
+            self._refresh_model_selectors()
+            self.session.logger.info(f"Manual tweak finished and saved: {save_path}")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
 
     def _select_combo_saved(self, combo, saved):
         if combo is None or saved is None:
@@ -846,9 +1162,9 @@ class CiliaBuilder2Tool(ToolInstance):
                 show_result=True,
                 rotate_xy_90=True,
                 single_big_object=True,
-                attach_auto_align_long_axis=True,
-                attach_inout_flip=bool(self.attach_inout_flip.isChecked()),
-                attach_updown_flip=True,
+                attach_auto_align_long_axis=False,
+                attach_inout_flip=False,
+                attach_updown_flip=False,
                 attach_axis_rot_z_deg=-90.0,
             )
             # Keep the original source map loaded for reference, but hide it.

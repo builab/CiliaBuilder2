@@ -555,6 +555,7 @@ def cbsubmap_impl(
     if src_map is None:
         session.logger.error("cbsubmap cannot find map_model by that id")
         return None
+    src_map._cb_attach_source = True
     try:
         from .cmd import _add_to_cb_map_group
         _add_to_cb_map_group(session, src_map)
@@ -566,7 +567,10 @@ def cbsubmap_impl(
     if map_vox_ang < 1e-12:
         map_vox_ang = 1.0
 
-    out_root = Model(f"{star_model_obj.name} maps", session)
+    source_name = str(getattr(src_map, "name", "source")).strip() or "source"
+    out_root = Model(f"{star_model_obj.name} <- {source_name}", session)
+    out_root._cb_generated_attached = True
+    out_root._cb_attach_source = False
     try:
         from .cmd import _add_to_cb_map_group
         _add_to_cb_map_group(session, out_root)
@@ -727,7 +731,8 @@ def cbsubmap_impl(
         if Places is not None:
             try:
                 base_copy.positions = Places(places)
-                base_copy.name = f"Attached_All_{len(places)}"
+                base_copy.name = f"{source_name} placed on {star_model_obj.name}"
+                base_copy._cb_generated_attached = True
                 session.models.add([base_copy], parent=out_root)
                 single_added = True
             except Exception:
@@ -735,7 +740,9 @@ def cbsubmap_impl(
         if not single_added:
             # Fallback if volume instancing is unavailable in current runtime.
             session.models.close([out_root])
-            out_root = Model(f"{star_model_obj.name} maps", session)
+            out_root = Model(f"{star_model_obj.name} <- {source_name}", session)
+            out_root._cb_generated_attached = True
+            out_root._cb_attach_source = False
             try:
                 from .cmd import _add_to_cb_map_group
                 _add_to_cb_map_group(session, out_root)
