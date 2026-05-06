@@ -540,6 +540,7 @@ def cbsubmap_impl(
     attach_axis_rot_x_deg=CALIB_ROT_X_DEG,
     attach_axis_rot_y_deg=CALIB_ROT_Y_DEG,
     attach_axis_rot_z_deg=CALIB_ROT_Z_DEG,
+    attach_local_adjust_matrix=None,
 ):
     """
     Deep-fix placement pipeline
@@ -577,11 +578,21 @@ def cbsubmap_impl(
     except Exception:
         session.models.add([out_root])
 
+    # Keep the user-facing Y rotation separate from the fixed calibration
+    # so Attachment Y rotation defines a new local model orientation first,
+    # and Attachment Z offset then rotates that result in the line plane.
     Rc = _calibration_rotation_matrix(
         rx_deg=float(attach_axis_rot_x_deg),
-        ry_deg=float(attach_axis_rot_y_deg),
+        ry_deg=0.0,
         rz_deg=float(attach_axis_rot_z_deg),
     )
+    extra_local_y_deg = float(attach_axis_rot_y_deg)
+    local_adjust = None
+    if attach_local_adjust_matrix is not None:
+        try:
+            local_adjust = np.array(attach_local_adjust_matrix, dtype=float).reshape((3, 3))
+        except Exception:
+            local_adjust = None
     calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
     shared_anchor = _shared_source_anchor_local(session, src_map)
     source_long_axis = _source_long_axis_local(session, src_map) if bool(attach_auto_align_long_axis) else None
@@ -665,6 +676,16 @@ def cbsubmap_impl(
             exw, eyw = eyw, -exw
         if bool(attach_inout_flip):
             exw, eyw = -exw, -eyw
+        if abs(extra_local_y_deg) > 1e-12:
+            By = np.column_stack((exw, eyw, ezw)) @ _rot_y(extra_local_y_deg)
+            exw = By[:, 0]
+            eyw = By[:, 1]
+            ezw = By[:, 2]
+        if local_adjust is not None:
+            Ba = np.column_stack((exw, eyw, ezw)) @ local_adjust
+            exw = Ba[:, 0]
+            eyw = Ba[:, 1]
+            ezw = Ba[:, 2]
         try:
             tid = int(float(r.get("rlnHelicalTubeID", 0)))
         except Exception:

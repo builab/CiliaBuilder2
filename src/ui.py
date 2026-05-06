@@ -111,7 +111,7 @@ class CiliaBuilder2Panel(ToolInstance):
         self.pixel_size = QDoubleSpinBox()
         self.pixel_size.setRange(0.0001, 1e6)
         self.pixel_size.setDecimals(4)
-        self.pixel_size.setValue(10.0)
+        self.pixel_size.setValue(1.0)
 
         self.star_format = QComboBox()
         self.star_format.addItem("RELION STAR file")

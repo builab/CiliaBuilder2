@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import numpy as np
 
 from chimerax.core.tools import ToolInstance
 from chimerax.core.commands import run as _run
@@ -27,7 +28,11 @@ class CiliaBuilder2Tool(ToolInstance):
         self._manual_tweak_source = None
         self._manual_tweak_fit_source = None
         self._manual_tweak_resampled = None
-
+        self._manual_tweak_source_is_external = False
+        self._last_attached_result = None
+        self._last_attach_star_id = None
+        self._last_attach_map_id = None
+        self._attach_rebuild_in_progress = False
         self.tool_window = None
         self._build_ui()
 
@@ -230,7 +235,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.pixel_size = QDoubleSpinBox(pixel_row)
         self.pixel_size.setRange(1e-6, 1e9)
         self.pixel_size.setDecimals(6)
-        self.pixel_size.setValue(10.0)
+        self.pixel_size.setValue(1.0)
         pixel_lay.addWidget(self.pixel_size)
         pixel_lay.addStretch(1)
         main_layout.addWidget(pixel_row)
@@ -292,6 +297,34 @@ class CiliaBuilder2Tool(ToolInstance):
         map_lay.addWidget(self.sel_map_model, 1)
         attach_select_lay.addWidget(map_row)
 
+        attach_rot_row = QWidget(main)
+        attach_rot_lay = QHBoxLayout(attach_rot_row)
+        attach_rot_lay.setContentsMargins(0, 0, 0, 0)
+        attach_rot_lay.addWidget(QLabel("Attachment Z offset (deg)", attach_rot_row))
+        self.attach_line_rotation = QDoubleSpinBox(attach_rot_row)
+        self.attach_line_rotation.setRange(-360.0, 360.0)
+        self.attach_line_rotation.setDecimals(2)
+        self.attach_line_rotation.setSingleStep(1.0)
+        self.attach_line_rotation.setValue(0.0)
+        self.attach_line_rotation.valueChanged.connect(self._reattach_with_current_settings)
+        attach_rot_lay.addWidget(self.attach_line_rotation)
+        attach_rot_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_rot_row)
+
+        attach_y_row = QWidget(main)
+        attach_y_lay = QHBoxLayout(attach_y_row)
+        attach_y_lay.setContentsMargins(0, 0, 0, 0)
+        attach_y_lay.addWidget(QLabel("Attachment Y rotation (deg)", attach_y_row))
+        self.attach_y_rotation = QDoubleSpinBox(attach_y_row)
+        self.attach_y_rotation.setRange(-360.0, 360.0)
+        self.attach_y_rotation.setDecimals(2)
+        self.attach_y_rotation.setSingleStep(1.0)
+        self.attach_y_rotation.setValue(0.0)
+        self.attach_y_rotation.valueChanged.connect(self._reattach_with_current_settings)
+        attach_y_lay.addWidget(self.attach_y_rotation)
+        attach_y_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_y_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -306,10 +339,20 @@ class CiliaBuilder2Tool(ToolInstance):
         tweak_box = QGroupBox("Manual tweak to template", main)
         tweak_layout = QVBoxLayout(tweak_box)
 
+        tweak_open_row = QWidget(main)
+        tweak_open_lay = QHBoxLayout(tweak_open_row)
+        tweak_open_lay.setContentsMargins(0, 0, 0, 0)
+        tweak_open_lay.addWidget(QLabel("Open model", tweak_open_row))
+        self.tweak_open_model = RefreshingComboBox(self._refresh_model_selectors, tweak_open_row)
+        self.tweak_open_model.setMinimumContentsLength(24)
+        self.tweak_open_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        tweak_open_lay.addWidget(self.tweak_open_model, 1)
+        tweak_layout.addWidget(tweak_open_row)
+
         tweak_source_row = QWidget(main)
         tweak_source_lay = QHBoxLayout(tweak_source_row)
         tweak_source_lay.setContentsMargins(0, 0, 0, 0)
-        tweak_source_lay.addWidget(QLabel("User model path", tweak_source_row))
+        tweak_source_lay.addWidget(QLabel("Or user model path", tweak_source_row))
         self.tweak_source_path = QLineEdit(tweak_source_row)
         tweak_source_lay.addWidget(self.tweak_source_path, 1)
         tweak_source_browse = QPushButton("Browse", tweak_source_row)
@@ -370,6 +413,42 @@ class CiliaBuilder2Tool(ToolInstance):
     def _model_ref(self, model):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
+
+    def _rot_y_matrix(self, deg):
+        a = math.radians(float(deg))
+        c = math.cos(a)
+        s = math.sin(a)
+        return np.array(
+            [[c, 0.0, s],
+             [0.0, 1.0, 0.0],
+             [-s, 0.0, c]],
+            dtype=float,
+        )
+
+    def _rot_z_matrix(self, deg):
+        a = math.radians(float(deg))
+        c = math.cos(a)
+        s = math.sin(a)
+        return np.array(
+            [[c, -s, 0.0],
+             [s,  c, 0.0],
+             [0.0, 0.0, 1.0]],
+            dtype=float,
+        )
+
+    def _xy90_adjust_matrix(self):
+        return self._rot_z_matrix(90.0)
+
+    def _y_control_matrix(self, deg):
+        m = self._xy90_adjust_matrix()
+        return m.T @ self._rot_y_matrix(deg) @ m
+
+    def _current_attach_adjust_matrix(self):
+        adjust = np.eye(3, dtype=float)
+        y_deg = float(self.attach_y_rotation.value())
+        if abs(y_deg) > 1e-12:
+            adjust = adjust @ self._y_control_matrix(y_deg)
+        return adjust
 
     def _model_parent(self, model):
         try:
@@ -475,6 +554,30 @@ class CiliaBuilder2Tool(ToolInstance):
             self.ift_origin_model.setEnabled(bool(star_items))
             self.ift_origin_model.blockSignals(False)
 
+        if hasattr(self, "tweak_open_model"):
+            tweak_current = self.tweak_open_model.currentData()
+            self.tweak_open_model.blockSignals(True)
+            self.tweak_open_model.clear()
+            self.tweak_open_model.addItem("No open map/STL/GLB models", None)
+            tweak_has_models = False
+            for m in self.session.models.list():
+                ref = self._model_ref(m)
+                if ref is None or not self._is_selector_attach_source(m):
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.tweak_open_model.addItem(label, str(ref))
+                tweak_has_models = True
+            if tweak_current is not None:
+                idx = self.tweak_open_model.findData(str(tweak_current))
+                if idx >= 0:
+                    self.tweak_open_model.setCurrentIndex(idx)
+                else:
+                    self.tweak_open_model.setCurrentIndex(1 if self.tweak_open_model.count() > 1 else 0)
+            else:
+                self.tweak_open_model.setCurrentIndex(1 if self.tweak_open_model.count() > 1 else 0)
+            self.tweak_open_model.setEnabled(tweak_has_models)
+            self.tweak_open_model.blockSignals(False)
+
         if hasattr(self, "attach_selected_btn"):
             self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
 
@@ -495,6 +598,17 @@ class CiliaBuilder2Tool(ToolInstance):
         idx = self.sel_map_model.findData(str(ref))
         if idx >= 0:
             self.sel_map_model.setCurrentIndex(idx)
+
+    def _browse_tweak_template(self):
+        from Qt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self.tool_window.ui_area,
+            "Choose template map",
+            self.tweak_template_path.text().strip() or "",
+            "Maps (*.mrc *.map *.ccp4 *.mrcs);;All files (*)",
+        )
+        if path:
+            self.tweak_template_path.setText(path)
 
     def _browse_tweak_source(self):
         from Qt.QtWidgets import QFileDialog
@@ -520,17 +634,6 @@ class CiliaBuilder2Tool(ToolInstance):
         if path:
             self.tweak_save_path.setText(path)
 
-    def _browse_tweak_template(self):
-        from Qt.QtWidgets import QFileDialog
-        path, _ = QFileDialog.getOpenFileName(
-            self.tool_window.ui_area,
-            "Choose template map",
-            self.tweak_template_path.text().strip() or "",
-            "Maps (*.mrc *.map *.ccp4 *.mrcs);;All files (*)",
-        )
-        if path:
-            self.tweak_template_path.setText(path)
-
     def _restore_manual_tweak_scene(self):
         for model, visible in self._manual_tweak_hidden:
             try:
@@ -539,10 +642,30 @@ class CiliaBuilder2Tool(ToolInstance):
                 pass
         self._manual_tweak_hidden = []
 
+    def _model_chain(self, model):
+        chain = []
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            chain.append(cur)
+            cur = self._model_parent(cur)
+        return chain
+
+    def _model_chain_ids(self, model):
+        return {id(m) for m in self._model_chain(model)}
+
+    def _set_model_chain_visible(self, model, visible=True):
+        for m in reversed(self._model_chain(model)):
+            try:
+                m.display = bool(visible)
+            except Exception:
+                pass
+
     def _close_manual_tweak_models(self):
         for model in (
             self._manual_tweak_template,
-            self._manual_tweak_source,
+            None if self._manual_tweak_source_is_external else self._manual_tweak_source,
             self._manual_tweak_fit_source,
             self._manual_tweak_resampled,
         ):
@@ -556,6 +679,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self._manual_tweak_source = None
         self._manual_tweak_fit_source = None
         self._manual_tweak_resampled = None
+        self._manual_tweak_source_is_external = False
 
     def _command_created_models(self, command):
         before = set(self.session.models.list())
@@ -681,12 +805,22 @@ class CiliaBuilder2Tool(ToolInstance):
         from Qt.QtWidgets import QMessageBox
 
         try:
+            self._refresh_model_selectors()
+            source_ref = self.tweak_open_model.currentData() if hasattr(self, "tweak_open_model") else None
             source_path = os.path.expanduser(self.tweak_source_path.text().strip())
             template_path = os.path.expanduser(self.tweak_template_path.text().strip())
-            if not source_path:
-                raise RuntimeError("Choose a user model path first")
-            if not os.path.exists(source_path):
-                raise RuntimeError(f"User model path does not exist: {source_path}")
+            selected_source = None
+            if source_ref is not None:
+                selected_source = self._model_by_ref(source_ref)
+                if selected_source is None:
+                    raise RuntimeError(f"Open model #{source_ref} not found")
+                if not self._is_attach_source(selected_source):
+                    raise RuntimeError("Selected open model is not a map/STL/GLB attach source")
+            elif source_path:
+                if not os.path.exists(source_path):
+                    raise RuntimeError(f"User model path does not exist: {source_path}")
+            else:
+                raise RuntimeError("Select an open model or choose a user model path first")
             if not template_path:
                 raise RuntimeError("Choose a template map path first")
             if not os.path.exists(template_path):
@@ -695,9 +829,12 @@ class CiliaBuilder2Tool(ToolInstance):
             self._close_manual_tweak_models()
             self._restore_manual_tweak_scene()
 
+            source_chain_ids = self._model_chain_ids(selected_source)
             self._manual_tweak_hidden = []
             for model in self.session.models.list():
                 try:
+                    if id(model) in source_chain_ids:
+                        continue
                     self._manual_tweak_hidden.append((model, bool(model.display)))
                     model.display = False
                 except Exception:
@@ -712,24 +849,29 @@ class CiliaBuilder2Tool(ToolInstance):
             if self._manual_tweak_template is None:
                 raise RuntimeError("Could not find opened template map volume")
 
-            before = set(self.session.models.list())
-            _run(self.session, f'open "{source_path}"')
-            source_new = [m for m in self.session.models.list() if m not in before]
-            if not source_new:
-                raise RuntimeError("Could not open user model")
-            self._manual_tweak_source = self._pick_opened_model(
-                source_new,
-                lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
-            )
-            if self._manual_tweak_source is None:
-                raise RuntimeError("Could not find opened user model geometry")
+            if selected_source is not None:
+                self._manual_tweak_source = selected_source
+                self._manual_tweak_source_is_external = True
+            else:
+                before = set(self.session.models.list())
+                _run(self.session, f'open "{source_path}"')
+                source_new = [m for m in self.session.models.list() if m not in before]
+                if not source_new:
+                    raise RuntimeError("Could not open user model")
+                self._manual_tweak_source = self._pick_opened_model(
+                    source_new,
+                    lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
+                )
+                if self._manual_tweak_source is None:
+                    raise RuntimeError("Could not find opened user model geometry")
+                self._manual_tweak_source_is_external = False
             self._match_template_voxel_size_to_source()
 
             try:
                 self._manual_tweak_template.display = True
-                self._manual_tweak_source.display = True
             except Exception:
                 pass
+            self._set_model_chain_visible(self._manual_tweak_source, True)
 
             _run(self.session, f"select #{self._manual_tweak_source.id_string}")
             _run(self.session, "view")
@@ -751,16 +893,48 @@ class CiliaBuilder2Tool(ToolInstance):
             if not self._is_volume_like(self._manual_tweak_template):
                 raise RuntimeError("Template model must be a volume map")
 
-            save_path = os.path.expanduser(self.tweak_save_path.text().strip())
-            if not save_path:
-                raise RuntimeError("Choose a save path for the tweaked model")
-
             self._manual_tweak_fit_source = self._prepare_manual_tweak_fit_source()
+            fit_pre_position = None
+            if self._manual_tweak_fit_source is not self._manual_tweak_source:
+                try:
+                    fit_pre_position = self._manual_tweak_fit_source.position
+                except Exception:
+                    fit_pre_position = None
 
             _run(
                 self.session,
                 f"fitmap #{self._manual_tweak_fit_source.id_string} inMap #{self._manual_tweak_template.id_string}",
             )
+
+            if self._manual_tweak_source_is_external:
+                live_source = self._manual_tweak_source
+                if self._manual_tweak_fit_source is not self._manual_tweak_source:
+                    try:
+                        fit_post_position = self._manual_tweak_fit_source.position
+                        if fit_pre_position is not None:
+                            delta = fit_post_position * fit_pre_position.inverse()
+                            live_source.position = delta * live_source.position
+                    except Exception:
+                        pass
+                try:
+                    live_source.display = True
+                    live_source.set_selected(True)
+                except Exception:
+                    pass
+                self._close_manual_tweak_models()
+                self._restore_manual_tweak_scene()
+                self._set_model_chain_visible(live_source, True)
+                try:
+                    live_source.set_selected(True)
+                except Exception:
+                    pass
+                self._refresh_model_selectors()
+                self.session.logger.info("Manual tweak finished and applied directly to the selected open model.")
+                return
+
+            save_path = os.path.expanduser(self.tweak_save_path.text().strip())
+            if not save_path:
+                raise RuntimeError("Choose a save path for the tweaked model")
 
             resampled_new = self._command_created_models(
                 f"volume resample #{self._manual_tweak_fit_source.id_string} onGrid #{self._manual_tweak_template.id_string}"
@@ -1197,52 +1371,94 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _attach_selected_models(self):
         from Qt.QtWidgets import QMessageBox
-        from .map import cbsubmap_impl
 
         try:
             self._refresh_model_selectors()
             star_id = self.sel_star_model.currentData()
             map_id = self.sel_map_model.currentData()
-            if star_id is None:
-                raise RuntimeError("Select a STAR model first")
-            if map_id is None:
-                raise RuntimeError("Select a map model first")
-
-            star_model = self._model_by_ref(star_id)
-            if star_model is None:
-                raise RuntimeError(f"STAR model #{star_id} not found")
-            if not hasattr(star_model, "_cb_star_rows"):
-                raise RuntimeError(f"Model #{star_id} is not a CiliaBuilder2 STAR model")
-
-            map_model = self._model_by_ref(map_id)
-            if map_model is None:
-                raise RuntimeError(f"Map model #{map_id} not found")
-            if not self._is_attach_source(map_model):
-                raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB attach source")
-
-            cbsubmap_impl(
-                session=self.session,
-                star_model_obj=star_model,
-                map_model_id=map_id,
-                close_source=False,
-                show_result=True,
-                rotate_xy_90=True,
-                single_big_object=True,
-                attach_auto_align_long_axis=False,
-                attach_inout_flip=False,
-                attach_updown_flip=False,
-                attach_axis_rot_z_deg=-90.0,
-            )
-            # Keep the original source map loaded for reference, but hide it.
-            try:
-                map_model.display = False
-            except Exception:
-                pass
-            self._refresh_model_selectors()
-
+            self._perform_attachment(star_id=star_id, map_id=map_id, remember_selection=True)
         except Exception as e:
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+
+    def _perform_attachment(self, star_id=None, map_id=None, remember_selection=False):
+        from .map import cbsubmap_impl
+
+        if star_id is None:
+            star_id = self._last_attach_star_id
+        if map_id is None:
+            map_id = self._last_attach_map_id
+        if star_id is None:
+            raise RuntimeError("Select a STAR model first")
+        if map_id is None:
+            raise RuntimeError("Select a map model first")
+
+        star_model = self._model_by_ref(star_id)
+        if star_model is None:
+            raise RuntimeError(f"STAR model #{star_id} not found")
+        if not hasattr(star_model, "_cb_star_rows"):
+            raise RuntimeError(f"Model #{star_id} is not a CiliaBuilder2 STAR model")
+
+        map_model = self._model_by_ref(map_id)
+        if map_model is None:
+            raise RuntimeError(f"Map model #{map_id} not found")
+        if not self._is_attach_source(map_model):
+            raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB attach source")
+
+        star_id = str(star_id)
+        map_id = str(map_id)
+        old_result = self._last_attached_result
+        if old_result is not None:
+            try:
+                self.session.models.close([old_result])
+            except Exception:
+                pass
+            self._last_attached_result = None
+
+        out_root = cbsubmap_impl(
+            session=self.session,
+            star_model_obj=star_model,
+            map_model_id=map_id,
+            close_source=False,
+            show_result=True,
+            rotate_xy_90=True,
+            single_big_object=True,
+            attach_all_z_offset_deg=float(self.attach_line_rotation.value()),
+            attach_auto_align_long_axis=False,
+            attach_inout_flip=False,
+            attach_updown_flip=False,
+            attach_axis_rot_y_deg=0.0,
+            attach_axis_rot_z_deg=-90.0,
+            attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
+        )
+        self._last_attached_result = out_root
+
+        if remember_selection:
+            self._last_attach_star_id = star_id
+            self._last_attach_map_id = map_id
+
+        try:
+            map_model.display = False
+        except Exception:
+            pass
+        self._refresh_model_selectors()
+
+    def _reattach_with_current_settings(self, _value):
+        from Qt.QtWidgets import QMessageBox
+
+        if self._attach_rebuild_in_progress:
+            return
+        if self._last_attach_star_id is None or self._last_attach_map_id is None:
+            return
+
+        try:
+            self._attach_rebuild_in_progress = True
+            self._perform_attachment(remember_selection=False)
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._attach_rebuild_in_progress = False
 
 
 def start_tool(session, tool_name):
