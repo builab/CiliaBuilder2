@@ -676,6 +676,7 @@ def cbsubmap_impl(
             exw, eyw = eyw, -exw
         if bool(attach_inout_flip):
             exw, eyw = -exw, -eyw
+        macro_z_axis = _safe_unit(ezw)
         if abs(extra_local_y_deg) > 1e-12:
             By = np.column_stack((exw, eyw, ezw)) @ _rot_y(extra_local_y_deg)
             exw = By[:, 0]
@@ -695,13 +696,10 @@ def cbsubmap_impl(
         all_z_offset = float(attach_all_z_offset_deg)
         total_z_offset = per_line_z_offset + all_z_offset
         if abs(total_z_offset) > 1e-12:
-            a = math.radians(total_z_offset)
-            ca = math.cos(a)
-            sa = math.sin(a)
-            ex0 = exw.copy()
-            ey0 = eyw.copy()
-            exw = ex0 * ca - ey0 * sa
-            eyw = ex0 * sa + ey0 * ca
+            Rmacro_z = _rotation_about_axis(macro_z_axis, total_z_offset)
+            exw = Rmacro_z @ exw
+            eyw = Rmacro_z @ eyw
+            ezw = Rmacro_z @ ezw
         if source_long_axis is not None:
             current_long_world = _safe_unit(
                 source_long_axis[0] * exw
