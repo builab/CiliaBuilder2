@@ -43,8 +43,14 @@ def build_cilia_lines_star_rows(
     class_number = int(class_number)
     step_deg = 360.0 / float(n)
 
-    use_random = bool(random_spacing) and float(random_max_diff) > 0.0
+    use_random = bool(random_spacing)
     max_diff = abs(float(random_max_diff))
+    if bool(random_spacing):
+        default_cap = 0.49 * bead_spacing_ang
+        if max_diff <= 0.0:
+            max_diff = default_cap
+        else:
+            max_diff = min(max_diff, default_cap)
 
     if rng_seed is None:
         rng = random.Random()
@@ -66,22 +72,13 @@ def build_cilia_lines_star_rows(
         # an additional 90 degrees clockwise.
         rot_deg = -(phi_deg + (doublet_offset_deg - 180.0) + 90.0)
 
-        z_list = [float(z_offset_ang)]
+        line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
         current_z = float(z_offset_ang)
+        z_list = []
 
-        while True:
-            spacing_this = bead_spacing_ang
-            if use_random:
-                spacing_this += rng.uniform(-max_diff, max_diff)
-                if spacing_this <= 1e-6:
-                    spacing_this = bead_spacing_ang
-
-            next_z = current_z + spacing_this
-            if next_z > float(z_offset_ang) + length_ang + 1e-6:
-                break
-
-            z_list.append(next_z)
-            current_z = next_z
+        while current_z <= float(z_offset_ang) + length_ang + 1e-6:
+            z_list.append(current_z + line_offset)
+            current_z += bead_spacing_ang
 
         for z_ang in z_list:
             rows.append(
@@ -135,25 +132,21 @@ def buildcentriole_star_rows(
     else:
         rng = random.Random(int(rng_seed))
 
-    use_random = bool(random_spacing) and float(random_max_diff) > 0.0
+    use_random = bool(random_spacing)
     max_diff = abs(float(random_max_diff))
-
-    z_list = [float(z_offset_ang)]
+    if use_random:
+        default_cap = 0.49 * bead_spacing_ang
+        if max_diff <= 0.0:
+            max_diff = default_cap
+        else:
+            max_diff = min(max_diff, default_cap)
+    line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
     current_z = float(z_offset_ang)
+    z_list = []
 
-    while True:
-        spacing_this = bead_spacing_ang
-        if use_random:
-            spacing_this += rng.uniform(-max_diff, max_diff)
-            if spacing_this <= 1e-6:
-                spacing_this = bead_spacing_ang
-
-        next_z = current_z + spacing_this
-        if next_z > float(z_offset_ang) + length_ang + 1e-6:
-            break
-
-        z_list.append(next_z)
-        current_z = next_z
+    while current_z <= float(z_offset_ang) + length_ang + 1e-6:
+        z_list.append(current_z + line_offset)
+        current_z += bead_spacing_ang
 
     rows = []
 

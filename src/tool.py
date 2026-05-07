@@ -30,9 +30,12 @@ class CiliaBuilder2Tool(ToolInstance):
         self._manual_tweak_resampled = None
         self._manual_tweak_source_is_external = False
         self._last_attached_result = None
+        self._attached_results = {}
         self._last_attach_star_id = None
         self._last_attach_map_id = None
         self._attach_rebuild_in_progress = False
+        self._cb_attachment_clip_states = None
+        self._cb_attachment_clip_plane_name = "cb_random_start_clip"
         self.tool_window = None
         self._build_ui()
 
@@ -131,12 +134,7 @@ class CiliaBuilder2Tool(ToolInstance):
         rand_lay.addWidget(QLabel("Random", rand_row))
         self.random_enable = QCheckBox("Enable", rand_row)
         rand_lay.addWidget(self.random_enable)
-        rand_lay.addWidget(QLabel("Max diff", rand_row))
-        self.random_max_diff = QDoubleSpinBox(rand_row)
-        self.random_max_diff.setRange(0.0, 1e9)
-        self.random_max_diff.setDecimals(2)
-        self.random_max_diff.setValue(0.0)
-        rand_lay.addWidget(self.random_max_diff)
+        rand_lay.addStretch(1)
         outer_layout.addWidget(rand_row)
 
         panels.addWidget(outer_box)
@@ -484,6 +482,9 @@ class CiliaBuilder2Tool(ToolInstance):
                 return m
         return None
 
+    def _attach_key(self, star_model, map_model):
+        return (id(star_model), id(map_model))
+
     def _refresh_model_selectors(self):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
@@ -661,6 +662,136 @@ class CiliaBuilder2Tool(ToolInstance):
                 m.display = bool(visible)
             except Exception:
                 pass
+
+    def _iter_top_models(self):
+        for model in self.session.models.list():
+            if self._model_parent(model) is None:
+                yield model
+
+    def _restore_attachment_clip(self):
+        planes = getattr(self.session.main_view, "clip_planes", None)
+        if planes is not None:
+            try:
+                planes.remove_plane(self._cb_attachment_clip_plane_name)
+            except Exception:
+                pass
+        if self._cb_attachment_clip_states:
+            for model, allow in self._cb_attachment_clip_states:
+                try:
+                    model.allow_clipping = bool(allow)
+                except Exception:
+                    pass
+        self._cb_attachment_clip_states = None
+        try:
+            from chimerax import surface
+            surface.update_clip_caps(self.session.main_view)
+        except Exception:
+            pass
+
+    def _star_random_clip_info(self, star_model):
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        if not rows:
+            return None
+
+        by_tube = {}
+        for row in rows:
+            try:
+                tid = int(float(row.get("rlnHelicalTubeID", 0)))
+                x = float(row.get("rlnCoordinateX", 0.0))
+                y = float(row.get("rlnCoordinateY", 0.0))
+                z = float(row.get("rlnCoordinateZ", 0.0))
+            except Exception:
+                continue
+            by_tube.setdefault(tid, []).append((z, x, y))
+
+        if len(by_tube) < 2:
+            return None
+
+        start_by_tube = {}
+        start_point_by_tube = {}
+        direction_vectors = []
+        for tid, pts in by_tube.items():
+            pts.sort(key=lambda p: p[0])
+            start_z, start_x, start_y = pts[0]
+            start_by_tube[tid] = start_z
+            start_point_by_tube[tid] = np.array([start_x, start_y, start_z], dtype=float)
+            if len(pts) >= 2:
+                z2, x2, y2 = pts[1]
+                vec = np.array([x2 - start_x, y2 - start_y, z2 - start_z], dtype=float)
+                norm = float(np.linalg.norm(vec))
+                if norm > 1e-9:
+                    direction_vectors.append(vec / norm)
+
+        if not start_by_tube:
+            return None
+
+        starts = list(start_by_tube.values())
+        spread = float(max(starts) - min(starts))
+        if spread <= 1e-6:
+            return None
+
+        clip_tube = max(start_by_tube, key=start_by_tube.get)
+        plane_point = start_point_by_tube[clip_tube]
+        if direction_vectors:
+            axis = np.sum(direction_vectors, axis=0)
+            norm = float(np.linalg.norm(axis))
+            if norm > 1e-9:
+                axis = axis / norm
+            else:
+                axis = np.array([0.0, 0.0, 1.0], dtype=float)
+        else:
+            axis = np.array([0.0, 0.0, 1.0], dtype=float)
+
+        return {
+            "plane_point": plane_point,
+            "axis": axis,
+            "spread": spread,
+            "clip_start": float(start_by_tube[clip_tube]),
+        }
+
+    def _apply_attachment_clip_if_needed(self, out_root, star_model):
+        clip_info = self._star_random_clip_info(star_model)
+        if clip_info is None:
+            self._restore_attachment_clip()
+            return
+
+        self._restore_attachment_clip()
+        self._cb_attachment_clip_states = []
+        for model in self._iter_top_models():
+            try:
+                self._cb_attachment_clip_states.append((model, bool(model.allow_clipping)))
+                model.allow_clipping = False
+            except Exception:
+                pass
+        for model in self._iter_model_tree(out_root):
+            try:
+                model.allow_clipping = True
+            except Exception:
+                pass
+
+        from chimerax.graphics import SceneClipPlane
+
+        planes = self.session.main_view.clip_planes
+        try:
+            planes.remove_plane(self._cb_attachment_clip_plane_name)
+        except Exception:
+            pass
+        plane = SceneClipPlane(
+            self._cb_attachment_clip_plane_name,
+            clip_info["axis"],
+            clip_info["plane_point"],
+        )
+        planes.add_plane(plane)
+        try:
+            from chimerax import surface
+            surface.update_clip_caps(self.session.main_view)
+        except Exception:
+            pass
+        self.session.logger.info(
+            "Applied random-start clip to attached result at "
+            f"{clip_info['clip_start']:.3f} along axis "
+            f"({clip_info['axis'][0]:.3f}, {clip_info['axis'][1]:.3f}, {clip_info['axis'][2]:.3f})."
+        )
 
     def _close_manual_tweak_models(self):
         for model in (
@@ -1025,7 +1156,6 @@ class CiliaBuilder2Tool(ToolInstance):
             "spacing": float(self.spacing.value()),
             "doublet_offset": float(self.doublet_offset.value()),
             "random_enable": bool(self.random_enable.isChecked()),
-            "random_max_diff": float(self.random_max_diff.value()),
             "centriole_length": float(self.centriole_length.value()),
             "centriole_spacing": float(self.centriole_spacing.value()),
             "centriole_z_offset": float(self.centriole_z_offset.value()),
@@ -1045,7 +1175,6 @@ class CiliaBuilder2Tool(ToolInstance):
         self.spacing.setValue(float(state.get("spacing", self.spacing.value())))
         self.doublet_offset.setValue(float(state.get("doublet_offset", self.doublet_offset.value())))
         self.random_enable.setChecked(bool(state.get("random_enable", self.random_enable.isChecked())))
-        self.random_max_diff.setValue(float(state.get("random_max_diff", self.random_max_diff.value())))
         self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
         self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
         self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
@@ -1186,9 +1315,7 @@ class CiliaBuilder2Tool(ToolInstance):
             doublet_offset = float(self.doublet_offset.value())
 
             random_spacing = bool(self.random_enable.isChecked())
-            random_max_diff = float(self.random_max_diff.value())
-            if random_max_diff < 0.0:
-                random_max_diff = -random_max_diff
+            random_max_diff = max(0.0, 0.49 * spacing)
 
             pixel_size = float(self.pixel_size.value())
             model = cmd.cbstraight(
@@ -1407,13 +1534,16 @@ class CiliaBuilder2Tool(ToolInstance):
 
         star_id = str(star_id)
         map_id = str(map_id)
-        old_result = self._last_attached_result
+        attach_key = self._attach_key(star_model, map_model)
+        old_result = self._attached_results.get(attach_key)
         if old_result is not None:
             try:
                 self.session.models.close([old_result])
             except Exception:
                 pass
-            self._last_attached_result = None
+            self._attached_results.pop(attach_key, None)
+            if self._last_attached_result is old_result:
+                self._last_attached_result = None
 
         out_root = cbsubmap_impl(
             session=self.session,
@@ -1432,16 +1562,29 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
         )
         self._last_attached_result = out_root
+        self._attached_results[attach_key] = out_root
 
-        if remember_selection:
-            self._last_attach_star_id = star_id
-            self._last_attach_map_id = map_id
+        current_star_id = self._model_ref(star_model) or star_id
+        current_map_id = self._model_ref(map_model) or map_id
+
+        self._last_attach_star_id = current_star_id
+        self._last_attach_map_id = current_map_id
 
         try:
             map_model.display = False
         except Exception:
             pass
+        try:
+            self._apply_attachment_clip_if_needed(out_root, star_model)
+        except Exception:
+            # Keep attachment usable even if clip application fails.
+            pass
         self._refresh_model_selectors()
+        try:
+            self._select_star_model(star_model)
+            self._select_map_model(map_model)
+        except Exception:
+            pass
 
     def _reattach_with_current_settings(self, _value):
         from Qt.QtWidgets import QMessageBox
