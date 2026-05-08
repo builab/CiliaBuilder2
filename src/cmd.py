@@ -55,7 +55,31 @@ def _matvec(a, v):
     return tuple(sum(a[r][k] * v[k] for k in range(3)) for r in range(3))
 
 
+def _row_world_center(row):
+    try:
+        wx = row.get("_cbWorldCoordinateX", None)
+        wy = row.get("_cbWorldCoordinateY", None)
+        wz = row.get("_cbWorldCoordinateZ", None)
+        if wx is not None and wy is not None and wz is not None:
+            return (float(wx), float(wy), float(wz))
+    except Exception:
+        pass
+    return (
+        float(row.get("rlnCoordinateX", 0.0)),
+        float(row.get("rlnCoordinateY", 0.0)),
+        float(row.get("rlnCoordinateZ", 0.0)),
+    )
+
+
 def _particle_axes_from_row(row):
+    try:
+        ex = row.get("_cbAxisX", None)
+        ey = row.get("_cbAxisY", None)
+        ez = row.get("_cbAxisZ", None)
+        if ex is not None and ey is not None and ez is not None:
+            return _safe_unit(ex), _safe_unit(ey), _safe_unit(ez)
+    except Exception:
+        pass
     rot = float(row.get("rlnAngleRot", 0.0))
     tilt = float(row.get("rlnAngleTilt", 0.0))
     psi = float(row.get("rlnAnglePsi", 0.0))
@@ -147,17 +171,20 @@ def _render_star_model(session, parent_model, rows, show_arrows):
     marker_set._cb_rendered_particles = True
     parent_model.add([marker_set])
 
-    for row in rows:
+    for row_index, row in enumerate(rows):
         px = float(row.get("rlnImagePixelSize", 1.0) or 1.0)
-        cx = float(row.get("rlnCoordinateX", 0.0))
-        cy = float(row.get("rlnCoordinateY", 0.0))
-        cz = float(row.get("rlnCoordinateZ", 0.0))
+        cx, cy, cz = _row_world_center(row)
         center = (cx, cy, cz)
         glyph_scale = max(0.25, min(4.0, 10.0 / max(px, 1e-6)))
         center_radius = 8.0 * glyph_scale
         axis_len = 24.0 * glyph_scale
         link_radius = 2.4 * glyph_scale
         base = marker_set.create_marker(center, (50, 80, 255, 255), center_radius)
+        for atom in (base,):
+            try:
+                atom._cb_star_row_index = int(row_index)
+            except Exception:
+                pass
         if not bool(show_arrows):
             continue
         ex, ey, ez = _particle_axes_from_row(row)
@@ -180,6 +207,11 @@ def _render_star_model(session, parent_model, rows, show_arrows):
             )
             shaft = marker_set.create_marker(shaft_xyz, color, max(0.6, 1.4 * glyph_scale))
             tip = marker_set.create_marker(tip_xyz, color, max(0.2, 0.5 * glyph_scale))
+            for atom in (shaft, tip):
+                try:
+                    atom._cb_star_row_index = int(row_index)
+                except Exception:
+                    pass
             create_link(base, shaft, rgba=color, radius=link_radius)
             create_link(shaft, tip, rgba=color, radius=max(0.8, 1.4 * glyph_scale))
 
@@ -193,6 +225,10 @@ def _render_star_model(session, parent_model, rows, show_arrows):
                     tip_xyz[2] - head_back * vec[2] + sign * head_side * side[2],
                 )
                 head = marker_set.create_marker(head_xyz, color, max(0.2, 0.4 * glyph_scale))
+                try:
+                    head._cb_star_row_index = int(row_index)
+                except Exception:
+                    pass
                 create_link(tip, head, rgba=color, radius=max(0.7, 1.1 * glyph_scale))
     return marker_set
 
@@ -201,7 +237,7 @@ def _open_star(session, star_text, star_format):
     return write_star_tempfile(star_text, suffix=".star")
 
 
-def _create_star_model(session, name, rows, star_text, open_star, star_format, show_arrows):
+def _create_star_model(session, name, rows, star_text, open_star, star_format, show_arrows, view_orient=True):
     created = Model(name, session)
     _add_to_cb_star_group(session, created)
     created._cb_star_rows = rows
@@ -209,10 +245,11 @@ def _create_star_model(session, name, rows, star_text, open_star, star_format, s
     if bool(open_star):
         created._cb_star_path = _open_star(session, star_text, star_format)
         _render_star_model(session, created, rows, show_arrows)
-        try:
-            _run(session, "view orient")
-        except Exception:
-            pass
+        if bool(view_orient):
+            try:
+                _run(session, "view orient")
+            except Exception:
+                pass
     return created
 
 

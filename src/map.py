@@ -63,6 +63,25 @@ def _parse_star_rows_from_model(model_obj):
     return rows
 
 
+def _row_world_center(row):
+    try:
+        wx = row.get("_cbWorldCoordinateX", None)
+        wy = row.get("_cbWorldCoordinateY", None)
+        wz = row.get("_cbWorldCoordinateZ", None)
+        if wx is not None and wy is not None and wz is not None:
+            return np.array([float(wx), float(wy), float(wz)], dtype=float), True
+    except Exception:
+        pass
+    return np.array(
+        [
+            float(row.get("rlnCoordinateX", 0.0)),
+            float(row.get("rlnCoordinateY", 0.0)),
+            float(row.get("rlnCoordinateZ", 0.0)),
+        ],
+        dtype=float,
+    ), False
+
+
 def _safe_unit(v):
     v = np.array(v, dtype=float)
     n = float(np.linalg.norm(v))
@@ -170,6 +189,26 @@ def _particle_axes_from_star(rot_deg, tilt_deg, psi_deg):
     ey = _safe_unit(Rt @ np.array([0.0, 1.0, 0.0], dtype=float))
     ez = _safe_unit(Rt @ np.array([0.0, 0.0, 1.0], dtype=float))
     return ex, ey, ez
+
+
+def _particle_axes_from_row(row):
+    try:
+        ex = row.get("_cbAxisX", None)
+        ey = row.get("_cbAxisY", None)
+        ez = row.get("_cbAxisZ", None)
+        if ex is not None and ey is not None and ez is not None:
+            return (
+                _safe_unit(np.array(ex, dtype=float)),
+                _safe_unit(np.array(ey, dtype=float)),
+                _safe_unit(np.array(ez, dtype=float)),
+            )
+    except Exception:
+        pass
+    return _particle_axes_from_star(
+        row.get("rlnAngleRot", 0.0),
+        row.get("rlnAngleTilt", 0.0),
+        row.get("rlnAnglePsi", 0.0),
+    )
 
 
 def _copy_source_instance(session, src):
@@ -572,6 +611,8 @@ def cbsubmap_impl(
     out_root = Model(f"{star_model_obj.name} <- {source_name}", session)
     out_root._cb_generated_attached = True
     out_root._cb_attach_source = False
+    out_root._cb_attached_star_ref = getattr(star_model_obj, "id_string", None)
+    out_root._cb_attached_source_ref = getattr(src_map, "id_string", None)
     try:
         from .cmd import _add_to_cb_map_group
         _add_to_cb_map_group(session, out_root)
@@ -611,30 +652,23 @@ def cbsubmap_impl(
         if particle_px_ang < 1e-12:
             particle_px_ang = 1.0
 
-        # STAR coords are already in model/particle units.
         try:
-            cx = float(r.get("rlnCoordinateX", 0.0))
-            cy = float(r.get("rlnCoordinateY", 0.0))
-            cz = float(r.get("rlnCoordinateZ", 0.0))
+            center, has_world_center = _row_world_center(r)
         except Exception:
             continue
 
-        # Diameter tuning is applied in XY only, relative to model coordinates.
-        center = np.array(
-            [
-                cx * float(attach_diameter_scale),
-                cy * float(attach_diameter_scale),
-                cz,
-            ],
-            dtype=float,
-        )
+        if not has_world_center:
+            center = np.array(
+                [
+                    center[0] * float(attach_diameter_scale),
+                    center[1] * float(attach_diameter_scale),
+                    center[2],
+                ],
+                dtype=float,
+            )
 
         # Particle basis from STAR
-        ex, ey, ez = _particle_axes_from_star(
-            r.get("rlnAngleRot", 0.0),
-            r.get("rlnAngleTilt", 0.0),
-            r.get("rlnAnglePsi", 0.0),
-        )
+        ex, ey, ez = _particle_axes_from_row(r)
         display_blue_axis = _safe_unit(ez)
         Rp = np.column_stack((ex, ey, ez))
 
@@ -733,6 +767,9 @@ def cbsubmap_impl(
             mcopy.name = f"Attached_t{tid}_{i}"
         except Exception:
             pass
+        mcopy._cb_generated_attached = True
+        mcopy._cb_attached_star_ref = getattr(star_model_obj, "id_string", None)
+        mcopy._cb_attached_source_ref = getattr(src_map, "id_string", None)
 
         try:
             mcopy.position = place
@@ -752,6 +789,8 @@ def cbsubmap_impl(
                 base_copy.positions = Places(places)
                 base_copy.name = f"{source_name} placed on {star_model_obj.name}"
                 base_copy._cb_generated_attached = True
+                base_copy._cb_attached_star_ref = getattr(star_model_obj, "id_string", None)
+                base_copy._cb_attached_source_ref = getattr(src_map, "id_string", None)
                 session.models.add([base_copy], parent=out_root)
                 single_added = True
             except Exception:
@@ -775,6 +814,9 @@ def cbsubmap_impl(
                     mcopy.name = f"Attached_fallback_{i}"
                 except Exception:
                     pass
+                mcopy._cb_generated_attached = True
+                mcopy._cb_attached_star_ref = getattr(star_model_obj, "id_string", None)
+                mcopy._cb_attached_source_ref = getattr(src_map, "id_string", None)
                 try:
                     mcopy.position = p
                 except Exception:
