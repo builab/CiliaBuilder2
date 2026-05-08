@@ -377,7 +377,7 @@ def buildcentriole(
 
     return _create_star_model(
         session,
-        f"Central apparatus STAR {class_num}",
+        f"Central pair STAR {class_num}",
         rows,
         star_text,
         open_star,
@@ -401,7 +401,7 @@ buildcentriole_desc = CmdDesc(
         ("star_format", StringArg),
         ("print_star", BoolArg),
     ],
-    synopsis="Build centriole STAR only (single center line).",
+    synopsis="Build central pair STAR only (single center line).",
 )
 
 
