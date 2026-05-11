@@ -484,6 +484,35 @@ def _map_data_origin_local(vol):
     return None
 
 
+def _zero_volume_origin(session, vol):
+    if vol is None or not _is_volume_like(vol):
+        return
+    changed = False
+    for owner in (getattr(vol, "data", None), getattr(vol, "grid_data", None)):
+        if owner is None:
+            continue
+        try:
+            if hasattr(owner, "set_origin"):
+                owner.set_origin((0.0, 0.0, 0.0))
+                changed = True
+                continue
+        except Exception:
+            pass
+        try:
+            owner.origin = (0.0, 0.0, 0.0)
+            changed = True
+        except Exception:
+            pass
+    if changed:
+        return
+    ref = getattr(vol, "id_string", None)
+    if ref:
+        try:
+            _run(session, f"volume #{ref} origin 0,0,0", log=False)
+        except Exception:
+            pass
+
+
 def _shared_map_anchor_local(session, src_map):
     """
     Use the map's own offset if it has one; otherwise use ChimeraX's built-in
@@ -595,6 +624,7 @@ def cbsubmap_impl(
     if src_map is None:
         session.logger.error("cbsubmap cannot find map_model by that id")
         return None
+    _zero_volume_origin(session, src_map)
     src_map._cb_attach_source = True
     try:
         from .cmd import _add_to_cb_map_group
@@ -678,11 +708,13 @@ def cbsubmap_impl(
                 base_copy = _copy_source_instance(session, src_map)
                 if base_copy is None:
                     raise RuntimeError("cbsubmap could not create an instance from the source model")
+                _zero_volume_origin(session, base_copy)
             mcopy = base_copy
         else:
             mcopy = _copy_source_instance(session, src_map)
             if mcopy is None:
                 raise RuntimeError("cbsubmap could not create an instance from the source model")
+            _zero_volume_origin(session, mcopy)
 
         # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
         local_anchor = shared_anchor + calib_shift
@@ -810,6 +842,7 @@ def cbsubmap_impl(
                 mcopy = _copy_source_instance(session, src_map)
                 if mcopy is None:
                     continue
+                _zero_volume_origin(session, mcopy)
                 try:
                     mcopy.name = f"Attached_fallback_{i}"
                 except Exception:

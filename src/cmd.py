@@ -1,6 +1,7 @@
 # vim: set expandtab shiftwidth=4 softtabstop=4:
 
 import math
+import numpy as np
 
 from chimerax.core.commands import CmdDesc, FloatArg, IntArg, BoolArg, StringArg
 from chimerax.core.commands import run as _run
@@ -108,6 +109,37 @@ def _arrow_head_basis(axis):
     return side
 
 
+def _rotation_align_vector_to_vector(v_from, v_to):
+    v = np.array(v_from, dtype=float)
+    z = np.array(v_to, dtype=float)
+    nv = float(np.linalg.norm(v))
+    nz = float(np.linalg.norm(z))
+    if nv < 1e-12 or nz < 1e-12:
+        return np.eye(3, dtype=float)
+    v /= nv
+    z /= nz
+    c = float(np.clip(np.dot(v, z), -1.0, 1.0))
+    if c > 1.0 - 1e-8:
+        return np.eye(3, dtype=float)
+    if c < -1.0 + 1e-8:
+        return np.array(((1.0, 0.0, 0.0), (0.0, -1.0, 0.0), (0.0, 0.0, -1.0)), dtype=float)
+    axis = np.cross(v, z)
+    n = float(np.linalg.norm(axis))
+    if n < 1e-12:
+        return np.eye(3, dtype=float)
+    axis /= n
+    x, y, zz = axis
+    K = np.array(
+        [
+            [0.0, -zz, y],
+            [zz, 0.0, -x],
+            [-y, x, 0.0],
+        ],
+        dtype=float,
+    )
+    return np.eye(3, dtype=float) + K + (K @ K) * ((1.0 - c) / (n * n))
+
+
 def _find_child_group(parent, tag):
     for child in parent.child_models():
         if getattr(child, "_cb_group_tag", None) == tag:
@@ -152,6 +184,107 @@ def _add_to_cb_star_group(session, model):
 def _add_to_cb_map_group(session, model):
     _ensure_cb_map_group(session).add([model])
     return model
+
+
+def _annulus_cap_triangles(outer_ring, inner_ring, reverse=False):
+    tris = []
+    nc = len(outer_ring)
+    for i in range(nc):
+        j = (i + 1) % nc
+        if reverse:
+            tris.append((outer_ring[i], inner_ring[i], inner_ring[j]))
+            tris.append((outer_ring[i], inner_ring[j], outer_ring[j]))
+        else:
+            tris.append((outer_ring[i], inner_ring[j], inner_ring[i]))
+            tris.append((outer_ring[i], outer_ring[j], inner_ring[j]))
+    return tris
+
+
+def buildmembrane_surface(
+    session,
+    name,
+    center,
+    axis,
+    length,
+    diameter,
+    thickness,
+    color=(180, 180, 190, 180),
+):
+    from chimerax.core.models import Surface
+    from chimerax.shape.shape import cylinder_geometry
+    from chimerax.surface import calculate_vertex_normals
+
+    length = float(length)
+    diameter = float(diameter)
+    thickness = float(thickness)
+    if length <= 0.0:
+        raise ValueError("Membrane length must be > 0")
+    if diameter <= 0.0:
+        raise ValueError("Membrane diameter must be > 0")
+    if thickness <= 0.0:
+        raise ValueError("Membrane thickness must be > 0")
+
+    outer_radius = 0.5 * diameter
+    inner_radius = max(1e-6, outer_radius - thickness)
+    if inner_radius >= outer_radius:
+        raise ValueError("Membrane thickness must be smaller than half the diameter")
+
+    nc = max(32, int(math.ceil((2.0 * math.pi * outer_radius) / 80.0)))
+    nz = max(2, int(math.ceil(length / max(80.0, thickness))))
+
+    outer_v, outer_t = cylinder_geometry(outer_radius, length, nz, nc, caps=False)
+    inner_v, inner_t = cylinder_geometry(inner_radius, length, nz, nc, caps=False)
+    inner_t = inner_t[:, ::-1]
+
+    inner_offset = len(outer_v)
+    inner_t = inner_t + inner_offset
+
+    outer_bottom = list(range(0, nc))
+    outer_top_start = (nz - 1) * nc
+    outer_top = list(range(outer_top_start, outer_top_start + nc))
+    inner_bottom = [inner_offset + i for i in range(0, nc)]
+    inner_top_start = inner_offset + (nz - 1) * nc
+    inner_top = [inner_top_start + i for i in range(0, nc)]
+
+    bottom_tris = _annulus_cap_triangles(outer_bottom, inner_bottom, reverse=True)
+    top_tris = _annulus_cap_triangles(outer_top, inner_top, reverse=False)
+
+    vertices = np.concatenate((outer_v, inner_v), axis=0).astype(np.float32)
+    triangles = np.concatenate(
+        (
+            np.array(outer_t, dtype=np.int32),
+            np.array(inner_t, dtype=np.int32),
+            np.array(bottom_tris, dtype=np.int32),
+            np.array(top_tris, dtype=np.int32),
+        ),
+        axis=0,
+    )
+    normals = calculate_vertex_normals(vertices, triangles)
+
+    axis = np.array(axis, dtype=float)
+    naxis = float(np.linalg.norm(axis))
+    axis = np.array((0.0, 0.0, 1.0), dtype=float) if naxis < 1e-12 else axis / naxis
+    R = _rotation_align_vector_to_vector((0.0, 0.0, 1.0), axis)
+    vertices = (vertices @ R.T) + np.array(center, dtype=float)
+    normals = normals @ R.T
+
+    surface = Surface(name, session)
+    surface.set_geometry(vertices.astype(np.float32), normals.astype(np.float32), triangles.astype(np.int32))
+    try:
+        surface.color = color
+    except Exception:
+        pass
+    surface._cb_generated_membrane = True
+    surface._cb_attach_source = False
+    surface._cb_membrane_state = {
+        "center": [float(v) for v in center],
+        "axis": [float(v) for v in axis],
+        "length": float(length),
+        "diameter": float(diameter),
+        "thickness": float(thickness),
+    }
+    _add_to_cb_map_group(session, surface)
+    return surface
 
 
 def _render_star_model(session, parent_model, rows, show_arrows):
