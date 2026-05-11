@@ -267,7 +267,7 @@ def cbstraight(
     length=9000.0,
     n_doublet=9,
     radius=700.0,
-    spacing=400.0,
+    spacing=960.0,
     z_offset=0.0,
     doublet_offset=0.0,
     random_spacing=False,
@@ -341,7 +341,7 @@ cbstraight_desc = CmdDesc(
 def buildcentriole(
     session,
     length=2000.0,
-    spacing=400.0,
+    spacing=320.0,
     z_offset=0.0,
     tube_id=100,
     random_spacing=False,

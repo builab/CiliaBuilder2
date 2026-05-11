@@ -298,7 +298,6 @@ class CiliaBuilder2Tool(ToolInstance):
             QVBoxLayout,
             QHBoxLayout,
             QScrollArea,
-            QSplitter,
             QGroupBox,
             QLabel,
             QAbstractSpinBox,
@@ -309,7 +308,9 @@ class CiliaBuilder2Tool(ToolInstance):
             QCheckBox,
             QFileDialog,
             QLineEdit,
+            QStackedWidget,
         )
+        from Qt.QtGui import QDoubleValidator, QIntValidator
         from chimerax.ui import MainToolWindow
 
         class RefreshingComboBox(QComboBox):
@@ -339,6 +340,10 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.setButtonSymbols(QAbstractSpinBox.NoButtons)
                 self.setKeyboardTracking(False)
 
+            def wheelEvent(self, event):
+                event.ignore()
+
+        class NumericLineEdit(QLineEdit):
             def wheelEvent(self, event):
                 event.ignore()
 
@@ -392,7 +397,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.spacing = TypedOnlyDoubleSpinBox(main)
         self.spacing.setRange(0.0, 1e9)
         self.spacing.setDecimals(2)
-        self.spacing.setValue(400.0)
+        self.spacing.setValue(960.0)
         outer_row_spin("Periodicity (spacing)", self.spacing)
 
         self.doublet_offset = TypedOnlyDoubleSpinBox(main)
@@ -412,8 +417,8 @@ class CiliaBuilder2Tool(ToolInstance):
 
         panels.addWidget(outer_box)
 
-        # Central apparatus panel
-        cent_box = QGroupBox("Central apparatus", main)
+        # Central pair panel
+        cent_box = QGroupBox("Central pair", main)
         cent_layout = QVBoxLayout(cent_box)
 
         def cent_row_spin(label, spin):
@@ -433,7 +438,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_spacing = TypedOnlyDoubleSpinBox(main)
         self.centriole_spacing.setRange(0.0, 1e9)
         self.centriole_spacing.setDecimals(2)
-        self.centriole_spacing.setValue(400.0)
+        self.centriole_spacing.setValue(320.0)
         cent_row_spin("Periodicity (spacing)", self.centriole_spacing)
 
         self.centriole_z_offset = TypedOnlyDoubleSpinBox(main)
@@ -441,11 +446,6 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_z_offset.setDecimals(2)
         self.centriole_z_offset.setValue(0.0)
         cent_row_spin("Z offset", self.centriole_z_offset)
-
-        self.centriole_tube_id = TypedOnlySpinBox(main)
-        self.centriole_tube_id.setRange(1, 999999)
-        self.centriole_tube_id.setValue(100)
-        cent_row_spin("Tube id", self.centriole_tube_id)
 
         panels.addWidget(cent_box)
 
@@ -460,6 +460,25 @@ class CiliaBuilder2Tool(ToolInstance):
             lay.addWidget(QLabel(label, w))
             lay.addWidget(spin)
             ift_layout.addWidget(w)
+            return w
+
+        def ift_row_edit(label, edit):
+            w = QWidget(main)
+            lay = QHBoxLayout(w)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(QLabel(label, w))
+            lay.addWidget(edit)
+            ift_layout.addWidget(w)
+
+        ift_mode_row = QWidget(main)
+        ift_mode_lay = QHBoxLayout(ift_mode_row)
+        ift_mode_lay.setContentsMargins(0, 0, 0, 0)
+        ift_mode_lay.addWidget(QLabel("IFT mode", ift_mode_row))
+        self.ift_mode = QComboBox(ift_mode_row)
+        self.ift_mode.addItem("Train", "train")
+        self.ift_mode.addItem("Pick STAR point", "pick")
+        ift_mode_lay.addWidget(self.ift_mode, 1)
+        ift_layout.addWidget(ift_mode_row)
 
         ift_type_row = QWidget(main)
         ift_type_lay = QHBoxLayout(ift_type_row)
@@ -477,15 +496,93 @@ class CiliaBuilder2Tool(ToolInstance):
         self.ift_distance.setValue(900.0)
         ift_row_spin("Distance from STAR center", self.ift_distance)
 
+        self.ift_anterograde_angle = TypedOnlyDoubleSpinBox(main)
+        self.ift_anterograde_angle.setRange(-360.0, 360.0)
+        self.ift_anterograde_angle.setDecimals(2)
+        self.ift_anterograde_angle.setValue(5.0)
+        self.ift_anterograde_angle_row = ift_row_spin("Anterograde angle (deg)", self.ift_anterograde_angle)
+
+        self.ift_retrograde_angle = TypedOnlyDoubleSpinBox(main)
+        self.ift_retrograde_angle.setRange(-360.0, 360.0)
+        self.ift_retrograde_angle.setDecimals(2)
+        self.ift_retrograde_angle.setValue(12.0)
+        self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (deg)", self.ift_retrograde_angle)
+        self.ift_type.currentIndexChanged.connect(self._update_ift_type_visibility)
+
+        self.ift_mode_stack = QStackedWidget(main)
+
+        train_page = QWidget(main)
+        train_layout = QVBoxLayout(train_page)
+        train_layout.setContentsMargins(0, 0, 0, 0)
+
+        def train_row_widget(label, widget):
+            row = QWidget(train_page)
+            row_lay = QHBoxLayout(row)
+            row_lay.setContentsMargins(0, 0, 0, 0)
+            row_lay.addWidget(QLabel(label, row))
+            row_lay.addWidget(widget)
+            train_layout.addWidget(row)
+
+        self.ift_train_star_model = RefreshingComboBox(self._refresh_model_selectors, train_page)
+        self.ift_train_star_model.setMinimumContentsLength(24)
+        self.ift_train_star_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        train_row_widget("Target STAR model", self.ift_train_star_model)
+
+        self.ift_train_doublet = NumericLineEdit(train_page)
+        self.ift_train_doublet.setPlaceholderText("required")
+        self.ift_train_doublet.setValidator(QIntValidator(1, 10**9, self.ift_train_doublet))
+        train_row_widget("Filament number", self.ift_train_doublet)
+
+        self.ift_train_angle = NumericLineEdit(train_page)
+        self.ift_train_angle.setPlaceholderText("required")
+        self.ift_train_angle.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_angle))
+        train_row_widget("Angle (deg)", self.ift_train_angle)
+
+        self.ift_train_offset = NumericLineEdit(train_page)
+        self.ift_train_offset.setPlaceholderText("required")
+        self.ift_train_offset.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_offset))
+        train_row_widget("Offset", self.ift_train_offset)
+
+        self.ift_train_periodicity = NumericLineEdit(train_page)
+        self.ift_train_periodicity.setPlaceholderText("required")
+        self.ift_train_periodicity.setValidator(QDoubleValidator(0.0, 1e9, 6, self.ift_train_periodicity))
+        train_row_widget("Periodicity", self.ift_train_periodicity)
+
+        self.ift_train_repeat = NumericLineEdit(train_page)
+        self.ift_train_repeat.setPlaceholderText("required")
+        self.ift_train_repeat.setValidator(QIntValidator(1, 10**9, self.ift_train_repeat))
+        train_row_widget("Repeating number", self.ift_train_repeat)
+
+        train_btn_row = QWidget(train_page)
+        train_btn_lay = QHBoxLayout(train_btn_row)
+        train_btn_lay.setContentsMargins(0, 0, 0, 0)
+        train_build_btn = QPushButton("Build IFT train STAR", train_btn_row)
+        train_build_btn.clicked.connect(self._build_ift_train_star)
+        train_btn_lay.addWidget(train_build_btn)
+        train_btn_lay.addStretch(1)
+        train_layout.addWidget(train_btn_row)
+        train_layout.addStretch(1)
+
+        pick_page = QWidget(main)
+        pick_layout = QVBoxLayout(pick_page)
+        pick_layout.setContentsMargins(0, 0, 0, 0)
+
         ift_target_row = QWidget(main)
         ift_target_lay = QHBoxLayout(ift_target_row)
         ift_target_lay.setContentsMargins(0, 0, 0, 0)
-        use_target_btn = QPushButton("Select filament for IFT", ift_target_row)
+        use_target_btn = QPushButton("Select STAR point for IFT", ift_target_row)
         use_target_btn.clicked.connect(self._start_ift_pick_mode)
         ift_target_lay.addWidget(use_target_btn)
-        self.ift_target_label = QLabel("Press button, then click one attached filament", ift_target_row)
+        self.ift_target_label = QLabel("Press button, then click one STAR point", ift_target_row)
         ift_target_lay.addWidget(self.ift_target_label, 1)
-        ift_layout.addWidget(ift_target_row)
+        pick_layout.addWidget(ift_target_row)
+        pick_layout.addStretch(1)
+
+        self.ift_mode_stack.addWidget(train_page)
+        self.ift_mode_stack.addWidget(pick_page)
+        self.ift_mode.currentIndexChanged.connect(self.ift_mode_stack.setCurrentIndex)
+        self.ift_mode_stack.setCurrentIndex(self.ift_mode.currentIndex())
+        ift_layout.addWidget(self.ift_mode_stack)
 
         panels.addWidget(ift_box)
 
@@ -514,7 +611,7 @@ class CiliaBuilder2Tool(ToolInstance):
         cont_outer_btn.clicked.connect(lambda: self._build_outer(continue_mode=True))
         btn_lay.addWidget(cont_outer_btn)
 
-        build_cent_btn = QPushButton("Build central apparatus", btn_row)
+        build_cent_btn = QPushButton("Build central pair", btn_row)
         build_cent_btn.clicked.connect(self._build_centriole)
         btn_lay.addWidget(build_cent_btn)
 
@@ -657,17 +754,8 @@ class CiliaBuilder2Tool(ToolInstance):
         scroll = QScrollArea(parent)
         scroll.setWidgetResizable(True)
         scroll.setWidget(main)
-        splitter = QSplitter(parent)
-        splitter.addWidget(scroll)
-        self.models_browser = EmbeddedModelsBrowser(self.session, splitter)
-        splitter.addWidget(self.models_browser.widget)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 3)
-        try:
-            splitter.setSizes([420, 520])
-        except Exception:
-            pass
-        parent.layout().addWidget(splitter)
+        self.models_browser = None
+        parent.layout().addWidget(scroll)
 
         self.tool_window.manage(placement=None)
         self.tool_window.shown = True
@@ -677,15 +765,52 @@ class CiliaBuilder2Tool(ToolInstance):
             dw.setFloating(True)
             dw.setAttribute(Qt.WA_DeleteOnClose, False)
             dw.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            dw.resize(940, 450)
+            dw.resize(560, 450)
             dw.show()
         except Exception:
             pass
         self._refresh_model_selectors()
+        self._update_ift_type_visibility()
 
     def _model_ref(self, model):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
+
+    def _model_source_path(self, model):
+        for attr in ("path", "filename"):
+            try:
+                value = getattr(model, attr, None)
+                if value:
+                    return os.path.abspath(os.path.expanduser(str(value)))
+            except Exception:
+                pass
+        try:
+            data = getattr(model, "data", None)
+            path = getattr(data, "path", None)
+            if path:
+                return os.path.abspath(os.path.expanduser(str(path)))
+        except Exception:
+            pass
+        try:
+            grid = getattr(model, "grid_data", None)
+            path = getattr(grid, "path", None)
+            if path:
+                return os.path.abspath(os.path.expanduser(str(path)))
+        except Exception:
+            pass
+        return None
+
+    def _required_float_edit(self, edit, label):
+        text = edit.text().strip()
+        if not text:
+            raise RuntimeError(f"Enter {label}")
+        return float(text)
+
+    def _required_int_edit(self, edit, label):
+        text = edit.text().strip()
+        if not text:
+            raise RuntimeError(f"Enter {label}")
+        return int(text)
 
     def _rot_y_matrix(self, deg):
         a = math.radians(float(deg))
@@ -728,6 +853,16 @@ class CiliaBuilder2Tool(ToolInstance):
             return model.parent
         except Exception:
             return None
+
+    def _is_under_cb_group(self, model, tag):
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_group_tag", None) == tag:
+                return True
+            cur = self._model_parent(cur)
+        return False
 
     def _is_generated_attached_model(self, model):
         cur = model
@@ -788,6 +923,32 @@ class CiliaBuilder2Tool(ToolInstance):
             self.sel_star_model.setEnabled(star_has_models)
             self.sel_star_model.blockSignals(False)
 
+        if hasattr(self, "ift_train_star_model"):
+            train_star_current = self.ift_train_star_model.currentData()
+            self.ift_train_star_model.blockSignals(True)
+            self.ift_train_star_model.clear()
+            self.ift_train_star_model.addItem("No STAR models", None)
+            train_star_has_models = False
+            for m in self.session.models.list():
+                ref = self._model_ref(m)
+                if ref is None or not hasattr(m, "_cb_star_rows"):
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.ift_train_star_model.addItem(label, str(ref))
+                train_star_has_models = True
+            if train_star_current is not None:
+                idx = self.ift_train_star_model.findData(str(train_star_current))
+                if idx >= 0:
+                    self.ift_train_star_model.setCurrentIndex(idx)
+                else:
+                    self.ift_train_star_model.setCurrentIndex(1 if self.ift_train_star_model.count() > 1 else 0)
+            else:
+                preferred = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+                idx = self.ift_train_star_model.findData(str(preferred)) if preferred is not None else -1
+                self.ift_train_star_model.setCurrentIndex(idx if idx >= 0 else (1 if self.ift_train_star_model.count() > 1 else 0))
+            self.ift_train_star_model.setEnabled(train_star_has_models)
+            self.ift_train_star_model.blockSignals(False)
+
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
@@ -845,6 +1006,15 @@ class CiliaBuilder2Tool(ToolInstance):
         idx = self.sel_star_model.findData(str(ref))
         if idx >= 0:
             self.sel_star_model.setCurrentIndex(idx)
+
+    def _update_ift_type_visibility(self):
+        if not hasattr(self, "ift_type"):
+            return
+        current = str(self.ift_type.currentData() or "anterograde")
+        if hasattr(self, "ift_anterograde_angle_row"):
+            self.ift_anterograde_angle_row.setVisible(current == "anterograde")
+        if hasattr(self, "ift_retrograde_angle_row"):
+            self.ift_retrograde_angle_row.setVisible(current == "retrograde")
 
     def _select_map_model(self, model):
         self._refresh_model_selectors()
@@ -962,67 +1132,6 @@ class CiliaBuilder2Tool(ToolInstance):
                 child.allow_clipping = bool(allow)
             except Exception:
                 pass
-
-    def _star_random_clip_info(self, star_model):
-        rows = getattr(star_model, "_cb_star_rows", None) or []
-        if not rows:
-            return None
-
-        by_tube = {}
-        for row in rows:
-            try:
-                tid = int(float(row.get("rlnHelicalTubeID", 0)))
-                x = float(row.get("rlnCoordinateX", 0.0))
-                y = float(row.get("rlnCoordinateY", 0.0))
-                z = float(row.get("rlnCoordinateZ", 0.0))
-            except Exception:
-                continue
-            by_tube.setdefault(tid, []).append((z, x, y))
-
-        if len(by_tube) < 2:
-            return None
-
-        start_by_tube = {}
-        start_point_by_tube = {}
-        direction_vectors = []
-        for tid, pts in by_tube.items():
-            pts.sort(key=lambda p: p[0])
-            start_z, start_x, start_y = pts[0]
-            start_by_tube[tid] = start_z
-            start_point_by_tube[tid] = np.array([start_x, start_y, start_z], dtype=float)
-            if len(pts) >= 2:
-                z2, x2, y2 = pts[1]
-                vec = np.array([x2 - start_x, y2 - start_y, z2 - start_z], dtype=float)
-                norm = float(np.linalg.norm(vec))
-                if norm > 1e-9:
-                    direction_vectors.append(vec / norm)
-
-        if not start_by_tube:
-            return None
-
-        starts = list(start_by_tube.values())
-        spread = float(max(starts) - min(starts))
-        if spread <= 1e-6:
-            return None
-
-        clip_tube = max(start_by_tube, key=start_by_tube.get)
-        plane_point = start_point_by_tube[clip_tube]
-        if direction_vectors:
-            axis = np.sum(direction_vectors, axis=0)
-            norm = float(np.linalg.norm(axis))
-            if norm > 1e-9:
-                axis = axis / norm
-            else:
-                axis = np.array([0.0, 0.0, 1.0], dtype=float)
-        else:
-            axis = np.array([0.0, 0.0, 1.0], dtype=float)
-
-        return {
-            "plane_point": plane_point,
-            "axis": axis,
-            "spread": spread,
-            "clip_start": float(start_by_tube[clip_tube]),
-        }
 
     def _apply_attachment_clip_if_needed(self, out_root, star_model):
         clip_info = self._star_random_clip_info(star_model)
@@ -1328,6 +1437,159 @@ class CiliaBuilder2Tool(ToolInstance):
             self._restore_ift_mouse_mode()
             self._keep_tool_visible()
 
+    def _ift_train_geometry(self, star_model, tube_id):
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        tube_rows = []
+        for row in rows:
+            try:
+                if int(float(row.get("rlnHelicalTubeID", 0))) != int(tube_id):
+                    continue
+            except Exception:
+                continue
+            tube_rows.append(row)
+        if not tube_rows:
+            raise RuntimeError(f"Target STAR model has no rows for doublet {tube_id}")
+
+        points = [self._row_world_center(row) for row in tube_rows]
+        if len(points) >= 2:
+            line_vec = np.array(points[-1], dtype=float) - np.array(points[0], dtype=float)
+            norm = float(np.linalg.norm(line_vec))
+            line_axis = (line_vec / norm) if norm > 1e-9 else np.array([0.0, 0.0, 1.0], dtype=float)
+        else:
+            ex, ey, ez = self._axes_from_star_row(tube_rows[0])
+            line_axis = np.array(ez, dtype=float)
+        line_axis = line_axis / max(float(np.linalg.norm(line_axis)), 1e-12)
+
+        scalars = [float(np.dot(np.array(p, dtype=float), line_axis)) for p in points]
+        order = np.argsort(scalars)
+        ordered_rows = [tube_rows[i] for i in order]
+        ordered_points = [np.array(points[i], dtype=float) for i in order]
+        start_point = np.array(ordered_points[0], dtype=float)
+        start_scalar = float(np.dot(start_point, line_axis))
+
+        return {
+            "rows": ordered_rows,
+            "points": ordered_points,
+            "line_axis": line_axis,
+            "start_point": start_point,
+            "start_scalar": start_scalar,
+        }
+
+    def _build_ift_train_star(self):
+        from Qt.QtWidgets import QMessageBox
+        from . import cmd
+        from .io import rows_to_star_text
+        from .map import _rotation_about_axis
+
+        try:
+            self._refresh_model_selectors()
+            star_ref = self.ift_train_star_model.currentData() if hasattr(self, "ift_train_star_model") else None
+            if star_ref is None:
+                raise RuntimeError("Select a target STAR model for the IFT train")
+            star_model = self._model_by_ref(star_ref)
+            if star_model is None or not hasattr(star_model, "_cb_star_rows"):
+                raise RuntimeError("Target STAR model for the IFT train is not available")
+
+            tube_id = self._required_int_edit(self.ift_train_doublet, "Filament number")
+            base_angle_deg = self._required_float_edit(self.ift_train_angle, "Angle")
+            offset_ang = self._required_float_edit(self.ift_train_offset, "Offset")
+            periodicity_ang = self._required_float_edit(self.ift_train_periodicity, "Periodicity")
+            repeat_count = self._required_int_edit(self.ift_train_repeat, "Repeating number")
+            if periodicity_ang <= 0.0:
+                raise RuntimeError("Periodicity must be > 0")
+            if repeat_count <= 0:
+                raise RuntimeError("Repeating number must be > 0")
+
+            ift_type = str(self.ift_type.currentData() or "anterograde")
+            anterograde_angle = float(self.ift_anterograde_angle.value())
+            retrograde_angle = float(self.ift_retrograde_angle.value())
+            type_angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
+            angle_deg = base_angle_deg + type_angle_deg
+
+            geom = self._ift_train_geometry(star_model, tube_id)
+            source_rows = geom["rows"]
+            line_axis = np.array(geom["line_axis"], dtype=float)
+            start_point = np.array(geom["start_point"], dtype=float)
+            star_center = self._star_scene_center(star_model)
+
+            radial_seed = start_point - np.array(star_center, dtype=float)
+            radial_seed = radial_seed - line_axis * float(np.dot(radial_seed, line_axis))
+            radial_norm = float(np.linalg.norm(radial_seed))
+            if radial_norm < 1e-9:
+                raise RuntimeError("Could not determine radial direction for the selected doublet")
+            radial_dir = radial_seed / radial_norm
+
+            spin_rot = _rotation_about_axis(line_axis, angle_deg)
+            rotated_radial = spin_rot @ radial_dir
+            class_num = cmd._next_class_number()
+
+            try:
+                pixel_size = float(source_rows[0].get("rlnImagePixelSize", 1.0) or 1.0)
+            except Exception:
+                pixel_size = 1.0
+            if pixel_size <= 0.0:
+                pixel_size = 1.0
+
+            ex, ey, ez = self._axes_from_star_row(source_rows[0])
+            base_axes = [np.array(ex, dtype=float), np.array(ey, dtype=float), np.array(ez, dtype=float)]
+            basis_axes = [spin_rot @ axis for axis in base_axes]
+
+            star_rows = []
+            for idx in range(repeat_count):
+                target_point = start_point + line_axis * float(offset_ang + idx * periodicity_ang)
+                axial_component = float(np.dot(target_point - np.array(star_center, dtype=float), line_axis))
+                ift_origin = (
+                    np.array(star_center, dtype=float)
+                    + rotated_radial * float(self.ift_distance.value())
+                    + line_axis * axial_component
+                )
+                star_rows.append(
+                    {
+                        "rlnTomoName": str(source_rows[0].get("rlnTomoName", "TS_001")),
+                        "rlnCoordinateX": float(ift_origin[0]),
+                        "rlnCoordinateY": float(ift_origin[1]),
+                        "rlnCoordinateZ": float(ift_origin[2]),
+                        "rlnAngleRot": 0.0,
+                        "rlnAngleTilt": 0.0,
+                        "rlnAnglePsi": 0.0,
+                        "rlnImagePixelSize": float(pixel_size),
+                        "rlnHelicalTubeID": int(tube_id),
+                        "rlnClassNumber": int(class_num),
+                        "_cbWorldCoordinateX": float(ift_origin[0]),
+                        "_cbWorldCoordinateY": float(ift_origin[1]),
+                        "_cbWorldCoordinateZ": float(ift_origin[2]),
+                        "_cbAxisX": [float(v) for v in basis_axes[0]],
+                        "_cbAxisY": [float(v) for v in basis_axes[1]],
+                        "_cbAxisZ": [float(v) for v in basis_axes[2]],
+                        "_cb_ift_type": ift_type,
+                        "_cb_source_star_ref": self._model_ref(star_model),
+                        "_cb_source_star_row_index": int(idx),
+                    }
+                )
+
+            star_text = rows_to_star_text(star_rows)
+            created = cmd._create_star_model(
+                self.session,
+                f"IFT {ift_type.capitalize()} Train STAR {class_num}",
+                star_rows,
+                star_text,
+                True,
+                "relion",
+                True,
+                False,
+            )
+            self._inherit_clip_info(created, star_model)
+            self._select_star_model(created)
+            self.ift_target_label.setText(f"Generated: {created.name}")
+            self.session.logger.info(
+                f"Generated {created.name} from train parameters. Use the normal map attachment section to attach your IFT model."
+            )
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
+
     def _generate_ift_star_from_target(self, target):
         from . import cmd
         from .io import rows_to_star_text
@@ -1369,7 +1631,9 @@ class CiliaBuilder2Tool(ToolInstance):
         radial_dir = radial_vec / radial_norm
 
         ift_type = str(self.ift_type.currentData() or "anterograde")
-        angle_deg = 15.0 if ift_type == "retrograde" else 0.0
+        anterograde_angle = float(self.ift_anterograde_angle.value())
+        retrograde_angle = float(self.ift_retrograde_angle.value())
+        angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
         angle_rad = math.radians(angle_deg)
         macro_rot = np.array(
             [
@@ -1433,6 +1697,7 @@ class CiliaBuilder2Tool(ToolInstance):
             True,
             False,
         )
+        self._inherit_clip_info(created, star_model)
         self._select_star_model(created)
         self.session.logger.info(
             f"Generated {created.name} from selected filament. Use the normal map attachment section to attach your IFT model."
@@ -1473,7 +1738,9 @@ class CiliaBuilder2Tool(ToolInstance):
         radial_dir = radial_vec / radial_norm
 
         ift_type = str(self.ift_type.currentData() or "anterograde")
-        angle_deg = 15.0 if ift_type == "retrograde" else 0.0
+        anterograde_angle = float(self.ift_anterograde_angle.value())
+        retrograde_angle = float(self.ift_retrograde_angle.value())
+        angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
         angle_rad = math.radians(angle_deg)
         macro_rot = np.array(
             [
@@ -1534,6 +1801,7 @@ class CiliaBuilder2Tool(ToolInstance):
             True,
             False,
         )
+        self._inherit_clip_info(created, star_model)
         self._select_star_model(created)
         self.session.logger.info(
             f"Generated {created.name} from picked STAR point. Use the normal map attachment section to attach your IFT model."
@@ -1591,6 +1859,105 @@ class CiliaBuilder2Tool(ToolInstance):
         if not coords:
             return np.zeros(3, dtype=float)
         return np.array(coords, dtype=float).mean(axis=0)
+
+    def _star_random_clip_info(self, star_model):
+        stored = getattr(star_model, "_cb_random_clip_info", None)
+        if isinstance(stored, dict):
+            try:
+                return {
+                    "plane_point": np.array(stored["plane_point"], dtype=float),
+                    "axis": np.array(stored["axis"], dtype=float),
+                    "spread": float(stored["spread"]),
+                    "clip_start": float(stored["clip_start"]),
+                }
+            except Exception:
+                pass
+
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        if not rows:
+            return None
+
+        by_tube = {}
+        for row in rows:
+            try:
+                tid = int(float(row.get("rlnHelicalTubeID", 0)))
+            except Exception:
+                continue
+            point = self._row_world_center(row)
+            by_tube.setdefault(tid, []).append(point)
+
+        if len(by_tube) < 2:
+            return None
+
+        start_by_tube = {}
+        start_point_by_tube = {}
+        direction_vectors = []
+        for tid, points in by_tube.items():
+            if not points:
+                continue
+            pts = [np.array(p, dtype=float) for p in points]
+            if len(pts) >= 2:
+                line_vec = pts[-1] - pts[0]
+                norm = float(np.linalg.norm(line_vec))
+                axis = (line_vec / norm) if norm > 1e-9 else np.array([0.0, 0.0, 1.0], dtype=float)
+            else:
+                axis = np.array([0.0, 0.0, 1.0], dtype=float)
+            scalars = [float(np.dot(p, axis)) for p in pts]
+            order = np.argsort(scalars)
+            pts = [pts[i] for i in order]
+            scalars = [scalars[i] for i in order]
+            start_by_tube[tid] = scalars[0]
+            start_point_by_tube[tid] = pts[0]
+            if len(pts) >= 2:
+                direction_vectors.append(axis)
+
+        if not start_by_tube:
+            return None
+
+        starts = list(start_by_tube.values())
+        spread = float(max(starts) - min(starts))
+        if spread <= 1e-6:
+            return None
+
+        clip_tube = max(start_by_tube, key=start_by_tube.get)
+        plane_point = start_point_by_tube[clip_tube]
+        if direction_vectors:
+            axis = np.sum(direction_vectors, axis=0)
+            norm = float(np.linalg.norm(axis))
+            axis = (axis / norm) if norm > 1e-9 else np.array([0.0, 0.0, 1.0], dtype=float)
+        else:
+            axis = np.array([0.0, 0.0, 1.0], dtype=float)
+
+        clip_info = {
+            "plane_point": np.array(plane_point, dtype=float),
+            "axis": np.array(axis, dtype=float),
+            "spread": spread,
+            "clip_start": float(start_by_tube[clip_tube]),
+        }
+        try:
+            star_model._cb_random_clip_info = {
+                "plane_point": clip_info["plane_point"].tolist(),
+                "axis": clip_info["axis"].tolist(),
+                "spread": float(clip_info["spread"]),
+                "clip_start": float(clip_info["clip_start"]),
+            }
+        except Exception:
+            pass
+        return clip_info
+
+    def _inherit_clip_info(self, new_star_model, source_star_model):
+        clip_info = self._star_random_clip_info(source_star_model)
+        if clip_info is None:
+            return
+        try:
+            new_star_model._cb_random_clip_info = {
+                "plane_point": np.array(clip_info["plane_point"], dtype=float).tolist(),
+                "axis": np.array(clip_info["axis"], dtype=float).tolist(),
+                "spread": float(clip_info["spread"]),
+                "clip_start": float(clip_info["clip_start"]),
+            }
+        except Exception:
+            pass
 
     def _close_manual_tweak_models(self):
         for model in (
@@ -1938,17 +2305,69 @@ class CiliaBuilder2Tool(ToolInstance):
     def _generated_star_models(self):
         out = []
         for model in self.session.models.list():
-            rows = getattr(model, "_cb_star_rows", None)
-            if rows is None:
-                continue
-            out.append(
-                {
-                    "name": str(model.name),
-                    "rows": rows,
-                    "star_text": getattr(model, "_cb_star_text", None),
-                }
-            )
+            try:
+                rows = getattr(model, "_cb_star_rows", None)
+                if rows is None:
+                    continue
+                out.append(
+                    {
+                        "name": str(model.name),
+                        "rows": rows,
+                        "star_text": getattr(model, "_cb_star_text", None),
+                        "display": bool(getattr(model, "display", True)),
+                        "clip_info": getattr(model, "_cb_random_clip_info", None),
+                        "under_cb_star_group": self._is_under_cb_group(model, "star_models"),
+                    }
+                )
+            except Exception as e:
+                self.session.logger.warning(f"Skipping STAR model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
         return out
+
+    def _attach_source_models_state(self):
+        out = []
+        seen_paths = set()
+        for model in self.session.models.list():
+            try:
+                if not self._is_selector_attach_source(model):
+                    continue
+                path = self._model_source_path(model)
+                if not path or path in seen_paths:
+                    continue
+                seen_paths.add(path)
+                out.append(
+                    {
+                        "name": str(model.name),
+                        "path": path,
+                        "display": bool(getattr(model, "display", True)),
+                        "under_cb_map_group": self._is_under_cb_group(model, "maps"),
+                    }
+                )
+            except Exception as e:
+                self.session.logger.warning(f"Skipping attach source during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        return out
+
+    def _attachment_models_state(self):
+        items = []
+        seen = set()
+        for out_root in self._attached_results.values():
+            try:
+                if out_root is None or id(out_root) in seen:
+                    continue
+                seen.add(id(out_root))
+                items.append(
+                    {
+                        "name": str(getattr(out_root, "name", "") or ""),
+                        "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
+                        "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
+                        "map_path": getattr(out_root, "_cb_attachment_map_path", None),
+                        "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
+                        "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
+                        "display": bool(getattr(out_root, "display", True)),
+                    }
+                )
+            except Exception as e:
+                self.session.logger.warning(f"Skipping attached result during JSON save: {getattr(out_root, 'name', '(unnamed)')} ({e})")
+        return items
 
     def _ui_state(self):
         return {
@@ -1962,10 +2381,23 @@ class CiliaBuilder2Tool(ToolInstance):
             "centriole_length": float(self.centriole_length.value()),
             "centriole_spacing": float(self.centriole_spacing.value()),
             "centriole_z_offset": float(self.centriole_z_offset.value()),
-            "centriole_tube_id": int(self.centriole_tube_id.value()),
             "ift_distance": float(self.ift_distance.value()),
+            "ift_mode": str(self.ift_mode.currentData() or "train"),
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
+            "ift_anterograde_angle": float(self.ift_anterograde_angle.value()),
+            "ift_retrograde_angle": float(self.ift_retrograde_angle.value()),
+            "ift_train_star_model": self._combo_state(self.ift_train_star_model) if hasattr(self, "ift_train_star_model") else {"id": None, "text": ""},
+            "ift_train_doublet": self.ift_train_doublet.text().strip(),
+            "ift_train_angle": self.ift_train_angle.text().strip(),
+            "ift_train_offset": self.ift_train_offset.text().strip(),
+            "ift_train_periodicity": self.ift_train_periodicity.text().strip(),
+            "ift_train_repeat": self.ift_train_repeat.text().strip(),
+            "attach_line_rotation": float(self.attach_line_rotation.value()),
+            "attach_y_rotation": float(self.attach_y_rotation.value()),
             "pixel_size": float(self.pixel_size.value()),
+            "tweak_source_path": self.tweak_source_path.text().strip() if hasattr(self, "tweak_source_path") else "",
+            "tweak_template_path": self.tweak_template_path.text().strip() if hasattr(self, "tweak_template_path") else "",
+            "tweak_save_path": self.tweak_save_path.text().strip() if hasattr(self, "tweak_save_path") else "",
         }
 
     def _apply_ui_state(self, state):
@@ -1979,13 +2411,33 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
         self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
         self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
-        self.centriole_tube_id.setValue(int(state.get("centriole_tube_id", self.centriole_tube_id.value())))
         self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
+        if hasattr(self, "ift_mode"):
+            idx = self.ift_mode.findData(str(state.get("ift_mode", self.ift_mode.currentData())))
+            if idx >= 0:
+                self.ift_mode.setCurrentIndex(idx)
+        self.ift_anterograde_angle.setValue(float(state.get("ift_anterograde_angle", self.ift_anterograde_angle.value())))
+        self.ift_retrograde_angle.setValue(float(state.get("ift_retrograde_angle", self.ift_retrograde_angle.value())))
         if hasattr(self, "ift_type"):
             idx = self.ift_type.findData(str(state.get("ift_type", self.ift_type.currentData())))
             if idx >= 0:
                 self.ift_type.setCurrentIndex(idx)
+        self._update_ift_type_visibility()
+        if hasattr(self, "ift_train_doublet"):
+            self.ift_train_doublet.setText(str(state.get("ift_train_doublet", "") or ""))
+            self.ift_train_angle.setText(str(state.get("ift_train_angle", "") or ""))
+            self.ift_train_offset.setText(str(state.get("ift_train_offset", "") or ""))
+            self.ift_train_periodicity.setText(str(state.get("ift_train_periodicity", "") or ""))
+            self.ift_train_repeat.setText(str(state.get("ift_train_repeat", "") or ""))
+        self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
+        self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
+        if hasattr(self, "tweak_source_path"):
+            self.tweak_source_path.setText(str(state.get("tweak_source_path", self.tweak_source_path.text()) or ""))
+        if hasattr(self, "tweak_template_path"):
+            self.tweak_template_path.setText(str(state.get("tweak_template_path", self.tweak_template_path.text()) or ""))
+        if hasattr(self, "tweak_save_path"):
+            self.tweak_save_path.setText(str(state.get("tweak_save_path", self.tweak_save_path.text()) or ""))
 
     def _restore_generated_star_models(self, models_state):
         from . import cmd
@@ -2005,7 +2457,145 @@ class CiliaBuilder2Tool(ToolInstance):
             cmd._add_to_cb_star_group(self.session, created)
             created._cb_star_rows = rows
             created._cb_star_text = item.get("star_text", None)
+            created._cb_random_clip_info = item.get("clip_info", None)
             cmd._render_star_model(self.session, created, rows, True)
+            try:
+                created.display = bool(item.get("display", True))
+            except Exception:
+                pass
+            try:
+                if str(name).startswith("Microtubules STAR"):
+                    self._last_outer_star_model = created
+                elif str(name).startswith("Central pair STAR"):
+                    self._last_cent_star_model = created
+            except Exception:
+                pass
+
+    def _find_model_by_name(self, name, require_star=False):
+        want = str(name or "").strip()
+        if not want:
+            return None
+        for model in self.session.models.list():
+            if str(getattr(model, "name", "") or "") != want:
+                continue
+            if require_star and not hasattr(model, "_cb_star_rows"):
+                continue
+            return model
+        return None
+
+    def _find_model_by_path(self, path):
+        want = os.path.abspath(os.path.expanduser(str(path or "")))
+        if not want:
+            return None
+        for model in self.session.models.list():
+            source_path = self._model_source_path(model)
+            if source_path and os.path.abspath(source_path) == want:
+                return model
+        return None
+
+    def _restore_attach_source_models(self, models_state):
+        from .cmd import _add_to_cb_map_group
+
+        for item in models_state or []:
+            path = item.get("path", None)
+            if not path:
+                continue
+            existing = self._find_model_by_path(path)
+            if existing is not None:
+                try:
+                    existing._cb_attach_source = True
+                    if bool(item.get("under_cb_map_group", False)):
+                        _add_to_cb_map_group(self.session, existing)
+                    existing.display = bool(item.get("display", True))
+                except Exception:
+                    pass
+                continue
+            if not os.path.exists(path):
+                continue
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{path}"')
+            opened = [m for m in self.session.models.list() if m not in before]
+            if not opened:
+                continue
+            source_model = self._pick_opened_model(
+                opened,
+                lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
+            )
+            if source_model is None:
+                source_model = opened[-1]
+            try:
+                source_model._cb_attach_source = True
+                if bool(item.get("under_cb_map_group", False)):
+                    _add_to_cb_map_group(self.session, source_model)
+                source_model.display = bool(item.get("display", True))
+            except Exception:
+                pass
+
+    def _restore_attachments(self, attachment_state):
+        from .map import cbsubmap_impl
+
+        self._attached_results = {}
+        self._last_attached_result = None
+
+        for item in attachment_state or []:
+            star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
+            if star_model is None:
+                continue
+            map_model = None
+            map_path = item.get("map_path", None)
+            if map_path:
+                map_model = self._find_model_by_path(map_path)
+            if map_model is None:
+                map_model = self._find_model_by_name(item.get("map_name"), require_star=False)
+            if map_model is None or not self._is_attach_source(map_model):
+                continue
+
+            line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
+            y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
+            adjust_matrix = self._y_control_matrix(y_rotation).tolist() if abs(y_rotation) > 1e-12 else np.eye(3, dtype=float).tolist()
+
+            out_root = cbsubmap_impl(
+                session=self.session,
+                star_model_obj=star_model,
+                map_model_id=self._model_ref(map_model),
+                close_source=False,
+                show_result=bool(item.get("display", True)),
+                rotate_xy_90=True,
+                single_big_object=True,
+                attach_all_z_offset_deg=line_rotation,
+                attach_auto_align_long_axis=False,
+                attach_inout_flip=False,
+                attach_updown_flip=False,
+                attach_axis_rot_y_deg=0.0,
+                attach_axis_rot_z_deg=-90.0,
+                attach_local_adjust_matrix=adjust_matrix,
+            )
+            if out_root is None:
+                continue
+            try:
+                out_root._cb_attachment_line_rotation = line_rotation
+                out_root._cb_attachment_y_rotation = y_rotation
+                out_root._cb_attachment_star_name = str(star_model.name)
+                out_root._cb_attachment_map_name = str(map_model.name)
+                out_root._cb_attachment_map_path = self._model_source_path(map_model)
+                out_root.display = bool(item.get("display", True))
+            except Exception:
+                pass
+            attach_key = self._attach_key(star_model, map_model)
+            self._attached_results[attach_key] = out_root
+            self._last_attached_result = out_root
+            try:
+                map_model.display = False
+            except Exception:
+                pass
+            try:
+                star_model.display = False
+            except Exception:
+                pass
+            try:
+                self._apply_attachment_clip_if_needed(out_root, star_model)
+            except Exception:
+                pass
 
     def _save_session_json(self):
         from Qt.QtWidgets import QMessageBox, QFileDialog
@@ -2019,14 +2609,22 @@ class CiliaBuilder2Tool(ToolInstance):
             )
             if not path:
                 return
+            ui_state = self._ui_state()
+            selected_state = {
+                "star_model": self._combo_state(self.sel_star_model),
+                "map_model": self._combo_state(self.sel_map_model),
+                "ift_train_star_model": self._combo_state(self.ift_train_star_model) if hasattr(self, "ift_train_star_model") else {"id": None, "text": ""},
+            }
+            attach_sources = self._attach_source_models_state()
+            generated_star_models = self._generated_star_models()
+            attachments = self._attachment_models_state()
             payload = {
-                "version": 1,
-                "ui": self._ui_state(),
-                "selected": {
-                    "star_model": self._combo_state(self.sel_star_model),
-                    "map_model": self._combo_state(self.sel_map_model),
-                },
-                "generated_star_models": self._generated_star_models(),
+                "version": 2,
+                "ui": ui_state,
+                "selected": selected_state,
+                "attach_sources": attach_sources,
+                "generated_star_models": generated_star_models,
+                "attachments": attachments,
             }
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
@@ -2053,12 +2651,16 @@ class CiliaBuilder2Tool(ToolInstance):
                 payload = json.load(f)
 
             self._apply_ui_state(payload.get("ui", {}))
+            self._restore_attach_source_models(payload.get("attach_sources", []))
             self._restore_generated_star_models(payload.get("generated_star_models", []))
+            self._restore_attachments(payload.get("attachments", []))
             self._refresh_model_selectors()
 
             selected = payload.get("selected", {})
             self._select_combo_saved(self.sel_star_model, selected.get("star_model"))
             self._select_combo_saved(self.sel_map_model, selected.get("map_model"))
+            if hasattr(self, "ift_train_star_model"):
+                self._select_combo_saved(self.ift_train_star_model, selected.get("ift_train_star_model"))
 
             self.session.logger.info(f"Loaded CiliaBuilder2 session JSON: {path}")
         except Exception as e:
@@ -2141,6 +2743,13 @@ class CiliaBuilder2Tool(ToolInstance):
 
             self._last_outer_star_model = model
             try:
+                if random_spacing:
+                    self._star_random_clip_info(model)
+                else:
+                    model._cb_random_clip_info = None
+            except Exception:
+                pass
+            try:
                 self._select_star_model(model)
             except Exception:
                 pass
@@ -2175,7 +2784,7 @@ class CiliaBuilder2Tool(ToolInstance):
             length = float(self.centriole_length.value())
             spacing = float(self.centriole_spacing.value())
             z_offset = float(self.centriole_z_offset.value())
-            tube_id = int(self.centriole_tube_id.value())
+            tube_id = 100
 
             pixel_size = float(self.pixel_size.value())
             model = cmd.buildcentriole(
@@ -2192,11 +2801,16 @@ class CiliaBuilder2Tool(ToolInstance):
 
             self._last_cent_star_model = model
             try:
+                if self._last_outer_star_model is not None:
+                    self._inherit_clip_info(model, self._last_outer_star_model)
+            except Exception:
+                pass
+            try:
                 self._select_star_model(model)
             except Exception:
                 pass
 
-            # Update last centriole end z
+            # Update last central-pair end z
             try:
                 rows = getattr(model, "_cb_star_rows", None) or []
                 px = float(pixel_size)
@@ -2349,6 +2963,14 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_axis_rot_z_deg=-90.0,
             attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
         )
+        try:
+            out_root._cb_attachment_line_rotation = float(self.attach_line_rotation.value())
+            out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
+            out_root._cb_attachment_star_name = str(star_model.name)
+            out_root._cb_attachment_map_name = str(map_model.name)
+            out_root._cb_attachment_map_path = self._model_source_path(map_model)
+        except Exception:
+            pass
         self._last_attached_result = out_root
         self._attached_results[attach_key] = out_root
 
@@ -2360,6 +2982,10 @@ class CiliaBuilder2Tool(ToolInstance):
 
         try:
             map_model.display = False
+        except Exception:
+            pass
+        try:
+            star_model.display = False
         except Exception:
             pass
         try:

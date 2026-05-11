@@ -89,7 +89,7 @@ class CiliaBuilder2Panel(ToolInstance):
         self.outer_period = QDoubleSpinBox()
         self.outer_period.setRange(1.0, 1e9)
         self.outer_period.setDecimals(1)
-        self.outer_period.setValue(400.0)
+        self.outer_period.setValue(960.0)
 
         self.angle_set = QDoubleSpinBox()
         self.angle_set.setRange(-3600.0, 3600.0)
@@ -122,6 +122,7 @@ class CiliaBuilder2Panel(ToolInstance):
         self.map_model.setRange(0, 999999)
         self.map_model.setValue(0)
 
+
         self.btn_open_map = QPushButton("Open map file")
         self.btn_open_map.clicked.connect(self._on_open_map)
 
@@ -142,11 +143,11 @@ class CiliaBuilder2Panel(ToolInstance):
         return box
 
     def _make_centriole_panel(self):
-        box = QGroupBox("Central apparatus")
+        box = QGroupBox("Central pair")
         form = QFormLayout()
         box.setLayout(form)
 
-        self.cen_enable = QCheckBox("Build central apparatus in center")
+        self.cen_enable = QCheckBox("Build central pair in center")
         self.cen_enable.setChecked(False)
 
         self.cen_length = QDoubleSpinBox()
@@ -157,7 +158,7 @@ class CiliaBuilder2Panel(ToolInstance):
         self.cen_period = QDoubleSpinBox()
         self.cen_period.setRange(1.0, 1e9)
         self.cen_period.setDecimals(1)
-        self.cen_period.setValue(400.0)
+        self.cen_period.setValue(320.0)
 
         self.cen_z_offset = QDoubleSpinBox()
         self.cen_z_offset.setRange(-1e9, 1e9)
