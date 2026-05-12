@@ -54,6 +54,53 @@ def _get_model_by_ref(session, id1):
     return None
 
 
+def _iter_model_tree(model_obj):
+    yield model_obj
+    try:
+        children = list(model_obj.child_models())
+    except Exception:
+        children = []
+    for child in children:
+        yield from _iter_model_tree(child)
+
+
+def _is_glb_like_model(model_obj):
+    if model_obj is None:
+        return False
+    cls_name = model_obj.__class__.__name__.lower()
+    if "gltf" in cls_name or "glb" in cls_name:
+        return True
+    model_name = str(getattr(model_obj, "name", "") or "").lower()
+    return model_name.endswith((".glb", ".gltf"))
+
+
+def _looks_like_surface_leaf(model_obj):
+    try:
+        vertices = getattr(model_obj, "vertices", None)
+        triangles = getattr(model_obj, "triangles", None)
+        if vertices is not None and triangles is not None:
+            return True
+    except Exception:
+        pass
+    cls_name = model_obj.__class__.__name__.lower()
+    if "surface" in cls_name or "stl" in cls_name or "mesh" in cls_name:
+        return True
+    model_name = str(getattr(model_obj, "name", "") or "").lower()
+    return model_name.endswith((".stl",))
+
+
+def _resolve_attach_source_model(model_obj):
+    if model_obj is None:
+        return None
+    if _is_glb_like_model(model_obj):
+        for child in _iter_model_tree(model_obj):
+            if child is model_obj:
+                continue
+            if _is_volume_like(child) or _looks_like_surface_leaf(child):
+                return child
+    return model_obj
+
+
 def _parse_star_rows_from_model(model_obj):
     rows = getattr(model_obj, "_cb_star_rows", None)
     if rows is None:
@@ -624,13 +671,8 @@ def cbsubmap_impl(
     if src_map is None:
         session.logger.error("cbsubmap cannot find map_model by that id")
         return None
+    src_map = _resolve_attach_source_model(src_map)
     _zero_volume_origin(session, src_map)
-    src_map._cb_attach_source = True
-    try:
-        from .cmd import _add_to_cb_map_group
-        _add_to_cb_map_group(session, src_map)
-    except Exception:
-        pass
 
     source_is_volume = _is_volume_like(src_map)
     map_vox_ang = float(_get_map_voxel_size_ang(src_map)) if source_is_volume else 1.0

@@ -980,10 +980,24 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _model_by_ref(self, model_id):
         want = str(model_id)
-        for m in self.session.models.list():
+        for m in self._all_session_models():
             if m.id_string == want:
                 return m
         return None
+
+    def _archive_attach_source_model(self, model):
+        if model is None:
+            return
+        try:
+            from .cmd import _add_to_cb_map_group
+            model._cb_attach_source = True
+            _add_to_cb_map_group(self.session, model)
+        except Exception:
+            pass
+        try:
+            model.display = False
+        except Exception:
+            pass
 
     def _attach_key(self, star_model, map_model):
         return (id(star_model), id(map_model))
@@ -2790,7 +2804,7 @@ class CiliaBuilder2Tool(ToolInstance):
         want = str(name or "").strip()
         if not want:
             return None
-        for model in self.session.models.list():
+        for model in self._all_session_models():
             if str(getattr(model, "name", "") or "") != want:
                 continue
             if require_star and not hasattr(model, "_cb_star_rows"):
@@ -2802,7 +2816,7 @@ class CiliaBuilder2Tool(ToolInstance):
         want = os.path.abspath(os.path.expanduser(str(path or "")))
         if not want:
             return None
-        for model in self.session.models.list():
+        for model in self._all_session_models():
             source_path = self._model_source_path(model)
             if source_path and os.path.abspath(source_path) == want:
                 return model
@@ -3005,6 +3019,15 @@ class CiliaBuilder2Tool(ToolInstance):
         model_name = str(getattr(model, "name", "") or "").lower()
         return model_name.endswith((".stl", ".glb", ".gltf"))
 
+    def _is_glb_like(self, model):
+        if model is None:
+            return False
+        cls_name = model.__class__.__name__.lower()
+        if "gltf" in cls_name or "glb" in cls_name:
+            return True
+        model_name = str(getattr(model, "name", "") or "").lower()
+        return model_name.endswith((".glb", ".gltf"))
+
     def _is_volume_like(self, model):
         cls_name = model.__class__.__name__.lower()
         model_name = str(getattr(model, "name", "") or "").lower()
@@ -3028,7 +3051,17 @@ class CiliaBuilder2Tool(ToolInstance):
         return False
 
     def _is_attach_source(self, model):
-        return self._is_volume_like(model) or self._is_surface_like(model)
+        if self._is_volume_like(model) or self._is_surface_like(model):
+            return True
+        if self._is_glb_like(model):
+            try:
+                children = list(model.child_models())
+            except Exception:
+                children = []
+            for child in children:
+                if self._is_volume_like(child) or self._is_surface_like(child):
+                    return True
+        return False
 
     def _build_outer(self, continue_mode=False):
         from Qt.QtWidgets import QMessageBox
@@ -3358,10 +3391,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self._last_attach_star_id = current_star_id
         self._last_attach_map_id = current_map_id
 
-        try:
-            map_model.display = False
-        except Exception:
-            pass
+        self._archive_attach_source_model(map_model)
         try:
             star_model.display = False
         except Exception:
