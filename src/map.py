@@ -90,14 +90,6 @@ def _looks_like_surface_leaf(model_obj):
 
 
 def _resolve_attach_source_model(model_obj):
-    if model_obj is None:
-        return None
-    if _is_glb_like_model(model_obj):
-        for child in _iter_model_tree(model_obj):
-            if child is model_obj:
-                continue
-            if _is_volume_like(child) or _looks_like_surface_leaf(child):
-                return child
     return model_obj
 
 
@@ -259,6 +251,12 @@ def _particle_axes_from_row(row):
 
 
 def _copy_source_instance(session, src):
+    if _is_glb_like_model(src):
+        try:
+            return _copy_gltf_tree(session, src)
+        except Exception:
+            pass
+
     # 1 direct copy
     try:
         if hasattr(src, "copy"):
@@ -326,6 +324,55 @@ def _copy_source_instance(session, src):
             return None
 
     return None
+
+
+def _copy_gltf_tree(session, src):
+    from chimerax.gltf.gltf import gltfModel, copy_model
+
+    def clone_node(node):
+        clone = gltfModel(str(getattr(node, "name", "gltf copy")), session)
+        try:
+            clone.position = node.position
+        except Exception:
+            pass
+        try:
+            clone.positions = node.positions
+        except Exception:
+            pass
+        try:
+            va = getattr(node, "vertices", None)
+            ta = getattr(node, "triangles", None)
+            if va is not None and ta is not None:
+                copy_model(node, clone)
+        except Exception:
+            pass
+        try:
+            children = list(node.child_models())
+        except Exception:
+            children = []
+        for child in children:
+            child_clone = clone_node(child)
+            if child_clone is not None:
+                clone.add([child_clone])
+        return clone
+
+    root = Model(str(getattr(src, "name", "gltf root")), session)
+    try:
+        root.position = src.position
+    except Exception:
+        pass
+    try:
+        children = list(src.child_models())
+    except Exception:
+        children = []
+    if children:
+        for child in children:
+            child_clone = clone_node(child)
+            if child_clone is not None:
+                root.add([child_clone])
+        return root
+    leaf = clone_node(src)
+    return leaf
 
 
 def _is_volume_like(model_obj):
