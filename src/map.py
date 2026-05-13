@@ -327,34 +327,65 @@ def _copy_source_instance(session, src):
 
 
 def _copy_gltf_tree(session, src):
-    from chimerax.gltf.gltf import gltfModel, copy_model
-
     def clone_node(node):
-        clone = gltfModel(str(getattr(node, "name", "gltf copy")), session)
         try:
-            clone.position = node.position
+            if hasattr(node, "copy"):
+                clone = node.copy()
+                if clone is not None:
+                    return clone
         except Exception:
             pass
-        try:
-            clone.positions = node.positions
-        except Exception:
-            pass
-        try:
-            va = getattr(node, "vertices", None)
-            ta = getattr(node, "triangles", None)
-            if va is not None and ta is not None:
-                copy_model(node, clone)
-        except Exception:
-            pass
+
         try:
             children = list(node.child_models())
         except Exception:
             children = []
-        for child in children:
-            child_clone = clone_node(child)
-            if child_clone is not None:
-                clone.add([child_clone])
-        return clone
+
+        if children:
+            clone = Model(str(getattr(node, "name", "gltf node")), session)
+            try:
+                clone.position = node.position
+            except Exception:
+                pass
+            try:
+                clone.positions = node.positions
+            except Exception:
+                pass
+            for child in children:
+                child_clone = clone_node(child)
+                if child_clone is not None:
+                    clone.add([child_clone])
+            return clone
+
+        try:
+            surf_type = node.__class__
+            clone = surf_type(str(getattr(node, "name", "gltf mesh copy")), session)
+            va = getattr(node, "vertices", None)
+            na = getattr(node, "normals", None)
+            ta = getattr(node, "triangles", None)
+            if va is not None and ta is not None and hasattr(clone, "set_geometry"):
+                clone.set_geometry(va, na, ta)
+                try:
+                    clone.color = node.color
+                except Exception:
+                    pass
+                try:
+                    clone.position = node.position
+                except Exception:
+                    pass
+                try:
+                    clone.positions = node.positions
+                except Exception:
+                    pass
+                return clone
+        except Exception:
+            pass
+
+        return None
+
+    root = clone_node(src)
+    if root is not None:
+        return root
 
     root = Model(str(getattr(src, "name", "gltf root")), session)
     try:
@@ -362,17 +393,23 @@ def _copy_gltf_tree(session, src):
     except Exception:
         pass
     try:
+        root.positions = src.positions
+    except Exception:
+        pass
+    try:
         children = list(src.child_models())
     except Exception:
         children = []
-    if children:
-        for child in children:
-            child_clone = clone_node(child)
-            if child_clone is not None:
-                root.add([child_clone])
-        return root
-    leaf = clone_node(src)
-    return leaf
+    for child in children:
+        child_clone = clone_node(child)
+        if child_clone is not None:
+            root.add([child_clone])
+    try:
+        if len(list(root.child_models())) > 0:
+            return root
+    except Exception:
+        pass
+    return None
 
 
 def _is_volume_like(model_obj):
@@ -408,6 +445,22 @@ def _is_surface_like(model_obj):
         pass
     model_name = str(getattr(model_obj, "name", "") or "").lower()
     return model_name.endswith((".stl", ".glb", ".gltf"))
+
+
+def _is_atomic_like(model_obj):
+    try:
+        atoms = getattr(model_obj, "atoms", None)
+        if atoms is not None and len(atoms) > 0:
+            return True
+    except Exception:
+        pass
+    cls_name = model_obj.__class__.__name__.lower()
+    model_name = str(getattr(model_obj, "name", "") or "").lower()
+    return (
+        "structure" in cls_name
+        or "atomic" in cls_name
+        or model_name.endswith((".pdb", ".cif", ".mmcif"))
+    )
 
 
 def _matching_volume_for_surface(session, src_surface):
@@ -658,6 +711,18 @@ def _shared_source_anchor_local(session, src_model):
                     pass
         return _bounds_center_local(src_model)
 
+    if _is_atomic_like(src_model):
+        probe = _copy_source_instance(session, src_model)
+        if probe is not None:
+            try:
+                return _bounds_center_local(probe)
+            finally:
+                try:
+                    session.models.close([probe])
+                except Exception:
+                    pass
+        return _bounds_center_local(src_model)
+
     return np.array([0.0, 0.0, 0.0], dtype=float)
 
 
@@ -722,6 +787,7 @@ def cbsubmap_impl(
     _zero_volume_origin(session, src_map)
 
     source_is_volume = _is_volume_like(src_map)
+    source_is_atomic = _is_atomic_like(src_map)
     map_vox_ang = float(_get_map_voxel_size_ang(src_map)) if source_is_volume else 1.0
     if map_vox_ang < 1e-12:
         map_vox_ang = 1.0
@@ -815,6 +881,11 @@ def cbsubmap_impl(
         if source_is_volume:
             base_scale = float(map_vox_ang) / float(effective_particle_px_ang)
             base_scale *= float(attach_pixel_scale)
+        elif source_is_atomic:
+            # Atomic structures are already in Angstrom coordinates.
+            # STAR placement here is in STAR coordinate units (Angstrom / pixel_size),
+            # so scale the atomic model into that same space.
+            base_scale = 1.0 / float(effective_particle_px_ang)
         else:
             base_scale = 1.0
         scale = base_scale * float(CALIB_SCALE)

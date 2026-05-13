@@ -1148,7 +1148,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
-            self.sel_map_model.addItem("No original map/STL/GLB models", None)
+            self.sel_map_model.addItem("No original map/STL/GLB/PDB/CIF models", None)
             for m in self._all_session_models():
                 ref = self._model_ref(m)
                 if ref is None or not self._is_selector_attach_source(m):
@@ -1171,7 +1171,7 @@ class CiliaBuilder2Tool(ToolInstance):
             tweak_current = self.tweak_open_model.currentData()
             self.tweak_open_model.blockSignals(True)
             self.tweak_open_model.clear()
-            self.tweak_open_model.addItem("No open map/STL/GLB models", None)
+            self.tweak_open_model.addItem("No open map/STL/GLB/PDB/CIF models", None)
             tweak_has_models = False
             for m in self._all_session_models():
                 ref = self._model_ref(m)
@@ -2381,7 +2381,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 if selected_source is None:
                     raise RuntimeError(f"Open model #{source_ref} not found")
                 if not self._is_attach_source(selected_source):
-                    raise RuntimeError("Selected open model is not a map/STL/GLB attach source")
+                    raise RuntimeError("Selected open model is not a map/STL/GLB/PDB/CIF attach source")
             elif source_path:
                 if not os.path.exists(source_path):
                     raise RuntimeError(f"User model path does not exist: {source_path}")
@@ -3051,7 +3051,7 @@ class CiliaBuilder2Tool(ToolInstance):
         return False
 
     def _is_attach_source(self, model):
-        if self._is_volume_like(model) or self._is_surface_like(model):
+        if self._is_volume_like(model) or self._is_surface_like(model) or self._is_atomic_like(model):
             return True
         if self._is_glb_like(model):
             try:
@@ -3059,7 +3059,7 @@ class CiliaBuilder2Tool(ToolInstance):
             except Exception:
                 children = []
             for child in children:
-                if self._is_volume_like(child) or self._is_surface_like(child):
+                if self._is_volume_like(child) or self._is_surface_like(child) or self._is_atomic_like(child):
                     return True
         return False
 
@@ -3341,7 +3341,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if map_model is None:
             raise RuntimeError(f"Map model #{map_id} not found")
         if not self._is_attach_source(map_model):
-            raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB attach source")
+            raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB/PDB/CIF attach source")
 
         self._zero_map_origin_index(map_model)
 
