@@ -854,32 +854,349 @@ class CiliaBuilder2Tool(ToolInstance):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
 
-    def _model_source_path(self, model):
-        for attr in ("path", "filename"):
+    def _candidate_model_paths(self, model):
+        paths = []
+        seen = set()
+
+        def add_path(value):
+            if not value:
+                return
             try:
-                value = getattr(model, attr, None)
-                if value:
+                norm = os.path.abspath(os.path.expanduser(str(value)))
+            except Exception:
+                return
+            if not norm or norm in seen:
+                return
+            seen.add(norm)
+            paths.append(norm)
 
+        try:
+            scan_models = list(self._iter_model_tree(model))
+        except Exception:
+            scan_models = [model]
+        for obj in scan_models:
+            for attr in ("path", "filename"):
+                try:
+                    add_path(getattr(obj, attr, None))
+                except Exception:
+                    pass
+            try:
+                data = getattr(obj, "data", None)
+                add_path(getattr(data, "path", None))
+            except Exception:
+                pass
+            try:
+                grid = getattr(obj, "grid_data", None)
+                add_path(getattr(grid, "path", None))
+            except Exception:
+                pass
+            try:
+                for extra in getattr(obj, "_cb_saved_session_paths", []) or []:
+                    add_path(extra)
+            except Exception:
+                pass
+        return paths
 
+    def _model_source_path(self, model):
+        paths = self._candidate_model_paths(model)
+        return paths[0] if paths else None
 
-                    return os.path.abspath(os.path.expanduser(str(value)))
+    def _store_model_saved_path(self, model, path):
+        norm = os.path.abspath(os.path.expanduser(str(path or "")))
+        if not norm:
+            return None
+        try:
+            targets = list(self._iter_model_tree(model))
+        except Exception:
+            targets = [model]
+        for obj in targets:
+            try:
+                aliases = list(getattr(obj, "_cb_saved_session_paths", []) or [])
+                if norm not in aliases:
+                    aliases.append(norm)
+                obj._cb_saved_session_paths = aliases
+            except Exception:
+                pass
+        return norm
+
+    def _remember_restored_session_source(self, model, item):
+        if model is None:
+            return
+        store = getattr(self, "_restored_session_sources", None)
+        if store is None:
+            store = {}
+            self._restored_session_sources = store
+
+        path = item.get("path", None)
+        if path:
+            try:
+                store[("path", os.path.abspath(os.path.expanduser(str(path))))] = model
+            except Exception:
+                pass
+
+        fetch_type = str(item.get("fetch_type", "") or "").strip().lower()
+        fetch_id = str(item.get("fetch_id", "") or "").strip().lower()
+        if fetch_type and fetch_id:
+            store[("fetch", fetch_type, fetch_id)] = model
+
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            store[("name", name)] = model
+
+    def _restored_session_source_model(self, item):
+        store = getattr(self, "_restored_session_sources", None) or {}
+
+        map_path = item.get("map_path", None)
+        if map_path:
+            try:
+                model = store.get(("path", os.path.abspath(os.path.expanduser(str(map_path)))))
+                if model is not None:
+                    return model
+            except Exception:
+                pass
+
+        fetch_type = str(item.get("fetch_type", "") or "").strip().lower()
+        fetch_id = str(item.get("fetch_id", "") or "").strip().lower()
+        if fetch_type and fetch_id:
+            model = store.get(("fetch", fetch_type, fetch_id))
+            if model is not None:
+                return model
+
+        map_name = str(item.get("map_name", "") or "").strip()
+        if map_name:
+            model = store.get(("name", map_name))
+            if model is not None:
+                return model
+        return None
+
+    def _session_copy_name(self, model, session_stem, ext):
+        import re
+
+        name = str(getattr(model, "name", "") or "model")
+        stem = os.path.splitext(name)[0]
+        stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._")
+        session_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", str(session_stem or "session")).strip("._") or "session"
+        return f"{stem or 'model'}__{session_stem}{ext}"
+
+    def _copy_source_file_for_session(self, model, save_dir, session_stem, ext, export_cache):
+        if model is None or not save_dir:
+            return None
+        cache_key = (id(model), str(ext or "").lower())
+        if cache_key in export_cache:
+            return export_cache[cache_key]
+
+        out_path = os.path.join(save_dir, self._session_copy_name(model, session_stem, ext))
+        source_path = self._model_source_path(model)
+        if source_path and os.path.exists(source_path):
+            import shutil
+            shutil.copy2(source_path, out_path)
+        else:
+            self._export_live_model_copy_for_session(model, out_path, ext)
+
+        stored = self._store_model_saved_path(model, out_path) or out_path
+        export_cache[cache_key] = stored
+        return stored
+
+    def _export_live_model_copy_for_session(self, model, out_path, ext):
+        display_state = []
+        try:
+            scan_models = list(self._iter_model_tree(model))
+        except Exception:
+            scan_models = [model]
+        for obj in scan_models:
+            try:
+                display_state.append((obj, bool(getattr(obj, "display", True))))
+                obj.display = True
             except Exception:
                 pass
         try:
-            data = getattr(model, "data", None)
-            path = getattr(data, "path", None)
-            if path:
-                return os.path.abspath(os.path.expanduser(str(path)))
+            ext = str(ext or "").lower()
+            if ext in (".glb", ".gltf"):
+                from chimerax.gltf.gltf import write_gltf
+                write_gltf(self.session, filename=out_path, models=[model])
+            elif ext == ".stl":
+                from chimerax.stl.stl import write_stl
+                write_stl(self.session, out_path, [model])
+            else:
+                raise RuntimeError(f"Unsupported automatic export type: {ext}")
+        finally:
+            for obj, shown in display_state:
+                try:
+                    obj.display = shown
+                except Exception:
+                    pass
+
+    def _session_model_path(self, model, save_dir=None, session_stem=None, export_cache=None):
+        if model is None:
+            return None
+        if save_dir and session_stem is not None and export_cache is not None:
+            source_path = self._model_source_path(model)
+            ext = ""
+            if source_path:
+                ext = os.path.splitext(str(source_path))[1].lower()
+            model_name = str(getattr(model, "name", "") or "").lower()
+            if ext not in (".glb", ".gltf", ".stl"):
+                if self._is_glb_like(model) or model_name.endswith((".glb", ".gltf")):
+                    ext = ".glb"
+                elif model_name.endswith(".stl") or ("stl" in model.__class__.__name__.lower()):
+                    ext = ".stl"
+            if ext in (".glb", ".gltf", ".stl"):
+                return self._copy_source_file_for_session(model, save_dir, session_stem, ext, export_cache)
+        return self._model_source_path(model)
+
+    def _materialize_session_source_replacement(self, target_path, replacement_path):
+        target = os.path.abspath(os.path.expanduser(str(target_path or "")))
+        replacement = os.path.abspath(os.path.expanduser(str(replacement_path or "")))
+        if not target or not replacement:
+            return replacement or target
+        if target == replacement:
+            return target
+        try:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
         except Exception:
             pass
         try:
-            grid = getattr(model, "grid_data", None)
-            path = getattr(grid, "path", None)
-            if path:
-                return os.path.abspath(os.path.expanduser(str(path)))
+            import shutil
+            shutil.copy2(replacement, target)
+            return target
+        except Exception:
+            return replacement
+
+    def _fetch_spec_for_model(self, model):
+        if model is None:
+            return None
+        try:
+            emdb_id = getattr(model, "fetch_emdb_id", None)
+            if emdb_id:
+                return {"fetch_type": "emdb", "fetch_id": str(emdb_id)}
         except Exception:
             pass
+
+        import re
+
+        name = str(getattr(model, "name", "") or "").strip()
+        low = name.lower()
+        m = re.match(r"^emdb\s+(\d+)$", low)
+        if m:
+            return {"fetch_type": "emdb", "fetch_id": m.group(1)}
+        m = re.match(r"^emd[_ -]?(\d+)(?:\.map)?$", low)
+        if m:
+            return {"fetch_type": "emdb", "fetch_id": m.group(1)}
+        m = re.match(r"^pdb\s+([0-9a-z]{4})$", low)
+        if m:
+            return {"fetch_type": "pdb", "fetch_id": m.group(1)}
+        if self._is_atomic_like(model) and re.match(r"^[0-9a-z]{4}$", low):
+            return {"fetch_type": "pdb", "fetch_id": low}
         return None
+
+    def _find_model_by_fetch(self, fetch_type, fetch_id):
+        want_type = str(fetch_type or "").strip().lower()
+        want_id = str(fetch_id or "").strip().lower()
+        if not want_type or not want_id:
+            return None
+        for model in self._all_session_models():
+            spec = self._fetch_spec_for_model(model)
+            if spec is None:
+                continue
+            if str(spec.get("fetch_type", "")).lower() == want_type and str(spec.get("fetch_id", "")).lower() == want_id:
+                return model
+        return None
+
+    def _choose_opened_source_model(self, opened_models):
+        for model in opened_models:
+            if self._is_glb_like(model):
+                return model
+        source_model = self._pick_opened_model(
+            opened_models,
+            lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
+        )
+        if source_model is not None:
+            return source_model
+        return opened_models[-1] if opened_models else None
+
+    def _prompt_session_source_replacement(self, missing_path, label="", reason=""):
+        from Qt.QtWidgets import QFileDialog
+
+        title_label = str(label or os.path.basename(str(missing_path or "")) or "session model")
+        title = f"Locate model for {title_label}"
+        if reason:
+            title = f"{title} ({reason})"
+        replacement, _ = QFileDialog.getOpenFileName(
+            self.tool_window.ui_area,
+            title,
+            os.path.dirname(str(missing_path or "")) or "",
+            "Model files (*.mrc *.map *.ccp4 *.mrcs *.stl *.glb *.gltf *.pdb *.cif *.mmcif);;All files (*)",
+        )
+        if not replacement:
+            raise RuntimeError(f"Session load cancelled. Provide a replacement for {title_label} to continue.")
+        return os.path.abspath(os.path.expanduser(str(replacement)))
+
+    def _open_fetch_source_item(self, fetch_type, fetch_id):
+        existing = self._find_model_by_fetch(fetch_type, fetch_id)
+        if existing is not None:
+            return existing
+        before = set(self.session.models.list())
+        _run(self.session, f"open {fetch_type}:{fetch_id}")
+        opened = [m for m in self.session.models.list() if m not in before]
+        if not opened:
+            return None
+        return self._choose_opened_source_model(opened)
+
+    def _open_saved_source_item(self, item, base_dir=""):
+        path = item.get("path", None)
+        if path:
+            path = str(path)
+            if not os.path.isabs(path):
+                path = os.path.abspath(os.path.join(base_dir or "", path))
+            else:
+                path = os.path.abspath(os.path.expanduser(path))
+            item["path"] = path
+
+        fetch_type = item.get("fetch_type", None)
+        fetch_id = item.get("fetch_id", None)
+        if fetch_type and fetch_id:
+            try:
+                source_model = self._open_fetch_source_item(fetch_type, fetch_id)
+                if source_model is not None:
+                    if path:
+                        self._store_model_saved_path(source_model, path)
+                    return source_model
+            except Exception:
+                pass
+
+        if not path:
+            return None
+
+        existing = self._find_model_by_path(path)
+        if existing is not None:
+            return existing
+
+        open_path = path
+        while True:
+            if not os.path.exists(open_path):
+                replacement_path = self._prompt_session_source_replacement(open_path, item.get("name", ""), "file missing")
+                open_path = self._materialize_session_source_replacement(path or open_path, replacement_path)
+                item["path"] = open_path
+                continue
+            before = set(self.session.models.list())
+            try:
+                _run(self.session, f'open "{open_path}"')
+            except Exception as err:
+                replacement_path = self._prompt_session_source_replacement(open_path, item.get("name", ""), str(err))
+                open_path = self._materialize_session_source_replacement(path or open_path, replacement_path)
+                item["path"] = open_path
+                continue
+            opened = [m for m in self.session.models.list() if m not in before]
+            source_model = self._choose_opened_source_model(opened)
+            if source_model is None:
+                replacement_path = self._prompt_session_source_replacement(
+                    open_path, item.get("name", ""), "opened file did not produce a usable map/model"
+                )
+                open_path = self._materialize_session_source_replacement(path or open_path, replacement_path)
+                item["path"] = open_path
+                continue
+            self._store_model_saved_path(source_model, open_path)
+            return source_model
 
     def _required_float_edit(self, edit, label):
         text = edit.text().strip()
@@ -2616,21 +2933,33 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.session.logger.warning(f"Skipping membrane model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
         return out
 
-    def _attach_source_models_state(self):
+    def _attach_source_models_state(self, save_dir, session_stem, export_cache):
         out = []
         seen_paths = set()
+        seen_fetches = set()
         for model in self.session.models.list():
             try:
                 if not self._is_selector_attach_source(model):
                     continue
-                path = self._model_source_path(model)
-                if not path or path in seen_paths:
+                path = self._session_model_path(model, save_dir=save_dir, session_stem=session_stem, export_cache=export_cache)
+                fetch_spec = self._fetch_spec_for_model(model)
+                fetch_key = None
+                if fetch_spec is not None:
+                    fetch_key = (str(fetch_spec.get("fetch_type", "")).lower(), str(fetch_spec.get("fetch_id", "")).lower())
+                if path and path in seen_paths:
                     continue
-                seen_paths.add(path)
+                if fetch_key and fetch_key in seen_fetches:
+                    continue
+                if path:
+                    seen_paths.add(path)
+                if fetch_key:
+                    seen_fetches.add(fetch_key)
                 out.append(
                     {
                         "name": str(model.name),
                         "path": path,
+                        "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,
+                        "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "display": bool(getattr(model, "display", True)),
                         "under_cb_map_group": self._is_under_cb_group(model, "maps"),
                     }
@@ -2639,7 +2968,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.session.logger.warning(f"Skipping attach source during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
         return out
 
-    def _attachment_models_state(self):
+    def _attachment_models_state(self, save_dir, session_stem, export_cache):
         items = []
         seen = set()
         for out_root in self._attached_results.values():
@@ -2647,12 +2976,29 @@ class CiliaBuilder2Tool(ToolInstance):
                 if out_root is None or id(out_root) in seen:
                     continue
                 seen.add(id(out_root))
+                map_model = None
+                source_ref = getattr(out_root, "_cb_attachment_source_ref", None)
+                if source_ref:
+                    map_model = self._model_by_ref(source_ref)
+                if map_model is None:
+                    map_model = self._find_model_by_name(getattr(out_root, "_cb_attachment_map_name", None), require_star=False)
+                map_path = self._session_model_path(map_model, save_dir=save_dir, session_stem=session_stem, export_cache=export_cache)
+                fetch_spec = self._fetch_spec_for_model(map_model)
+                if map_path is None:
+                    map_path = getattr(out_root, "_cb_attachment_map_path", None)
+                if fetch_spec is None:
+                    fetch_type = getattr(out_root, "_cb_attachment_fetch_type", None)
+                    fetch_id = getattr(out_root, "_cb_attachment_fetch_id", None)
+                    if fetch_type and fetch_id:
+                        fetch_spec = {"fetch_type": fetch_type, "fetch_id": fetch_id}
                 items.append(
                     {
                         "name": str(getattr(out_root, "name", "") or ""),
                         "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
                         "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
-                        "map_path": getattr(out_root, "_cb_attachment_map_path", None),
+                        "map_path": map_path,
+                        "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,
+                        "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
                         "display": bool(getattr(out_root, "display", True)),
@@ -2817,48 +3163,28 @@ class CiliaBuilder2Tool(ToolInstance):
         if not want:
             return None
         for model in self._all_session_models():
-            source_path = self._model_source_path(model)
-            if source_path and os.path.abspath(source_path) == want:
-                return model
+            for source_path in self._candidate_model_paths(model):
+                if source_path and os.path.abspath(os.path.expanduser(source_path)) == want:
+                    return model
         return None
 
-    def _restore_attach_source_models(self, models_state):
+    def _restore_attach_source_models(self, models_state, base_dir=""):
         from .cmd import _add_to_cb_map_group
 
         for item in models_state or []:
-            path = item.get("path", None)
-            if not path:
-                continue
-            existing = self._find_model_by_path(path)
-            if existing is not None:
-                try:
-                    existing._cb_attach_source = True
-                    if bool(item.get("under_cb_map_group", False)):
-                        _add_to_cb_map_group(self.session, existing)
-                    existing.display = bool(item.get("display", True))
-                    self._zero_map_origin_index(existing)
-                except Exception:
-                    pass
-                continue
-            if not os.path.exists(path):
-                continue
-            before = set(self.session.models.list())
-            _run(self.session, f'open "{path}"')
-            opened = [m for m in self.session.models.list() if m not in before]
-            if not opened:
-                continue
-            source_model = self._pick_opened_model(
-                opened,
-                lambda m: self._is_volume_like(m) or self._is_surface_like(m) or self._is_atomic_like(m),
-            )
+            source_model = self._open_saved_source_item(item, base_dir=base_dir)
             if source_model is None:
-                source_model = opened[-1]
+                continue
             try:
                 source_model._cb_attach_source = True
                 if bool(item.get("under_cb_map_group", False)):
                     _add_to_cb_map_group(self.session, source_model)
                 source_model.display = bool(item.get("display", True))
                 self._zero_map_origin_index(source_model)
+                path = item.get("path", None)
+                if path:
+                    self._store_model_saved_path(source_model, path)
+                self._remember_restored_session_source(source_model, item)
             except Exception:
                 pass
 
@@ -2872,14 +3198,24 @@ class CiliaBuilder2Tool(ToolInstance):
             star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
             if star_model is None:
                 continue
-            map_model = None
+            map_model = self._restored_session_source_model(item)
+            fetch_type = item.get("fetch_type", None)
+            fetch_id = item.get("fetch_id", None)
+            if map_model is None and fetch_type and fetch_id:
+                map_model = self._find_model_by_fetch(fetch_type, fetch_id)
+                if map_model is None:
+                    map_model = self._open_fetch_source_item(fetch_type, fetch_id)
             map_path = item.get("map_path", None)
-            if map_path:
+            if map_model is None and map_path:
                 map_model = self._find_model_by_path(map_path)
             if map_model is None:
                 map_model = self._find_model_by_name(item.get("map_name"), require_star=False)
             if map_model is None or not self._is_attach_source(map_model):
                 continue
+            try:
+                self._zero_map_origin_index(map_model)
+            except Exception:
+                pass
 
             line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
             y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
@@ -2909,6 +3245,9 @@ class CiliaBuilder2Tool(ToolInstance):
                 out_root._cb_attachment_star_name = str(star_model.name)
                 out_root._cb_attachment_map_name = str(map_model.name)
                 out_root._cb_attachment_map_path = self._model_source_path(map_model)
+                out_root._cb_attachment_source_ref = self._model_ref(map_model)
+                out_root._cb_attachment_fetch_type = fetch_type
+                out_root._cb_attachment_fetch_id = fetch_id
                 out_root.display = bool(item.get("display", True))
             except Exception:
                 pass
@@ -2940,18 +3279,25 @@ class CiliaBuilder2Tool(ToolInstance):
             )
             if not path:
                 return
+            if not str(path).lower().endswith(".json"):
+                path = f"{path}.json"
+            save_dir = os.path.dirname(os.path.abspath(path))
+            session_stem = os.path.splitext(os.path.basename(path))[0]
+            os.makedirs(save_dir, exist_ok=True)
+            export_cache = {}
             ui_state = self._ui_state()
             selected_state = {
                 "star_model": self._combo_state(self.sel_star_model),
                 "map_model": self._combo_state(self.sel_map_model),
                 "ift_train_star_model": self._combo_state(self.ift_train_star_model) if hasattr(self, "ift_train_star_model") else {"id": None, "text": ""},
             }
-            attach_sources = self._attach_source_models_state()
+            attach_sources = self._attach_source_models_state(save_dir, session_stem, export_cache)
             generated_star_models = self._generated_star_models()
             generated_membranes = self._generated_membrane_models()
-            attachments = self._attachment_models_state()
+            attachments = self._attachment_models_state(save_dir, session_stem, export_cache)
             payload = {
-                "version": 3,
+                "format": "ciliabuilder2_session",
+                "version": 4,
                 "ui": ui_state,
                 "selected": selected_state,
                 "attach_sources": attach_sources,
@@ -2984,8 +3330,43 @@ class CiliaBuilder2Tool(ToolInstance):
             with open(path, "r", encoding="utf-8") as f:
                 payload = json.load(f)
 
+            base_dir = os.path.dirname(os.path.abspath(path))
+            self._restored_session_sources = {}
+            source_items = []
+            for item in payload.get("attach_sources", []) or []:
+                source_items.append(dict(item))
+            for item in payload.get("attachments", []) or []:
+                source_items.append(
+                    {
+                        "name": item.get("map_name", ""),
+                        "path": item.get("map_path", None),
+                        "fetch_type": item.get("fetch_type", None),
+                        "fetch_id": item.get("fetch_id", None),
+                        "display": False,
+                        "under_cb_map_group": True,
+                    }
+                )
+
+            deduped_source_items = []
+            seen = set()
+            for item in source_items:
+                key = (
+                    str(item.get("fetch_type", "") or "").lower(),
+                    str(item.get("fetch_id", "") or "").lower(),
+                    os.path.abspath(os.path.expanduser(str(item.get("path", "") or ""))) if item.get("path", None) else "",
+                    str(item.get("name", "") or ""),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                deduped_source_items.append(item)
+            source_items = deduped_source_items
+
+            for item in source_items:
+                self._open_saved_source_item(item, base_dir=base_dir)
+
             self._apply_ui_state(payload.get("ui", {}))
-            self._restore_attach_source_models(payload.get("attach_sources", []))
+            self._restore_attach_source_models(source_items, base_dir=base_dir)
             self._restore_generated_star_models(payload.get("generated_star_models", []))
             self._restore_generated_membranes(payload.get("generated_membranes", []))
             self._restore_attachments(payload.get("attachments", []))
@@ -2997,6 +3378,10 @@ class CiliaBuilder2Tool(ToolInstance):
             if hasattr(self, "ift_train_star_model"):
                 self._select_combo_saved(self.ift_train_star_model, selected.get("ift_train_star_model"))
 
+            try:
+                _run(self.session, "view orient")
+            except Exception:
+                pass
             self.session.logger.info(f"Loaded CiliaBuilder2 session JSON: {path}")
         except Exception as e:
             self.session.logger.error(str(e))
@@ -3380,6 +3765,11 @@ class CiliaBuilder2Tool(ToolInstance):
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)
+            out_root._cb_attachment_source_ref = self._model_ref(map_model)
+            fetch_spec = self._fetch_spec_for_model(map_model)
+            if fetch_spec is not None:
+                out_root._cb_attachment_fetch_type = fetch_spec.get("fetch_type")
+                out_root._cb_attachment_fetch_id = fetch_spec.get("fetch_id")
         except Exception:
             pass
         self._last_attached_result = out_root
