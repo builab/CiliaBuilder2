@@ -517,6 +517,12 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_offset.setValue(0.0)
         mem_row_spin("Offset", self.membrane_offset)
 
+        self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
+        self.membrane_distortion.setRange(0.0, 10.0)
+        self.membrane_distortion.setDecimals(2)
+        self.membrane_distortion.setValue(1.0)
+        mem_row_spin("Distortion level", self.membrane_distortion)
+
         mem_tab = QWidget(main)
         mem_tab_layout = QVBoxLayout(mem_tab)
         mem_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -939,6 +945,10 @@ class CiliaBuilder2Tool(ToolInstance):
         if fetch_type and fetch_id:
             store[("fetch", fetch_type, fetch_id)] = model
 
+        source_id = str(item.get("session_source_id", "") or "").strip()
+        if source_id:
+            store[("source_id", source_id)] = model
+
         name = str(item.get("name", "") or "").strip()
         if name:
             store[("name", name)] = model
@@ -962,9 +972,47 @@ class CiliaBuilder2Tool(ToolInstance):
             if model is not None:
                 return model
 
+        source_id = str(item.get("source_session_id", "") or "").strip()
+        if source_id:
+            model = store.get(("source_id", source_id))
+            if model is not None:
+                return model
+
         map_name = str(item.get("map_name", "") or "").strip()
         if map_name:
             model = store.get(("name", map_name))
+            if model is not None:
+                return model
+        return None
+
+    def _remember_restored_session_star(self, model, item):
+        if model is None:
+            return
+        store = getattr(self, "_restored_session_stars", None)
+        if store is None:
+            store = {}
+            self._restored_session_stars = store
+
+        star_id = str(item.get("session_star_id", "") or "").strip()
+        if star_id:
+            store[("star_id", star_id)] = model
+
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            store[("name", name)] = model
+
+    def _restored_session_star_model(self, item):
+        store = getattr(self, "_restored_session_stars", None) or {}
+
+        star_id = str(item.get("star_session_id", "") or "").strip()
+        if star_id:
+            model = store.get(("star_id", star_id))
+            if model is not None:
+                return model
+
+        star_name = str(item.get("star_name", "") or "").strip()
+        if star_name:
+            model = store.get(("name", star_name))
             if model is not None:
                 return model
         return None
@@ -1345,15 +1393,23 @@ class CiliaBuilder2Tool(ToolInstance):
         self._known_star_models = alive
 
     def _zero_map_origin_index(self, model):
-        if model is None or not self._is_volume_like(model):
+        if model is None:
             return
-        ref = self._model_ref(model)
-        if ref is None:
+        if self._is_volume_like(model):
+            ref = self._model_ref(model)
+            if ref is None:
+                return
+            try:
+                _run(self.session, f"volume #{ref} origin 0,0,0", log=False)
+            except Exception:
+                pass
             return
-        try:
-            _run(self.session, f"volume #{ref} origin 0,0,0", log=False)
-        except Exception:
-            pass
+        if self._is_surface_like(model) and not self._is_glb_like(model):
+            try:
+                from chimerax.geometry import Place
+                model.position = Place()
+            except Exception:
+                pass
 
     def _focus_volume_in_viewer(self, model):
         if model is None or not self._is_volume_like(model):
@@ -2903,6 +2959,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     continue
                 out.append(
                     {
+                        "session_star_id": self._model_ref(model) or f"star_{len(out)+1}",
                         "name": str(model.name),
                         "rows": rows,
                         "star_text": getattr(model, "_cb_star_text", None),
@@ -2917,7 +2974,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _generated_membrane_models(self):
         out = []
-        for model in self.session.models.list():
+        for model in self._all_session_models():
             try:
                 state = getattr(model, "_cb_membrane_state", None)
                 if not state:
@@ -2956,6 +3013,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     seen_fetches.add(fetch_key)
                 out.append(
                     {
+                        "session_source_id": self._model_ref(model) or f"source_{len(out)+1}",
                         "name": str(model.name),
                         "path": path,
                         "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,
@@ -2994,6 +3052,8 @@ class CiliaBuilder2Tool(ToolInstance):
                 items.append(
                     {
                         "name": str(getattr(out_root, "name", "") or ""),
+                        "star_session_id": getattr(out_root, "_cb_attachment_star_session_id", None) or getattr(out_root, "_cb_attachment_star_ref", None),
+                        "source_session_id": getattr(out_root, "_cb_attachment_source_session_id", None) or source_ref,
                         "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
                         "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
                         "map_path": map_path,
@@ -3024,6 +3084,7 @@ class CiliaBuilder2Tool(ToolInstance):
             "membrane_diameter": float(self.membrane_diameter.value()),
             "membrane_thickness": float(self.membrane_thickness.value()),
             "membrane_offset": float(self.membrane_offset.value()),
+            "membrane_distortion": float(self.membrane_distortion.value()),
             "ift_distance": float(self.ift_distance.value()),
             "ift_mode": str(self.ift_mode.currentData() or "train"),
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
@@ -3058,6 +3119,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_diameter.setValue(float(state.get("membrane_diameter", self.membrane_diameter.value())))
         self.membrane_thickness.setValue(float(state.get("membrane_thickness", self.membrane_thickness.value())))
         self.membrane_offset.setValue(float(state.get("membrane_offset", self.membrane_offset.value())))
+        self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
         self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
         if hasattr(self, "ift_mode"):
             idx = self.ift_mode.findData(str(state.get("ift_mode", self.ift_mode.currentData())))
@@ -3096,6 +3158,7 @@ class CiliaBuilder2Tool(ToolInstance):
             exists = False
             for model in self.session.models.list():
                 if hasattr(model, "_cb_star_rows") and str(model.name) == name:
+                    self._remember_restored_session_star(model, item)
                     exists = True
                     break
             if exists:
@@ -3106,6 +3169,7 @@ class CiliaBuilder2Tool(ToolInstance):
             created._cb_star_text = item.get("star_text", None)
             created._cb_random_clip_info = item.get("clip_info", None)
             cmd._render_star_model(self.session, created, rows, True)
+            self._remember_restored_session_star(created, item)
             try:
                 created.display = bool(item.get("display", True))
             except Exception:
@@ -3141,7 +3205,15 @@ class CiliaBuilder2Tool(ToolInstance):
                     length=float(state.get("length", 1.0)),
                     diameter=float(state.get("diameter", 1.0)),
                     thickness=float(state.get("thickness", 1.0)),
+                    distortion_level=float(state.get("distortion_level", 1.0) or 0.0),
+                    distortion_seed=state.get("distortion_seed", None),
                 )
+                try:
+                    created_state = getattr(created, "_cb_membrane_state", None) or {}
+                    created_state.update(state)
+                    created._cb_membrane_state = created_state
+                except Exception:
+                    pass
                 created.display = bool(item.get("display", True))
             except Exception:
                 pass
@@ -3195,7 +3267,9 @@ class CiliaBuilder2Tool(ToolInstance):
         self._last_attached_result = None
 
         for item in attachment_state or []:
-            star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
+            star_model = self._restored_session_star_model(item)
+            if star_model is None:
+                star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
             if star_model is None:
                 continue
             map_model = self._restored_session_source_model(item)
@@ -3242,10 +3316,13 @@ class CiliaBuilder2Tool(ToolInstance):
             try:
                 out_root._cb_attachment_line_rotation = line_rotation
                 out_root._cb_attachment_y_rotation = y_rotation
+                out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
+                out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
                 out_root._cb_attachment_map_name = str(map_model.name)
                 out_root._cb_attachment_map_path = self._model_source_path(map_model)
                 out_root._cb_attachment_source_ref = self._model_ref(map_model)
+                out_root._cb_attachment_star_ref = self._model_ref(star_model)
                 out_root._cb_attachment_fetch_type = fetch_type
                 out_root._cb_attachment_fetch_id = fetch_id
                 out_root.display = bool(item.get("display", True))
@@ -3332,6 +3409,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
             base_dir = os.path.dirname(os.path.abspath(path))
             self._restored_session_sources = {}
+            self._restored_session_stars = {}
             source_items = []
             for item in payload.get("attach_sources", []) or []:
                 source_items.append(dict(item))
@@ -3575,6 +3653,7 @@ class CiliaBuilder2Tool(ToolInstance):
             diameter = float(self.membrane_diameter.value())
             thickness = float(self.membrane_thickness.value())
             offset = float(self.membrane_offset.value())
+            distortion_level = float(self.membrane_distortion.value())
 
             if length <= 0.0:
                 raise RuntimeError("Membrane length must be > 0")
@@ -3603,11 +3682,13 @@ class CiliaBuilder2Tool(ToolInstance):
                 length=length,
                 diameter=diameter,
                 thickness=thickness,
+                distortion_level=distortion_level,
             )
             self._membrane_counter = getattr(self, "_membrane_counter", 0) + 1
             try:
                 state = getattr(model, "_cb_membrane_state", None) or {}
                 state["offset"] = float(offset)
+                state["distortion_level"] = float(distortion_level)
                 state["source_star_name"] = str(getattr(anchor.get("star_model", None), "name", "") or "")
                 model._cb_membrane_state = state
             except Exception:

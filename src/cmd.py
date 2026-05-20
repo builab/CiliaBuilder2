@@ -150,18 +150,45 @@ def _find_child_group(parent, tag):
 def _ensure_cb_root(session):
     for model in session.models.list():
         if getattr(model, "_cb_root", False):
+            _ensure_cb_default_groups(session, model)
             return model
     root = Model("CiliaBuilder2", session)
     root._cb_root = True
     session.models.add([root])
+    _ensure_cb_default_groups(session, root)
     return root
 
 
+def _ensure_cb_default_groups(session, root=None):
+    if root is None:
+        root = _ensure_cb_root(session)
+    wanted = (
+        ("star_models", "STAR Models"),
+        ("maps", "Maps/Models"),
+        ("membrane", "Membrane"),
+    )
+    groups = {}
+    for tag, name in wanted:
+        group = _find_child_group(root, tag)
+        if group is None:
+            group = Model(name, session)
+            group._cb_group_tag = tag
+            root.add([group])
+        else:
+            try:
+                group.name = name
+            except Exception:
+                pass
+        groups[tag] = group
+    return groups
+
+
 def _ensure_cb_group(session, tag, name):
-    root = _ensure_cb_root(session)
-    group = _find_child_group(root, tag)
+    groups = _ensure_cb_default_groups(session)
+    group = groups.get(tag)
     if group is not None:
         return group
+    root = _ensure_cb_root(session)
     group = Model(name, session)
     group._cb_group_tag = tag
     root.add([group])
@@ -176,6 +203,10 @@ def _ensure_cb_map_group(session):
     return _ensure_cb_group(session, "maps", "Maps")
 
 
+def _ensure_cb_membrane_group(session):
+    return _ensure_cb_group(session, "membrane", "Membrane")
+
+
 def _add_to_cb_star_group(session, model):
     _ensure_cb_star_group(session).add([model])
     return model
@@ -183,6 +214,11 @@ def _add_to_cb_star_group(session, model):
 
 def _add_to_cb_map_group(session, model):
     _ensure_cb_map_group(session).add([model])
+    return model
+
+
+def _add_to_cb_membrane_group(session, model):
+    _ensure_cb_membrane_group(session).add([model])
     return model
 
 
@@ -208,6 +244,8 @@ def buildmembrane_surface(
     length,
     diameter,
     thickness,
+    distortion_level=1.0,
+    distortion_seed=None,
     color=(180, 180, 190, 180),
 ):
     from chimerax.core.models import Surface
@@ -217,6 +255,7 @@ def buildmembrane_surface(
     length = float(length)
     diameter = float(diameter)
     thickness = float(thickness)
+    distortion_level = max(0.0, float(distortion_level))
     if length <= 0.0:
         raise ValueError("Membrane length must be > 0")
     if diameter <= 0.0:
@@ -249,7 +288,45 @@ def buildmembrane_surface(
     bottom_tris = _annulus_cap_triangles(outer_bottom, inner_bottom, reverse=True)
     top_tris = _annulus_cap_triangles(outer_top, inner_top, reverse=False)
 
+    if distortion_seed is None:
+        distortion_seed = int(np.random.default_rng().integers(0, 2**31 - 1))
+
     vertices = np.concatenate((outer_v, inner_v), axis=0).astype(np.float32)
+    rng = np.random.default_rng(distortion_seed)
+    radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
+    axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
+    theta_modes = rng.uniform(-1.0, 1.0, size=3)
+    z_modes = rng.uniform(-1.0, 1.0, size=2)
+
+    def field(verts):
+        xy = verts[:, :2]
+        z = verts[:, 2]
+        theta = np.arctan2(xy[:, 1], xy[:, 0])
+        zn = (z / max(length, 1e-6)) + 0.5
+        radial_wave = (
+            theta_modes[0] * np.sin(2.0 * theta + 2.0 * math.pi * zn)
+            + theta_modes[1] * np.cos(3.0 * theta - 4.0 * math.pi * zn)
+            + theta_modes[2] * np.sin(5.0 * theta + 1.5 * math.pi * zn)
+        ) / 3.0
+        axial_wave = (
+            z_modes[0] * np.sin(3.0 * math.pi * zn + theta)
+            + z_modes[1] * np.cos(5.0 * math.pi * zn - 2.0 * theta)
+        ) / 2.0
+        return radial_wave.astype(np.float32), axial_wave.astype(np.float32)
+
+    def distort(verts):
+        radial_wave, axial_wave = field(verts)
+        xy = verts[:, :2]
+        radii = np.linalg.norm(xy, axis=1)
+        radial_dir = np.zeros_like(xy)
+        mask = radii > 1e-6
+        radial_dir[mask] = xy[mask] / radii[mask, None]
+        verts[:, :2] += radial_dir * (radial_amp * radial_wave)[:, None]
+        verts[:, 2] += axial_amp * axial_wave
+        return verts
+
+    vertices[:len(outer_v)] = distort(vertices[:len(outer_v)])
+    vertices[len(outer_v):] = distort(vertices[len(outer_v):])
     triangles = np.concatenate(
         (
             np.array(outer_t, dtype=np.int32),
@@ -282,8 +359,10 @@ def buildmembrane_surface(
         "length": float(length),
         "diameter": float(diameter),
         "thickness": float(thickness),
+        "distortion_level": float(distortion_level),
+        "distortion_seed": int(distortion_seed),
     }
-    _add_to_cb_map_group(session, surface)
+    _add_to_cb_membrane_group(session, surface)
     return surface
 
 
