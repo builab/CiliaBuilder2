@@ -107,6 +107,7 @@ def buildcentriole_star_rows(
     tomo_name,
     pixel_size_ang,
     tube_id=100,
+    x_offset_ang=0.0,
     z_offset_ang=0.0,
     class_number=1,
     random_spacing=False,
@@ -121,6 +122,7 @@ def buildcentriole_star_rows(
     length_ang = float(length_ang)
     bead_spacing_ang = float(bead_spacing_ang)
     pixel_size_ang = float(pixel_size_ang)
+    x_offset_ang = float(x_offset_ang)
 
     if pixel_size_ang <= 0.0:
         raise ValueError("pixel_size_ang must be > 0")
@@ -154,7 +156,7 @@ def buildcentriole_star_rows(
         rows.append(
             {
                 "rlnTomoName": str(tomo_name),
-                "rlnCoordinateX": 0.0,
+                "rlnCoordinateX": float(x_offset_ang) / pixel_size_ang,
                 "rlnCoordinateY": 0.0,
                 "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
                 "rlnAngleRot": 0.0,

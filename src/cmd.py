@@ -295,23 +295,34 @@ def buildmembrane_surface(
     rng = np.random.default_rng(distortion_seed)
     radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
     axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
-    theta_modes = rng.uniform(-1.0, 1.0, size=3)
-    z_modes = rng.uniform(-1.0, 1.0, size=2)
+    distortion_modes = [
+        (
+            mode,
+            rng.uniform(0.0, 2.0 * math.pi),
+            rng.uniform(-1.0, 1.0),
+            rng.uniform(-1.0, 1.0),
+        )
+        for mode in range(1, 10)
+    ]
 
     def field(verts):
         xy = verts[:, :2]
         z = verts[:, 2]
         theta = np.arctan2(xy[:, 1], xy[:, 0])
         zn = (z / max(length, 1e-6)) + 0.5
-        radial_wave = (
-            theta_modes[0] * np.sin(2.0 * theta + 2.0 * math.pi * zn)
-            + theta_modes[1] * np.cos(3.0 * theta - 4.0 * math.pi * zn)
-            + theta_modes[2] * np.sin(5.0 * theta + 1.5 * math.pi * zn)
-        ) / 3.0
-        axial_wave = (
-            z_modes[0] * np.sin(3.0 * math.pi * zn + theta)
-            + z_modes[1] * np.cos(5.0 * math.pi * zn - 2.0 * theta)
-        ) / 2.0
+        radial_wave = np.zeros(len(theta), dtype=np.float32)
+        axial_wave = np.zeros(len(theta), dtype=np.float32)
+        for mode, phase, radial_weight, axial_weight in distortion_modes:
+            radial_wave += (
+                radial_weight
+                * np.cos((mode * theta) + phase + (0.45 * mode) * math.pi * zn)
+            ).astype(np.float32)
+            axial_wave += (
+                axial_weight
+                * np.sin((mode * theta) + phase - (0.35 * mode + 0.65) * math.pi * zn)
+            ).astype(np.float32)
+        radial_wave /= float(len(distortion_modes))
+        axial_wave /= float(len(distortion_modes))
         return radial_wave.astype(np.float32), axial_wave.astype(np.float32)
 
     def distort(verts):
@@ -556,6 +567,7 @@ def buildcentriole(
     spacing=320.0,
     z_offset=0.0,
     tube_id=100,
+    x_offset=0.0,
     random_spacing=False,
     random_max_diff=0.0,
     show_arrows=False,
@@ -564,6 +576,7 @@ def buildcentriole(
     open_star=True,
     star_format="relion",
     print_star=False,
+    name_prefix="Central pair STAR",
 ):
     class_num = _next_class_number()
 
@@ -573,6 +586,7 @@ def buildcentriole(
         tomo_name=str(tomo_name),
         pixel_size_ang=float(pixel_size),
         tube_id=int(tube_id),
+        x_offset_ang=float(x_offset),
         z_offset_ang=float(z_offset),
         class_number=int(class_num),
         random_spacing=bool(random_spacing),
@@ -589,7 +603,7 @@ def buildcentriole(
 
     return _create_star_model(
         session,
-        f"Central pair STAR {class_num}",
+        f"{name_prefix} {class_num}",
         rows,
         star_text,
         open_star,
@@ -604,6 +618,7 @@ buildcentriole_desc = CmdDesc(
         ("spacing", FloatArg),
         ("z_offset", FloatArg),
         ("tube_id", IntArg),
+        ("x_offset", FloatArg),
         ("random_spacing", BoolArg),
         ("random_max_diff", FloatArg),
         ("show_arrows", BoolArg),
@@ -612,6 +627,7 @@ buildcentriole_desc = CmdDesc(
         ("open_star", BoolArg),
         ("star_format", StringArg),
         ("print_star", BoolArg),
+        ("name_prefix", StringArg),
     ],
     synopsis="Build central pair STAR only (single center line).",
 )

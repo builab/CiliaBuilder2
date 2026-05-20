@@ -359,8 +359,17 @@ class CiliaBuilder2Tool(ToolInstance):
         main = QWidget(parent)
         main_layout = QVBoxLayout(main)
 
-        panels = QTabWidget(main)
-        main_layout.addWidget(panels)
+        sidebar_tabs = QTabWidget(main)
+        sidebar_tabs.setTabPosition(QTabWidget.West)
+        main_layout.addWidget(sidebar_tabs)
+
+        build_page = QWidget(main)
+        build_page_layout = QVBoxLayout(build_page)
+        build_page_layout.setContentsMargins(0, 0, 0, 0)
+
+        panels = QTabWidget(build_page)
+        build_page_layout.addWidget(panels)
+        sidebar_tabs.addTab(build_page, "Build")
 
         # Microtubules panel
         outer_box = QGroupBox("Microtubules", main)
@@ -466,6 +475,16 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_z_offset.setValue(0.0)
         cent_row_spin("Z offset", self.centriole_z_offset)
 
+        cent_mode_row = QWidget(main)
+        cent_mode_lay = QHBoxLayout(cent_mode_row)
+        cent_mode_lay.setContentsMargins(0, 0, 0, 0)
+        cent_mode_lay.addWidget(QLabel("Central pair mode", cent_mode_row))
+        self.centriole_mode = QComboBox(cent_mode_row)
+        self.centriole_mode.addItem("Singlet line", "singlet")
+        self.centriole_mode.addItem("C1 + C2 lines", "doublet")
+        cent_mode_lay.addWidget(self.centriole_mode, 1)
+        cent_layout.addWidget(cent_mode_row)
+
         cent_tab = QWidget(main)
         cent_tab_layout = QVBoxLayout(cent_tab)
         cent_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -499,11 +518,11 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_length.setValue(9000.0)
         mem_row_spin("Length", self.membrane_length)
 
-        self.membrane_diameter = TypedOnlyDoubleSpinBox(main)
-        self.membrane_diameter.setRange(0.0, 1e9)
-        self.membrane_diameter.setDecimals(2)
-        self.membrane_diameter.setValue(1600.0)
-        mem_row_spin("Diameter", self.membrane_diameter)
+        self.membrane_radius = TypedOnlyDoubleSpinBox(main)
+        self.membrane_radius.setRange(0.0, 1e9)
+        self.membrane_radius.setDecimals(2)
+        self.membrane_radius.setValue(800.0)
+        mem_row_spin("Radius", self.membrane_radius)
 
         self.membrane_thickness = TypedOnlyDoubleSpinBox(main)
         self.membrane_thickness.setRange(0.0, 1e9)
@@ -680,20 +699,19 @@ class CiliaBuilder2Tool(ToolInstance):
         ift_tab_layout.addStretch(1)
         panels.addTab(ift_tab, "IFT")
 
-        pixel_row = QWidget(main)
-        pixel_lay = QHBoxLayout(pixel_row)
-        pixel_lay.setContentsMargins(0, 0, 0, 0)
-        pixel_lay.addWidget(QLabel("Pixel size (A/px)", pixel_row))
-        self.pixel_size = TypedOnlyDoubleSpinBox(pixel_row)
+        self.pixel_size = TypedOnlyDoubleSpinBox(main)
         self.pixel_size.setRange(1e-6, 1e9)
         self.pixel_size.setDecimals(6)
         self.pixel_size.setValue(1.0)
-        pixel_lay.addWidget(self.pixel_size)
-        pixel_lay.addStretch(1)
-        main_layout.addWidget(pixel_row)
+        self.pixel_size.hide()
 
-        # Buttons
-        btn_row = QWidget(main)
+        # Save / load sidebar
+        session_page = QWidget(main)
+        session_page_layout = QVBoxLayout(session_page)
+        session_page_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_tabs.addTab(session_page, "Save/Load")
+
+        btn_row = QWidget(session_page)
         btn_lay = QVBoxLayout(btn_row)
         btn_lay.setContentsMargins(0, 0, 0, 0)
 
@@ -705,12 +723,22 @@ class CiliaBuilder2Tool(ToolInstance):
         load_session_btn.clicked.connect(self._load_session_json)
         btn_lay.addWidget(load_session_btn)
 
+        export_cellpack_btn = QPushButton("Export cellPACK package", btn_row)
+        export_cellpack_btn.clicked.connect(self._export_cellpack_package)
+        btn_lay.addWidget(export_cellpack_btn)
+
         btn_lay.addStretch(1)
 
-        main_layout.addWidget(btn_row)
+        session_page_layout.addWidget(btn_row)
+        session_page_layout.addStretch(1)
 
         # Selection-based attachment controls
-        attach_select = QGroupBox("Attach by selected/open models", main)
+        attach_page = QWidget(main)
+        attach_page_layout = QVBoxLayout(attach_page)
+        attach_page_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_tabs.addTab(attach_page, "Attach")
+
+        attach_select = QGroupBox("Attach by selected/open models", attach_page)
         attach_select_lay = QVBoxLayout(attach_select)
 
         star_row = QWidget(main)
@@ -763,6 +791,20 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_y_lay.addStretch(1)
         attach_select_lay.addWidget(attach_y_row)
 
+        attach_x_move_row = QWidget(main)
+        attach_x_move_lay = QHBoxLayout(attach_x_move_row)
+        attach_x_move_lay.setContentsMargins(0, 0, 0, 0)
+        attach_x_move_lay.addWidget(QLabel("Attachment X movement", attach_x_move_row))
+        self.attach_x_movement = TypedOnlyDoubleSpinBox(attach_x_move_row)
+        self.attach_x_movement.setRange(-1e9, 1e9)
+        self.attach_x_movement.setDecimals(2)
+        self.attach_x_movement.setSingleStep(10.0)
+        self.attach_x_movement.setValue(0.0)
+        self.attach_x_movement.valueChanged.connect(self._reattach_with_current_settings)
+        attach_x_move_lay.addWidget(self.attach_x_movement)
+        attach_x_move_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_x_move_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -772,7 +814,8 @@ class CiliaBuilder2Tool(ToolInstance):
         sel_btn_lay.addStretch(1)
         attach_select_lay.addWidget(sel_btn_row)
 
-        main_layout.addWidget(attach_select)
+        attach_page_layout.addWidget(attach_select)
+        attach_page_layout.addStretch(1)
 
         tweak_box = QGroupBox("Manual tweak to template", main)
         tweak_layout = QVBoxLayout(tweak_box)
@@ -833,7 +876,7 @@ class CiliaBuilder2Tool(ToolInstance):
         tweak_btn_lay.addStretch(1)
         tweak_layout.addWidget(tweak_btn_row)
 
-        main_layout.addWidget(tweak_box)
+        tweak_box.hide()
 
         scroll = QScrollArea(parent)
         scroll.setWidgetResizable(True)
@@ -1460,6 +1503,8 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.attach_line_rotation.setValue(0.0)
             if hasattr(self, "attach_y_rotation"):
                 self.attach_y_rotation.setValue(0.0)
+            if hasattr(self, "attach_x_movement"):
+                self.attach_x_movement.setValue(0.0)
         finally:
             self._attach_rebuild_in_progress = False
             self._on_attach_selector_changed()
@@ -3061,6 +3106,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
+                        "x_movement": float(getattr(out_root, "_cb_attachment_x_movement", 0.0) or 0.0),
                         "display": bool(getattr(out_root, "display", True)),
                     }
                 )
@@ -3080,8 +3126,9 @@ class CiliaBuilder2Tool(ToolInstance):
             "centriole_length": float(self.centriole_length.value()),
             "centriole_spacing": float(self.centriole_spacing.value()),
             "centriole_z_offset": float(self.centriole_z_offset.value()),
+            "centriole_mode": str(self.centriole_mode.currentData() or "singlet"),
             "membrane_length": float(self.membrane_length.value()),
-            "membrane_diameter": float(self.membrane_diameter.value()),
+            "membrane_radius": float(self.membrane_radius.value()),
             "membrane_thickness": float(self.membrane_thickness.value()),
             "membrane_offset": float(self.membrane_offset.value()),
             "membrane_distortion": float(self.membrane_distortion.value()),
@@ -3098,6 +3145,7 @@ class CiliaBuilder2Tool(ToolInstance):
             "ift_train_repeat": self.ift_train_repeat.text().strip(),
             "attach_line_rotation": float(self.attach_line_rotation.value()),
             "attach_y_rotation": float(self.attach_y_rotation.value()),
+            "attach_x_movement": float(self.attach_x_movement.value()),
             "pixel_size": float(self.pixel_size.value()),
             "tweak_source_path": self.tweak_source_path.text().strip() if hasattr(self, "tweak_source_path") else "",
             "tweak_template_path": self.tweak_template_path.text().strip() if hasattr(self, "tweak_template_path") else "",
@@ -3115,8 +3163,16 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
         self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
         self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
+        if hasattr(self, "centriole_mode"):
+            idx = self.centriole_mode.findData(str(state.get("centriole_mode", self.centriole_mode.currentData())))
+            if idx >= 0:
+                self.centriole_mode.setCurrentIndex(idx)
         self.membrane_length.setValue(float(state.get("membrane_length", self.membrane_length.value())))
-        self.membrane_diameter.setValue(float(state.get("membrane_diameter", self.membrane_diameter.value())))
+        membrane_radius = state.get("membrane_radius", None)
+        if membrane_radius is None:
+            old_diameter = float(state.get("membrane_diameter", self.membrane_radius.value() * 2.0))
+            membrane_radius = 0.5 * old_diameter
+        self.membrane_radius.setValue(float(membrane_radius))
         self.membrane_thickness.setValue(float(state.get("membrane_thickness", self.membrane_thickness.value())))
         self.membrane_offset.setValue(float(state.get("membrane_offset", self.membrane_offset.value())))
         self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
@@ -3140,6 +3196,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self.ift_train_repeat.setText(str(state.get("ift_train_repeat", "") or ""))
         self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
+        self.attach_x_movement.setValue(float(state.get("attach_x_movement", self.attach_x_movement.value())))
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
         if hasattr(self, "tweak_source_path"):
             self.tweak_source_path.setText(str(state.get("tweak_source_path", self.tweak_source_path.text()) or ""))
@@ -3177,7 +3234,7 @@ class CiliaBuilder2Tool(ToolInstance):
             try:
                 if str(name).startswith("Microtubules STAR"):
                     self._last_outer_star_model = created
-                elif str(name).startswith("Central pair STAR"):
+                elif str(name).startswith("Central pair"):
                     self._last_cent_star_model = created
             except Exception:
                 pass
@@ -3293,6 +3350,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
             line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
             y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
+            x_movement = float(item.get("x_movement", 0.0) or 0.0)
             adjust_matrix = self._y_control_matrix(y_rotation).tolist() if abs(y_rotation) > 1e-12 else np.eye(3, dtype=float).tolist()
 
             out_root = cbsubmap_impl(
@@ -3309,6 +3367,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 attach_updown_flip=False,
                 attach_axis_rot_y_deg=0.0,
                 attach_axis_rot_z_deg=-90.0,
+                attach_x_movement=x_movement,
                 attach_local_adjust_matrix=adjust_matrix,
             )
             if out_root is None:
@@ -3316,6 +3375,7 @@ class CiliaBuilder2Tool(ToolInstance):
             try:
                 out_root._cb_attachment_line_rotation = line_rotation
                 out_root._cb_attachment_y_rotation = y_rotation
+                out_root._cb_attachment_x_movement = x_movement
                 out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
                 out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
@@ -3468,6 +3528,30 @@ class CiliaBuilder2Tool(ToolInstance):
             self._refresh_model_selectors()
             self._keep_tool_visible()
 
+    def _export_cellpack_package(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+        from .cellpack_export import export_cellpack_package
+
+        try:
+            out_dir = QFileDialog.getExistingDirectory(
+                self.tool_window.ui_area,
+                "Choose cellPACK export folder",
+                os.path.expanduser("~/"),
+            )
+            if not out_dir:
+                return
+            result = export_cellpack_package(self, out_dir)
+            self.session.logger.info(
+                "Exported cellPACK package to "
+                f"{result['package_dir']} "
+                f"({result['n_outputs']} outputs, {result['n_sources']} sources)."
+            )
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
+
     def _is_surface_like(self, model):
         cls_name = model.__class__.__name__.lower()
         if "surface" in cls_name or "stl" in cls_name or "gltf" in cls_name or "glb" in cls_name or "mesh" in cls_name:
@@ -3599,39 +3683,52 @@ class CiliaBuilder2Tool(ToolInstance):
             length = float(self.centriole_length.value())
             spacing = float(self.centriole_spacing.value())
             z_offset = float(self.centriole_z_offset.value())
-            tube_id = 100
+            mode = str(self.centriole_mode.currentData() or "singlet")
 
             pixel_size = float(self.pixel_size.value())
-            model = cmd.buildcentriole(
-                self.session,
-                length=length,
-                spacing=spacing,
-                z_offset=z_offset,
-                tube_id=tube_id,
-                pixel_size=pixel_size,
-                show_arrows=True,
-                open_star=True,
-                print_star=False,
-            )
+            built_models = []
+            cp_half_sep = 50.0
 
-            self._last_cent_star_model = model
-            try:
-                if self._last_outer_star_model is not None:
-                    self._inherit_clip_info(model, self._last_outer_star_model)
-            except Exception:
-                pass
+            def build_one(name_prefix, tube_id, x_offset):
+                model = cmd.buildcentriole(
+                    self.session,
+                    length=length,
+                    spacing=spacing,
+                    z_offset=z_offset,
+                    tube_id=tube_id,
+                    x_offset=x_offset,
+                    pixel_size=pixel_size,
+                    show_arrows=True,
+                    open_star=True,
+                    print_star=False,
+                    name_prefix=name_prefix,
+                )
+                built_models.append((model, tube_id))
+                try:
+                    if self._last_outer_star_model is not None:
+                        self._inherit_clip_info(model, self._last_outer_star_model)
+                except Exception:
+                    pass
+                return model
 
-            # Update last central-pair end z
+            if mode == "doublet":
+                build_one("Central pair C1 STAR", 100, -cp_half_sep)
+                build_one("Central pair C2 STAR", 101, cp_half_sep)
+                self._last_cent_star_model = built_models[-1][0]
+            else:
+                self._last_cent_star_model = build_one("Central pair STAR", 100, 0.0)
+
             try:
-                rows = getattr(model, "_cb_star_rows", None) or []
-                px = float(pixel_size)
                 max_cent = None
-                for r in rows:
-                    tid = int(r.get("rlnHelicalTubeID", 0))
-                    if tid == tube_id:
-                        z_ang = float(r.get("rlnCoordinateZ", 0.0)) * px
-                        if max_cent is None or z_ang > max_cent:
-                            max_cent = z_ang
+                for model, tube_id in built_models:
+                    rows = getattr(model, "_cb_star_rows", None) or []
+                    px = float(pixel_size)
+                    for r in rows:
+                        tid = int(r.get("rlnHelicalTubeID", 0))
+                        if tid == tube_id:
+                            z_ang = float(r.get("rlnCoordinateZ", 0.0)) * px
+                            if max_cent is None or z_ang > max_cent:
+                                max_cent = z_ang
                 if max_cent is not None:
                     self._last_cent_end_z_ang = float(max_cent)
             except Exception:
@@ -3650,19 +3747,20 @@ class CiliaBuilder2Tool(ToolInstance):
 
         try:
             length = float(self.membrane_length.value())
-            diameter = float(self.membrane_diameter.value())
+            radius = float(self.membrane_radius.value())
             thickness = float(self.membrane_thickness.value())
             offset = float(self.membrane_offset.value())
             distortion_level = float(self.membrane_distortion.value())
+            diameter = 2.0 * radius
 
             if length <= 0.0:
                 raise RuntimeError("Membrane length must be > 0")
-            if diameter <= 0.0:
-                raise RuntimeError("Membrane diameter must be > 0")
+            if radius <= 0.0:
+                raise RuntimeError("Membrane radius must be > 0")
             if thickness <= 0.0:
                 raise RuntimeError("Membrane thickness must be > 0")
-            if thickness >= 0.5 * diameter:
-                raise RuntimeError("Membrane thickness must be smaller than half the diameter")
+            if thickness >= radius:
+                raise RuntimeError("Membrane thickness must be smaller than the radius")
 
             anchor = self._membrane_anchor_info()
             axis = np.array(anchor["axis"], dtype=float)
@@ -3689,6 +3787,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 state = getattr(model, "_cb_membrane_state", None) or {}
                 state["offset"] = float(offset)
                 state["distortion_level"] = float(distortion_level)
+                state["radius"] = float(radius)
                 state["source_star_name"] = str(getattr(anchor.get("star_model", None), "name", "") or "")
                 model._cb_membrane_state = state
             except Exception:
@@ -3838,11 +3937,13 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_updown_flip=False,
             attach_axis_rot_y_deg=0.0,
             attach_axis_rot_z_deg=-90.0,
+            attach_x_movement=float(self.attach_x_movement.value()),
             attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
         )
         try:
             out_root._cb_attachment_line_rotation = float(self.attach_line_rotation.value())
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
+            out_root._cb_attachment_x_movement = float(self.attach_x_movement.value())
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)

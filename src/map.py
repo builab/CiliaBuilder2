@@ -761,6 +761,7 @@ def cbsubmap_impl(
     attach_z_offset_deg=0.0,
     attach_all_z_offset_deg=0.0,
     attach_vertical_shift=0.0,
+    attach_x_movement=0.0,
     attach_auto_align_long_axis=False,
     attach_inout_flip=False,
     attach_updown_flip=False,
@@ -945,6 +946,8 @@ def cbsubmap_impl(
             - eyw * float(local_anchor[1])
             - ezw * float(local_anchor[2])
         )
+        if abs(float(attach_x_movement)) > 1e-12:
+            origin = origin + _safe_unit(exw) * float(attach_x_movement)
         if abs(float(attach_vertical_shift)) > 1e-12:
             origin = origin + _safe_unit(ezw) * float(attach_vertical_shift)
 
