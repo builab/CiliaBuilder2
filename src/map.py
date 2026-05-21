@@ -494,9 +494,27 @@ def _try_get_step(obj):
         st = obj.step
         if st is None:
             return None
-        return (float(st[0]), float(st[1]), float(st[2]))
+        try:
+            return (float(st[0]), float(st[1]), float(st[2]))
+        except Exception:
+            v = abs(float(st))
+            return (v, v, v)
     except Exception:
         return None
+
+
+def _voxel_step_scalar(step_xyz):
+    try:
+        vals = tuple(abs(float(v)) for v in step_xyz[:3])
+    except Exception:
+        return 1.0
+    vals = tuple(v if v > 1e-12 else 0.0 for v in vals)
+    nonzero = tuple(v for v in vals if v > 1e-12)
+    if not nonzero:
+        return 1.0
+    if max(nonzero) - min(nonzero) < 1e-9:
+        return float(nonzero[0])
+    return float(sum(nonzero) / len(nonzero))
 
 
 def _get_map_voxel_size_ang(vol):
@@ -532,10 +550,7 @@ def _get_map_voxel_size_ang(vol):
     if not candidates:
         return 1.0
 
-    sx = abs(float(candidates[0][0]))
-    if sx < 1e-12:
-        return 1.0
-    return sx
+    return _voxel_step_scalar(candidates[0])
 
 
 def _bounds_center_local(model_obj):
@@ -875,13 +890,13 @@ def cbsubmap_impl(
         # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
         local_anchor = shared_anchor + calib_shift
 
-        # Scale rule from physical units: map voxel angstrom / particle pixel angstrom.
+        # Volume attachments are normalized to pixel size 1 before placement,
+        # so source voxel size does not change the attached scale.
         effective_particle_px_ang = float(particle_px_ang) * float(PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP)
         if effective_particle_px_ang < 1e-12:
             effective_particle_px_ang = float(particle_px_ang)
         if source_is_volume:
-            base_scale = float(map_vox_ang) / float(effective_particle_px_ang)
-            base_scale *= float(attach_pixel_scale)
+            base_scale = 1.0 / float(effective_particle_px_ang)
         elif source_is_atomic:
             # Atomic structures are already in Angstrom coordinates.
             # STAR placement here is in STAR coordinate units (Angstrom / pixel_size),
@@ -947,7 +962,9 @@ def cbsubmap_impl(
             - ezw * float(local_anchor[2])
         )
         if abs(float(attach_x_movement)) > 1e-12:
-            origin = origin + _safe_unit(exw) * float(attach_x_movement)
+            # Keep X movement on the fixed scene X axis so it stays horizontal
+            # after view orient and is not affected by local Y/Z rotations.
+            origin = origin + np.array([1.0, 0.0, 0.0], dtype=float) * float(attach_x_movement)
         if abs(float(attach_vertical_shift)) > 1e-12:
             origin = origin + _safe_unit(ezw) * float(attach_vertical_shift)
 

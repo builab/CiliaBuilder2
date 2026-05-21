@@ -485,6 +485,12 @@ class CiliaBuilder2Tool(ToolInstance):
         cent_mode_lay.addWidget(self.centriole_mode, 1)
         cent_layout.addWidget(cent_mode_row)
 
+        self.centriole_c1c2_distance = TypedOnlyDoubleSpinBox(main)
+        self.centriole_c1c2_distance.setRange(0.0, 1e9)
+        self.centriole_c1c2_distance.setDecimals(2)
+        self.centriole_c1c2_distance.setValue(100.0)
+        cent_row_spin("C1/C2 distance", self.centriole_c1c2_distance)
+
         cent_tab = QWidget(main)
         cent_tab_layout = QVBoxLayout(cent_tab)
         cent_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -1374,12 +1380,21 @@ class CiliaBuilder2Tool(ToolInstance):
         return False
 
     def _is_selector_attach_source(self, model):
+        if self._is_under_cb_group(model, "star_models"):
+            return False
         if not self._is_attach_source(model):
             return False
         if self._is_generated_attached_model(model):
             return False
         if self._is_generated_membrane_model(model):
             return False
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_rendered_particles", False):
+                return False
+            cur = self._model_parent(cur)
         if self._is_surface_like(model):
             parent = self._model_parent(model)
             if parent is not None and self._is_attach_source(parent):
@@ -1567,7 +1582,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
             self.sel_map_model.addItem("No original map/STL/GLB/PDB/CIF models", None)
-            for m in self._all_session_models():
+            for m in self._selector_attach_models():
                 ref = self._model_ref(m)
                 if ref is None or not self._is_selector_attach_source(m):
                     continue
@@ -1591,7 +1606,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self.tweak_open_model.clear()
             self.tweak_open_model.addItem("No open map/STL/GLB/PDB/CIF models", None)
             tweak_has_models = False
-            for m in self._all_session_models():
+            for m in self._selector_attach_models():
                 ref = self._model_ref(m)
                 if ref is None or not self._is_selector_attach_source(m):
                     continue
@@ -2677,6 +2692,31 @@ class CiliaBuilder2Tool(ToolInstance):
                 seen.add(id(candidate))
                 yield candidate
 
+    def _selector_attach_models(self):
+        seen = set()
+
+        def add(model):
+            if model is None or id(model) in seen:
+                return
+            seen.add(id(model))
+            yield model
+
+        for model in self.session.models.list():
+            if getattr(model, "_cb_group_tag", None) in ("star_models", "maps", "membrane"):
+                continue
+            if self._is_under_cb_group(model, "star_models"):
+                continue
+            yield from add(model)
+
+        for model in self._all_session_models():
+            if getattr(model, "_cb_group_tag", None) == "maps":
+                try:
+                    children = list(model.child_models())
+                except Exception:
+                    children = []
+                for child in children:
+                    yield from add(child)
+
     def _pick_opened_model(self, opened_models, predicate):
         for model in opened_models:
             for candidate in self._iter_model_tree(model):
@@ -2703,12 +2743,25 @@ class CiliaBuilder2Tool(ToolInstance):
         )
 
     def _volume_voxel_size(self, model):
+        def _norm_step(step):
+            try:
+                vals = tuple(abs(float(s)) for s in step[:3])
+            except Exception:
+                try:
+                    v = abs(float(step))
+                except Exception:
+                    return None
+                vals = (v, v, v)
+            if all(v > 1e-12 for v in vals):
+                return vals
+            return None
+
         try:
             data = getattr(model, "data", None)
             step = getattr(data, "step", None)
             if step is not None:
-                vals = tuple(float(s) for s in step[:3])
-                if all(abs(v) > 1e-12 for v in vals):
+                vals = _norm_step(step)
+                if vals is not None:
                     return vals
         except Exception:
             pass
@@ -2716,8 +2769,8 @@ class CiliaBuilder2Tool(ToolInstance):
             grid = getattr(model, "grid_data", None)
             step = getattr(grid, "step", None)
             if step is not None:
-                vals = tuple(float(s) for s in step[:3])
-                if all(abs(v) > 1e-12 for v in vals):
+                vals = _norm_step(step)
+                if vals is not None:
                     return vals
         except Exception:
             pass
@@ -3127,6 +3180,7 @@ class CiliaBuilder2Tool(ToolInstance):
             "centriole_spacing": float(self.centriole_spacing.value()),
             "centriole_z_offset": float(self.centriole_z_offset.value()),
             "centriole_mode": str(self.centriole_mode.currentData() or "singlet"),
+            "centriole_c1c2_distance": float(self.centriole_c1c2_distance.value()),
             "membrane_length": float(self.membrane_length.value()),
             "membrane_radius": float(self.membrane_radius.value()),
             "membrane_thickness": float(self.membrane_thickness.value()),
@@ -3163,6 +3217,9 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
         self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
         self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
+        self.centriole_c1c2_distance.setValue(
+            float(state.get("centriole_c1c2_distance", self.centriole_c1c2_distance.value()))
+        )
         if hasattr(self, "centriole_mode"):
             idx = self.centriole_mode.findData(str(state.get("centriole_mode", self.centriole_mode.currentData())))
             if idx >= 0:
@@ -3684,10 +3741,11 @@ class CiliaBuilder2Tool(ToolInstance):
             spacing = float(self.centriole_spacing.value())
             z_offset = float(self.centriole_z_offset.value())
             mode = str(self.centriole_mode.currentData() or "singlet")
+            c1c2_distance = float(self.centriole_c1c2_distance.value())
 
             pixel_size = float(self.pixel_size.value())
             built_models = []
-            cp_half_sep = 50.0
+            cp_half_sep = 0.5 * float(c1c2_distance)
 
             def build_one(name_prefix, tube_id, x_offset):
                 model = cmd.buildcentriole(
