@@ -3,7 +3,7 @@
 import math
 import numpy as np
 
-from chimerax.core.commands import CmdDesc, FloatArg, IntArg, BoolArg, StringArg
+from chimerax.core.commands import CmdDesc, FloatArg, IntArg, BoolArg, StringArg, OpenFileNameArg
 from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
 
@@ -482,6 +482,71 @@ def cbui(session):
 
 
 cbui_desc = CmdDesc(synopsis="Open CiliaBuilder2 UI")
+
+
+def cbopenapr(session, apr_path, name=""):
+    from .local_apr import open_local_cellpack_package
+
+    model, info = open_local_cellpack_package(session, apr_path, name=name)
+    _add_to_cb_map_group(session, model)
+    _log_local_cellpack_load(session, info)
+    return model
+
+
+cbopenapr_desc = CmdDesc(
+    required=[("apr_path", OpenFileNameArg)],
+    keyword=[
+        ("name", StringArg),
+    ],
+    synopsis="Open a local cellPACK package from disk.",
+)
+
+
+def _log_local_cellpack_load(session, info):
+    kind = str(info.get("package_kind", "apr") or "apr").lower()
+    if kind == "manifest":
+        detail = ""
+        if info.get("membrane_bundle_loaded", False):
+            detail = (
+                " Loaded membrane APR "
+                f"{info.get('membrane_apr_path', '')} "
+                f"({int(info.get('membrane_compartment_count', 0))} compartments, "
+                f"{int(info.get('membrane_ingredient_count', 0))} ingredient entries, "
+                f"{int(info.get('membrane_placement_count', 0))} placements)."
+            )
+        session.logger.info(
+            "Opened exported cellPACK manifest package "
+            f"{info['path']} "
+            f"({int(info.get('output_count', 0))} outputs, "
+            f"{int(info.get('model_count', 0))} opened models)."
+            f"{detail}"
+        )
+        return
+    if kind == "recipe":
+        detail = ""
+        if info.get("membrane_bundle_loaded", False):
+            detail = (
+                " Loaded membrane APR "
+                f"{info.get('membrane_apr_path', '')} "
+                f"({int(info.get('membrane_compartment_count', 0))} compartments, "
+                f"{int(info.get('membrane_ingredient_count', 0))} ingredient entries, "
+                f"{int(info.get('membrane_placement_count', 0))} placements)."
+            )
+        session.logger.info(
+            "Opened exported cellPACK recipe package "
+            f"{info['path']} "
+            f"({int(info.get('output_count', 0))} outputs, "
+            f"{int(info.get('model_count', 0))} opened models)."
+            f"{detail}"
+        )
+        return
+    session.logger.info(
+        "Opened local cellPACK APR package "
+        f"{info['apr_path']} "
+        f"({int(info['compartment_count'])} compartments, "
+        f"{int(info['ingredient_count'])} ingredient entries, "
+        f"{int(info['placement_count'])} placements)."
+    )
 
 
 def cbstraight(

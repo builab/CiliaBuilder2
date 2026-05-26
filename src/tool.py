@@ -387,7 +387,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.angle_set.setRange(-360.0, 360.0)
         self.angle_set.setDecimals(2)
         self.angle_set.setValue(0.0)
-        outer_row_spin("Angle of set (deg)", self.angle_set)
+        self.angle_set.hide()
 
         self.length = TypedOnlyDoubleSpinBox(main)
         self.length.setRange(0.0, 1e9)
@@ -517,6 +517,7 @@ class CiliaBuilder2Tool(ToolInstance):
             lay.addWidget(QLabel(label, w))
             lay.addWidget(spin)
             mem_layout.addWidget(w)
+            return w
 
         self.membrane_length = TypedOnlyDoubleSpinBox(main)
         self.membrane_length.setRange(0.0, 1e9)
@@ -547,6 +548,61 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_distortion.setDecimals(2)
         self.membrane_distortion.setValue(1.0)
         mem_row_spin("Distortion level", self.membrane_distortion)
+
+        self.membrane_particle_receptors_pct = TypedOnlyDoubleSpinBox(main)
+        self.membrane_particle_receptors_pct.setRange(0.0, 100.0)
+        self.membrane_particle_receptors_pct.setDecimals(2)
+        self.membrane_particle_receptors_pct.setSingleStep(1.0)
+        self.membrane_particle_receptors_pct.setValue(8.0)
+        self._membrane_particle_receptors_pct_row = mem_row_spin(
+            "Receptors (%)",
+            self.membrane_particle_receptors_pct,
+        )
+        self._membrane_particle_receptors_pct_row.hide()
+
+        self.membrane_particle_channels_pct = TypedOnlyDoubleSpinBox(main)
+        self.membrane_particle_channels_pct.setRange(0.0, 100.0)
+        self.membrane_particle_channels_pct.setDecimals(2)
+        self.membrane_particle_channels_pct.setSingleStep(1.0)
+        self.membrane_particle_channels_pct.setValue(7.0)
+        self._membrane_particle_channels_pct_row = mem_row_spin(
+            "Channels (%)",
+            self.membrane_particle_channels_pct,
+        )
+        self._membrane_particle_channels_pct_row.hide()
+
+        self.membrane_particle_signaling_pct = TypedOnlyDoubleSpinBox(main)
+        self.membrane_particle_signaling_pct.setRange(0.0, 100.0)
+        self.membrane_particle_signaling_pct.setDecimals(2)
+        self.membrane_particle_signaling_pct.setSingleStep(1.0)
+        self.membrane_particle_signaling_pct.setValue(7.0)
+        self._membrane_particle_signaling_pct_row = mem_row_spin(
+            "Signaling (%)",
+            self.membrane_particle_signaling_pct,
+        )
+        self._membrane_particle_signaling_pct_row.hide()
+
+        self.membrane_particle_scaffold_pct = TypedOnlyDoubleSpinBox(main)
+        self.membrane_particle_scaffold_pct.setRange(0.0, 100.0)
+        self.membrane_particle_scaffold_pct.setDecimals(2)
+        self.membrane_particle_scaffold_pct.setSingleStep(1.0)
+        self.membrane_particle_scaffold_pct.setValue(8.0)
+        self._membrane_particle_scaffold_pct_row = mem_row_spin(
+            "Scaffold (%)",
+            self.membrane_particle_scaffold_pct,
+        )
+        self._membrane_particle_scaffold_pct_row.hide()
+
+        self.membrane_particle_lipids_pct = TypedOnlyDoubleSpinBox(main)
+        self.membrane_particle_lipids_pct.setRange(0.0, 100.0)
+        self.membrane_particle_lipids_pct.setDecimals(2)
+        self.membrane_particle_lipids_pct.setSingleStep(1.0)
+        self.membrane_particle_lipids_pct.setValue(70.0)
+        self._membrane_particle_lipids_pct_row = mem_row_spin(
+            "Lipids (%)",
+            self.membrane_particle_lipids_pct,
+        )
+        self._membrane_particle_lipids_pct_row.hide()
 
         mem_tab = QWidget(main)
         mem_tab_layout = QVBoxLayout(mem_tab)
@@ -728,6 +784,10 @@ class CiliaBuilder2Tool(ToolInstance):
         load_session_btn = QPushButton("Load session JSON", btn_row)
         load_session_btn.clicked.connect(self._load_session_json)
         btn_lay.addWidget(load_session_btn)
+
+        load_cellpack_btn = QPushButton("Load cellPACK", btn_row)
+        load_cellpack_btn.clicked.connect(self._load_cellpack_package)
+        btn_lay.addWidget(load_cellpack_btn)
 
         export_cellpack_btn = QPushButton("Export cellPACK package", btn_row)
         export_cellpack_btn.clicked.connect(self._export_cellpack_package)
@@ -1489,40 +1549,31 @@ class CiliaBuilder2Tool(ToolInstance):
             pass
 
     def _on_attach_selector_changed(self, *_args):
+        star_id = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        map_id = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+        new_key = (str(star_id) if star_id is not None else None, str(map_id) if map_id is not None else None)
+        old_key = getattr(self, "_attach_selector_key", None)
+        if old_key != new_key:
+            self._clear_active_attachment_runtime_state()
+        self._attach_selector_key = new_key
         if hasattr(self, "attach_selected_btn"):
-            star_ok = bool(self.sel_star_model.currentData()) if hasattr(self, "sel_star_model") else False
-            map_ok = bool(self.sel_map_model.currentData()) if hasattr(self, "sel_map_model") else False
+            star_ok = bool(star_id)
+            map_ok = bool(map_id)
             self.attach_selected_btn.setEnabled(star_ok and map_ok)
         try:
-            map_id = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
             if map_id:
                 self._focus_volume_in_viewer(self._model_by_ref(map_id))
         except Exception:
             pass
 
-    def _reset_attachment_controls(self):
-        self._attach_rebuild_in_progress = True
+    def _clear_active_attachment_runtime_state(self):
         try:
-            try:
-                _run(self.session, "select clear", log=False)
-            except Exception:
-                pass
-            self._last_attach_star_id = None
-            self._last_attach_map_id = None
-            self._last_attached_result = None
-            if hasattr(self, "sel_star_model"):
-                self.sel_star_model.setCurrentIndex(0)
-            if hasattr(self, "sel_map_model"):
-                self.sel_map_model.setCurrentIndex(0)
-            if hasattr(self, "attach_line_rotation"):
-                self.attach_line_rotation.setValue(0.0)
-            if hasattr(self, "attach_y_rotation"):
-                self.attach_y_rotation.setValue(0.0)
-            if hasattr(self, "attach_x_movement"):
-                self.attach_x_movement.setValue(0.0)
-        finally:
-            self._attach_rebuild_in_progress = False
-            self._on_attach_selector_changed()
+            _run(self.session, "select clear", log=False)
+        except Exception:
+            pass
+        self._last_attach_star_id = None
+        self._last_attach_map_id = None
+        self._last_attached_result = None
 
     def _refresh_model_selectors(self):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
@@ -1546,9 +1597,9 @@ class CiliaBuilder2Tool(ToolInstance):
                 if idx >= 0:
                     self.sel_star_model.setCurrentIndex(idx)
                 else:
-                    self.sel_star_model.setCurrentIndex(0)
+                    self.sel_star_model.setCurrentIndex(1 if self.sel_star_model.count() > 1 else 0)
             else:
-                self.sel_star_model.setCurrentIndex(0)
+                self.sel_star_model.setCurrentIndex(1 if self.sel_star_model.count() > 1 else 0)
             self.sel_star_model.setEnabled(True)
             self.sel_star_model.blockSignals(False)
 
@@ -1581,7 +1632,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "sel_map_model"):
             self.sel_map_model.blockSignals(True)
             self.sel_map_model.clear()
-            self.sel_map_model.addItem("No original map/STL/GLB/PDB/CIF models", None)
+            self.sel_map_model.addItem("None", None)
             for m in self._selector_attach_models():
                 ref = self._model_ref(m)
                 if ref is None or not self._is_selector_attach_source(m):
@@ -1626,6 +1677,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
         if hasattr(self, "attach_selected_btn"):
             self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
+        self._on_attach_selector_changed()
 
     def _select_star_model(self, model):
         self._refresh_model_selectors()
@@ -2783,17 +2835,7 @@ class CiliaBuilder2Tool(ToolInstance):
             return
         if not self._is_volume_like(src) or not self._is_volume_like(tmpl):
             return
-        src_step = self._volume_voxel_size(src)
-        tmpl_step = self._volume_voxel_size(tmpl)
-        if src_step is None or tmpl_step is None:
-            return
-        if all(abs(a - b) < 1e-9 for a, b in zip(src_step, tmpl_step)):
-            return
-        step_text = ",".join(f"{v:.6g}" for v in src_step)
-        _run(self.session, f"volume #{tmpl.id_string} voxelSize {step_text}")
-        self.session.logger.info(
-            f"Adjusted template voxel size from {tmpl_step} to match source voxel size {src_step}."
-        )
+        return
 
     def _prepare_manual_tweak_fit_source(self):
         src = self._manual_tweak_source
@@ -3186,6 +3228,11 @@ class CiliaBuilder2Tool(ToolInstance):
             "membrane_thickness": float(self.membrane_thickness.value()),
             "membrane_offset": float(self.membrane_offset.value()),
             "membrane_distortion": float(self.membrane_distortion.value()),
+            "membrane_particle_receptors_pct": float(self.membrane_particle_receptors_pct.value()),
+            "membrane_particle_channels_pct": float(self.membrane_particle_channels_pct.value()),
+            "membrane_particle_signaling_pct": float(self.membrane_particle_signaling_pct.value()),
+            "membrane_particle_scaffold_pct": float(self.membrane_particle_scaffold_pct.value()),
+            "membrane_particle_lipids_pct": float(self.membrane_particle_lipids_pct.value()),
             "ift_distance": float(self.ift_distance.value()),
             "ift_mode": str(self.ift_mode.currentData() or "train"),
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
@@ -3233,6 +3280,21 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_thickness.setValue(float(state.get("membrane_thickness", self.membrane_thickness.value())))
         self.membrane_offset.setValue(float(state.get("membrane_offset", self.membrane_offset.value())))
         self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
+        self.membrane_particle_receptors_pct.setValue(
+            float(state.get("membrane_particle_receptors_pct", self.membrane_particle_receptors_pct.value()))
+        )
+        self.membrane_particle_channels_pct.setValue(
+            float(state.get("membrane_particle_channels_pct", self.membrane_particle_channels_pct.value()))
+        )
+        self.membrane_particle_signaling_pct.setValue(
+            float(state.get("membrane_particle_signaling_pct", self.membrane_particle_signaling_pct.value()))
+        )
+        self.membrane_particle_scaffold_pct.setValue(
+            float(state.get("membrane_particle_scaffold_pct", self.membrane_particle_scaffold_pct.value()))
+        )
+        self.membrane_particle_lipids_pct.setValue(
+            float(state.get("membrane_particle_lipids_pct", self.membrane_particle_lipids_pct.value()))
+        )
         self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
         if hasattr(self, "ift_mode"):
             idx = self.ift_mode.findData(str(state.get("ift_mode", self.ift_mode.currentData())))
@@ -3598,15 +3660,48 @@ class CiliaBuilder2Tool(ToolInstance):
             if not out_dir:
                 return
             result = export_cellpack_package(self, out_dir)
-            self.session.logger.info(
+            msg = (
                 "Exported cellPACK package to "
                 f"{result['package_dir']} "
                 f"({result['n_outputs']} outputs, {result['n_sources']} sources)."
             )
+            if result.get("cellpack_recipe_path", None) and result.get("cellpack_result_path", None):
+                msg += (
+                    " Membrane bundle: "
+                    f"{result['cellpack_recipe_path']} "
+                    f"and {result['cellpack_result_path']} "
+                    f"({int(result.get('n_membrane_particles', 0))} particles across "
+                    f"{int(result.get('n_membranes', 0))} membrane compartments)."
+                )
+            self.session.logger.info(msg)
         except Exception as e:
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
         finally:
+            self._keep_tool_visible()
+
+    def _load_cellpack_package(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+        from . import cmd
+        from .local_apr import open_local_cellpack_package
+
+        try:
+            path, _selected_filter = QFileDialog.getOpenFileName(
+                self.tool_window.ui_area,
+                "Choose cellPACK file",
+                os.path.expanduser("~/"),
+                "cellPACK files (*.apr.json ciliabuilder_manifest.json recipe.json *.json);;All files (*)",
+            )
+            if not path:
+                return
+            model, info = open_local_cellpack_package(self.session, path)
+            cmd._add_to_cb_map_group(self.session, model)
+            cmd._log_local_cellpack_load(self.session, info)
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._refresh_model_selectors()
             self._keep_tool_visible()
 
     def _is_surface_like(self, model):
@@ -4032,7 +4127,6 @@ class CiliaBuilder2Tool(ToolInstance):
             # Keep attachment usable even if clip application fails.
             pass
         self._refresh_model_selectors()
-        self._reset_attachment_controls()
 
     def _reattach_with_current_settings(self, _value):
         from Qt.QtWidgets import QMessageBox

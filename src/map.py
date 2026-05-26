@@ -890,13 +890,13 @@ def cbsubmap_impl(
         # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
         local_anchor = shared_anchor + calib_shift
 
-        # Volume attachments are normalized to pixel size 1 before placement,
-        # so source voxel size does not change the attached scale.
+        # Volume attachments should keep the same displayed size as the
+        # original source map, so do not apply an extra scale factor here.
         effective_particle_px_ang = float(particle_px_ang) * float(PARTICLE_PIXEL_SIZE_SCALE_FOR_MAP)
         if effective_particle_px_ang < 1e-12:
             effective_particle_px_ang = float(particle_px_ang)
         if source_is_volume:
-            base_scale = 1.0 / float(effective_particle_px_ang)
+            base_scale = 1.0
         elif source_is_atomic:
             # Atomic structures are already in Angstrom coordinates.
             # STAR placement here is in STAR coordinate units (Angstrom / pixel_size),
