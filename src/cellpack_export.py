@@ -61,6 +61,7 @@ class _CellPackExporter:
             recipe["ciliabuilder"]["cellpack_membrane_bundle"] = {
                 "recipe_path": self._relative_path(membrane_bundle["recipe_path"]),
                 "result_path": self._relative_path(membrane_bundle["result_path"]),
+                "cif_path": self._relative_path(membrane_bundle["cif_path"]),
                 "n_membranes": int(membrane_bundle["n_membranes"]),
                 "n_particles": int(membrane_bundle["n_particles"]),
             }
@@ -90,6 +91,7 @@ class _CellPackExporter:
                 {
                     "cellpack_recipe_path": membrane_bundle["recipe_path"],
                     "cellpack_result_path": membrane_bundle["result_path"],
+                    "cellpack_cif_path": membrane_bundle["cif_path"],
                     "n_membranes": membrane_bundle["n_membranes"],
                     "n_membrane_particles": membrane_bundle["n_particles"],
                 }
@@ -480,6 +482,7 @@ class _CellPackExporter:
             manifest["cellpack_membrane_bundle"] = {
                 "recipe_path": self._relative_path(cellpack_bundle["recipe_path"]),
                 "result_path": self._relative_path(cellpack_bundle["result_path"]),
+                "cif_path": self._relative_path(cellpack_bundle["cif_path"]),
                 "n_membranes": int(cellpack_bundle["n_membranes"]),
                 "n_particles": int(cellpack_bundle["n_particles"]),
             }
@@ -757,6 +760,7 @@ class _CellPackExporter:
             },
             "compartments": {},
         }
+        cif_particles = []
 
         total_particles = 0
         for comp_num, membrane_entry in enumerate(membrane_entries, start=1):
@@ -836,17 +840,36 @@ class _CellPackExporter:
                     "name": ingredient_name,
                     "encapsulatingRadius": float(class_info["particle_radius"]),
                 }
+                cif_particles.append(
+                    {
+                        "compartment_name": comp_name,
+                        "ingredient_name": ingredient_name,
+                        "class_suffix": class_suffix,
+                        "class_label": str(class_info.get("label", class_suffix) or class_suffix),
+                        "class_role": str(class_info.get("role", class_suffix) or class_suffix),
+                        "particle_radius": float(class_info["particle_radius"]),
+                        "target_percentage": float(class_info.get("target_percentage", 0.0) or 0.0),
+                        "placements": placements,
+                    }
+                )
                 total_particles += len(placements)
 
         recipe_path = os.path.join(self.package_dir, recipe_filename)
         result_path = os.path.join(self.package_dir, result_filename)
+        cif_path = os.path.join(self.package_dir, f"{self.package_name}_membrane_cellpack.cif")
         with open(recipe_path, "w", encoding="utf-8") as f:
             json.dump(recipe, f, indent=2)
         with open(result_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2)
+        self._write_cellpack_membrane_mmcif(
+            cif_path=cif_path,
+            particle_groups=cif_particles,
+            package_bounds=package_bounds,
+        )
         return {
             "recipe_path": recipe_path,
             "result_path": result_path,
+            "cif_path": cif_path,
             "n_membranes": len(membrane_entries),
             "n_particles": total_particles,
         }
@@ -1008,6 +1031,234 @@ class _CellPackExporter:
         }
         digest = hashlib.sha1(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
         return int(digest[:16], 16)
+
+    def _write_cellpack_membrane_mmcif(self, cif_path, particle_groups, package_bounds):
+        particle_groups = [group for group in (particle_groups or []) if group.get("placements")]
+        if not particle_groups:
+            raise RuntimeError("No membrane particle placements available for mmCIF export.")
+
+        mins = package_bounds[0] if package_bounds else [0.0, 0.0, 0.0]
+        maxs = package_bounds[1] if package_bounds else [1000.0, 1000.0, 1000.0]
+        cell_lengths = [
+            max(1.0, float(maxs[i]) - float(mins[i]) + 100.0)
+            for i in range(3)
+        ]
+        data_name = self._sanitize_stem(os.path.splitext(os.path.basename(cif_path))[0])
+        entity_rows = []
+        asym_rows = []
+        atom_rows = []
+        chem_comp_rows = {}
+        serial = 1
+
+        for entity_index, group in enumerate(particle_groups, start=1):
+            entity_id = str(entity_index)
+            asym_id = self._cif_asym_id(entity_index)
+            comp_id = self._cif_component_id(group.get("class_suffix", None))
+            compartment_name = str(group.get("compartment_name", "") or "membrane")
+            class_suffix = str(group.get("class_suffix", "") or "particle")
+            ingredient_name = str(group.get("ingredient_name", "") or class_suffix)
+            role = str(group.get("class_role", class_suffix) or class_suffix)
+            target_pct = float(group.get("target_percentage", 0.0) or 0.0)
+            description = f"{compartment_name}/{ingredient_name}"
+            entity_rows.append(
+                {
+                    "id": entity_id,
+                    "type": "non-polymer",
+                    "description": description,
+                    "details": role,
+                    "source": f"ciliabuilder:{class_suffix}",
+                    "parent": compartment_name,
+                }
+            )
+            asym_rows.append({"id": asym_id, "entity_id": entity_id})
+            chem_comp_rows[comp_id] = {
+                "id": comp_id,
+                "type": "non-polymer",
+                "name": str(group.get("class_label", class_suffix) or class_suffix),
+            }
+
+            for seq_id, placement in enumerate(group.get("placements", []) or [], start=1):
+                xyz = placement[0] if placement else (0.0, 0.0, 0.0)
+                x = float(xyz[0]) if len(xyz) > 0 else 0.0
+                y = float(xyz[1]) if len(xyz) > 1 else 0.0
+                z = float(xyz[2]) if len(xyz) > 2 else 0.0
+                atom_rows.append(
+                    {
+                        "group_PDB": "HETATM",
+                        "id": str(serial),
+                        "type_symbol": "C",
+                        "label_atom_id": "B1",
+                        "label_alt_id": ".",
+                        "label_comp_id": comp_id,
+                        "label_asym_id": asym_id,
+                        "label_entity_id": entity_id,
+                        "label_seq_id": str(seq_id),
+                        "ins_code": "?",
+                        "x": f"{x:.3f}",
+                        "y": f"{y:.3f}",
+                        "z": f"{z:.3f}",
+                        "occupancy": "1.00",
+                        "b_iso": f"{float(group.get('particle_radius', 0.0)):.3f}",
+                        "formal_charge": "?",
+                        "auth_seq_id": str(seq_id),
+                        "auth_comp_id": comp_id,
+                        "auth_asym_id": asym_id,
+                        "auth_atom_id": "B1",
+                        "model_num": "1",
+                        "target_pct": f"{target_pct:.2f}",
+                    }
+                )
+                serial += 1
+
+        with open(cif_path, "w", encoding="utf-8") as f:
+            f.write(f"data_{data_name}\n#\n")
+            f.write(f"_entry.id {self._cif_scalar(data_name)}\n")
+            f.write("_audit_conform.dict_name mmcif_pdbx\n")
+            f.write("_audit_conform.dict_version 5.397\n")
+            f.write("_cell.length_a %.3f\n" % cell_lengths[0])
+            f.write("_cell.length_b %.3f\n" % cell_lengths[1])
+            f.write("_cell.length_c %.3f\n" % cell_lengths[2])
+            f.write("_cell.angle_alpha 90.000\n")
+            f.write("_cell.angle_beta 90.000\n")
+            f.write("_cell.angle_gamma 90.000\n")
+            f.write("_symmetry.space_group_name_H-M 'P 1'\n")
+            f.write("_symmetry.Int_Tables_number 1\n")
+            f.write("#\n")
+            f.write("loop_\n")
+            f.write("_entity.id\n")
+            f.write("_entity.type\n")
+            f.write("_entity.pdbx_description\n")
+            f.write("_entity.details\n")
+            f.write("_entity.pdbx_ec\n")
+            f.write("_entity.pdbx_parent_entity_id\n")
+            for row in entity_rows:
+                f.write(
+                    "%s %s %s %s %s %s\n"
+                    % (
+                        self._cif_scalar(row["id"]),
+                        self._cif_scalar(row["type"]),
+                        self._cif_scalar(row["description"]),
+                        self._cif_scalar(row["details"]),
+                        self._cif_scalar(row["source"]),
+                        self._cif_scalar(row["parent"]),
+                    )
+                )
+            f.write("#\n")
+            f.write("loop_\n")
+            f.write("_struct_asym.id\n")
+            f.write("_struct_asym.entity_id\n")
+            for row in asym_rows:
+                f.write("%s %s\n" % (self._cif_scalar(row["id"]), self._cif_scalar(row["entity_id"])))
+            f.write("#\n")
+            f.write("loop_\n")
+            f.write("_chem_comp.id\n")
+            f.write("_chem_comp.type\n")
+            f.write("_chem_comp.name\n")
+            for comp_id in sorted(chem_comp_rows.keys()):
+                row = chem_comp_rows[comp_id]
+                f.write(
+                    "%s %s %s\n"
+                    % (
+                        self._cif_scalar(row["id"]),
+                        self._cif_scalar(row["type"]),
+                        self._cif_scalar(row["name"]),
+                    )
+                )
+            f.write("#\n")
+            f.write("loop_\n")
+            f.write("_atom_site.group_PDB\n")
+            f.write("_atom_site.id\n")
+            f.write("_atom_site.type_symbol\n")
+            f.write("_atom_site.label_atom_id\n")
+            f.write("_atom_site.label_alt_id\n")
+            f.write("_atom_site.label_comp_id\n")
+            f.write("_atom_site.label_asym_id\n")
+            f.write("_atom_site.label_entity_id\n")
+            f.write("_atom_site.label_seq_id\n")
+            f.write("_atom_site.pdbx_PDB_ins_code\n")
+            f.write("_atom_site.Cartn_x\n")
+            f.write("_atom_site.Cartn_y\n")
+            f.write("_atom_site.Cartn_z\n")
+            f.write("_atom_site.occupancy\n")
+            f.write("_atom_site.B_iso_or_equiv\n")
+            f.write("_atom_site.pdbx_formal_charge\n")
+            f.write("_atom_site.auth_seq_id\n")
+            f.write("_atom_site.auth_comp_id\n")
+            f.write("_atom_site.auth_asym_id\n")
+            f.write("_atom_site.auth_atom_id\n")
+            f.write("_atom_site.pdbx_PDB_model_num\n")
+            for row in atom_rows:
+                f.write(
+                    "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n"
+                    % (
+                        self._cif_scalar(row["group_PDB"]),
+                        self._cif_scalar(row["id"]),
+                        self._cif_scalar(row["type_symbol"]),
+                        self._cif_scalar(row["label_atom_id"]),
+                        self._cif_scalar(row["label_alt_id"]),
+                        self._cif_scalar(row["label_comp_id"]),
+                        self._cif_scalar(row["label_asym_id"]),
+                        self._cif_scalar(row["label_entity_id"]),
+                        self._cif_scalar(row["label_seq_id"]),
+                        self._cif_scalar(row["ins_code"]),
+                        row["x"],
+                        row["y"],
+                        row["z"],
+                        row["occupancy"],
+                        row["b_iso"],
+                        self._cif_scalar(row["formal_charge"]),
+                        self._cif_scalar(row["auth_seq_id"]),
+                        self._cif_scalar(row["auth_comp_id"]),
+                        self._cif_scalar(row["auth_asym_id"]),
+                        self._cif_scalar(row["auth_atom_id"]),
+                        self._cif_scalar(row["model_num"]),
+                    )
+                )
+            f.write("#\n")
+            f.write("loop_\n")
+            f.write("_ciliabuilder_membrane_particle.entity_id\n")
+            f.write("_ciliabuilder_membrane_particle.compartment\n")
+            f.write("_ciliabuilder_membrane_particle.class\n")
+            f.write("_ciliabuilder_membrane_particle.role\n")
+            f.write("_ciliabuilder_membrane_particle.radius\n")
+            f.write("_ciliabuilder_membrane_particle.target_percentage\n")
+            for entity_row, group in zip(entity_rows, particle_groups):
+                f.write(
+                    "%s %s %s %s %.3f %.2f\n"
+                    % (
+                        self._cif_scalar(entity_row["id"]),
+                        self._cif_scalar(group.get("compartment_name", "membrane")),
+                        self._cif_scalar(group.get("class_suffix", "particle")),
+                        self._cif_scalar(group.get("class_role", "particle")),
+                        float(group.get("particle_radius", 0.0) or 0.0),
+                        float(group.get("target_percentage", 0.0) or 0.0),
+                    )
+                )
+            f.write("#\n")
+
+    def _cif_asym_id(self, index):
+        index = max(1, int(index))
+        label = []
+        value = index
+        while value > 0:
+            value -= 1
+            label.append(chr(ord("A") + (value % 26)))
+            value //= 26
+        return "".join(reversed(label))
+
+    def _cif_component_id(self, class_suffix):
+        text = re.sub(r"[^A-Za-z0-9]+", "", str(class_suffix or "MPT")).upper()
+        if not text:
+            text = "MPT"
+        return (text[:3]).ljust(3, "X")
+
+    def _cif_scalar(self, value):
+        text = str(value if value is not None else ".")
+        if text in ("", " "):
+            return "."
+        if any(ch.isspace() for ch in text) or any(ch in text for ch in ("'", "\"", "#", ";")):
+            return json.dumps(text)
+        return text
 
     def _build_membrane_particle_ingredient(
         self,

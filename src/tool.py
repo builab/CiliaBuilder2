@@ -291,6 +291,19 @@ class CiliaBuilder2Tool(ToolInstance):
         self._ift_pick_handlers = []
         self._ift_pick_hidden_models = []
         self._ift_prev_left_mouse_mode_name = None
+        self._marker_path_counter = 0
+        self._marker_path_pick_pending = False
+        self._marker_path_pick_handlers = []
+        self._marker_path_prev_left_mouse_mode_name = None
+        self._marker_path_prev_marker_settings = None
+        self._marker_path_temp_root = None
+        self._marker_path_temp_set = None
+        self._marker_path_pick_hidden_models = []
+        self._marker_path_target_count = 0
+        self._marker_path_output_mode = "curve"
+        self._marker_path_pick_action = "tube"
+        self._marker_path_source_star_ref = None
+        self._marker_path_poll_timer = None
         self.tool_window = None
         self._build_ui()
 
@@ -804,7 +817,15 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_page_layout.setContentsMargins(0, 0, 0, 0)
         sidebar_tabs.addTab(attach_page, "Attach")
 
-        attach_select = QGroupBox("Attach by selected/open models", attach_page)
+        attach_modes = QTabWidget(attach_page)
+        attach_page_layout.addWidget(attach_modes)
+
+        attach_controls_page = QWidget(attach_page)
+        attach_controls_layout = QVBoxLayout(attach_controls_page)
+        attach_controls_layout.setContentsMargins(0, 0, 0, 0)
+        attach_modes.addTab(attach_controls_page, "Attachment")
+
+        attach_select = QGroupBox("Attach by selected/open models", attach_controls_page)
         attach_select_lay = QVBoxLayout(attach_select)
 
         star_row = QWidget(main)
@@ -880,8 +901,81 @@ class CiliaBuilder2Tool(ToolInstance):
         sel_btn_lay.addStretch(1)
         attach_select_lay.addWidget(sel_btn_row)
 
-        attach_page_layout.addWidget(attach_select)
-        attach_page_layout.addStretch(1)
+        attach_controls_layout.addWidget(attach_select)
+        attach_controls_layout.addStretch(1)
+
+        marker_page = QWidget(attach_page)
+        marker_page_layout = QVBoxLayout(marker_page)
+        marker_page_layout.setContentsMargins(0, 0, 0, 0)
+        attach_modes.addTab(marker_page, "Marker placement")
+
+        marker_box = QGroupBox("Marker path", marker_page)
+        marker_layout = QVBoxLayout(marker_box)
+
+        marker_count_row = QWidget(marker_page)
+        marker_count_lay = QHBoxLayout(marker_count_row)
+        marker_count_lay.setContentsMargins(0, 0, 0, 0)
+        marker_count_lay.addWidget(QLabel("No. of markers", marker_count_row))
+        self.marker_path_count = TypedOnlySpinBox(marker_count_row)
+        self.marker_path_count.setRange(2, 1000)
+        self.marker_path_count.setValue(4)
+        marker_count_lay.addWidget(self.marker_path_count)
+        marker_layout.addWidget(marker_count_row)
+
+        marker_target_row = QWidget(marker_page)
+        marker_target_lay = QHBoxLayout(marker_target_row)
+        marker_target_lay.setContentsMargins(0, 0, 0, 0)
+        marker_target_lay.addWidget(QLabel("Mark on model", marker_target_row))
+        self.marker_target_model = RefreshingComboBox(self._refresh_model_selectors, marker_target_row)
+        self.marker_target_model.setMinimumContentsLength(24)
+        self.marker_target_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.marker_target_model.currentIndexChanged.connect(self._on_marker_target_model_changed)
+        marker_target_lay.addWidget(self.marker_target_model, 1)
+        marker_layout.addWidget(marker_target_row)
+
+        marker_mode_row = QWidget(marker_page)
+        marker_mode_lay = QHBoxLayout(marker_mode_row)
+        marker_mode_lay.setContentsMargins(0, 0, 0, 0)
+        marker_mode_lay.addWidget(QLabel("Output", marker_mode_row))
+        self.marker_path_mode = QComboBox(marker_mode_row)
+        self.marker_path_mode.addItem("Curve", "curve")
+        self.marker_path_mode.addItem("Line", "line")
+        marker_mode_lay.addWidget(self.marker_path_mode, 1)
+        marker_layout.addWidget(marker_mode_row)
+
+        marker_radius_row = QWidget(marker_page)
+        marker_radius_lay = QHBoxLayout(marker_radius_row)
+        marker_radius_lay.setContentsMargins(0, 0, 0, 0)
+        marker_radius_lay.addWidget(QLabel("Tube radius", marker_radius_row))
+        self.marker_path_radius = TypedOnlyDoubleSpinBox(marker_radius_row)
+        self.marker_path_radius.setRange(0.1, 1e9)
+        self.marker_path_radius.setDecimals(2)
+        self.marker_path_radius.setValue(20.0)
+        marker_radius_lay.addWidget(self.marker_path_radius)
+        marker_layout.addWidget(marker_radius_row)
+
+        marker_btn_row = QWidget(marker_page)
+        marker_btn_lay = QHBoxLayout(marker_btn_row)
+        marker_btn_lay.setContentsMargins(0, 0, 0, 0)
+        self.marker_path_pick_btn = QPushButton("Place markers for path", marker_btn_row)
+        self.marker_path_pick_btn.clicked.connect(self._start_marker_path_pick_mode)
+        marker_btn_lay.addWidget(self.marker_path_pick_btn)
+        marker_btn_lay.addStretch(1)
+        marker_layout.addWidget(marker_btn_row)
+
+        marker_apply_row = QWidget(marker_page)
+        marker_apply_lay = QHBoxLayout(marker_apply_row)
+        marker_apply_lay.setContentsMargins(0, 0, 0, 0)
+        self.marker_pattern_star_btn = QPushButton("Place markers for replicated STAR", marker_apply_row)
+        self.marker_pattern_star_btn.clicked.connect(self._start_marker_pattern_star_pick_mode)
+        marker_apply_lay.addWidget(self.marker_pattern_star_btn)
+        marker_apply_lay.addStretch(1)
+        marker_layout.addWidget(marker_apply_row)
+
+        self.marker_path_status = QLabel("Press button, then click in ChimeraX to place markers", marker_box)
+        marker_layout.addWidget(self.marker_path_status)
+        marker_page_layout.addWidget(marker_box)
+        marker_page_layout.addStretch(1)
 
         tweak_box = QGroupBox("Manual tweak to template", main)
         tweak_layout = QVBoxLayout(tweak_box)
@@ -1439,6 +1533,16 @@ class CiliaBuilder2Tool(ToolInstance):
             cur = self._model_parent(cur)
         return False
 
+    def _is_generated_marker_path_model(self, model):
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_generated_marker_path", False):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
     def _is_selector_attach_source(self, model):
         if self._is_under_cb_group(model, "star_models"):
             return False
@@ -1447,6 +1551,8 @@ class CiliaBuilder2Tool(ToolInstance):
         if self._is_generated_attached_model(model):
             return False
         if self._is_generated_membrane_model(model):
+            return False
+        if self._is_generated_marker_path_model(model):
             return False
         cur = model
         seen = set()
@@ -1578,6 +1684,7 @@ class CiliaBuilder2Tool(ToolInstance):
     def _refresh_model_selectors(self):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+        marker_target_current = self.marker_target_model.currentData() if hasattr(self, "marker_target_model") else None
         star_has_models = False
         map_has_models = False
 
@@ -1651,6 +1758,34 @@ class CiliaBuilder2Tool(ToolInstance):
             self.sel_map_model.setEnabled(True)
             self.sel_map_model.blockSignals(False)
 
+        if hasattr(self, "marker_target_model"):
+            self.marker_target_model.blockSignals(True)
+            self.marker_target_model.clear()
+            self.marker_target_model.addItem("None", None)
+            marker_has_models = False
+            for m in self._marker_placeable_models():
+                ref = self._model_ref(m)
+                if ref is None:
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.marker_target_model.addItem(label, str(ref))
+                marker_has_models = True
+            if marker_target_current is not None:
+                idx = self.marker_target_model.findData(str(marker_target_current))
+                if idx >= 0:
+                    self.marker_target_model.setCurrentIndex(idx)
+                else:
+                    self.marker_target_model.setCurrentIndex(1 if self.marker_target_model.count() > 1 else 0)
+            else:
+                preferred = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+                idx = self.marker_target_model.findData(str(preferred)) if preferred is not None else -1
+                if idx >= 0:
+                    self.marker_target_model.setCurrentIndex(idx)
+                else:
+                    self.marker_target_model.setCurrentIndex(1 if self.marker_target_model.count() > 1 else 0)
+            self.marker_target_model.setEnabled(True)
+            self.marker_target_model.blockSignals(False)
+
         if hasattr(self, "tweak_open_model"):
             tweak_current = self.tweak_open_model.currentData()
             self.tweak_open_model.blockSignals(True)
@@ -1678,6 +1813,34 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "attach_selected_btn"):
             self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
         self._on_attach_selector_changed()
+
+    def _marker_placeable_models(self):
+        seen = set()
+        maps_group = None
+        for model in self._all_session_models():
+            if getattr(model, "_cb_group_tag", None) == "maps":
+                maps_group = model
+                break
+        if maps_group is None:
+            for model in self._selector_attach_models():
+                if model is None or id(model) in seen:
+                    continue
+                if self._is_generated_marker_path_model(model):
+                    continue
+                seen.add(id(model))
+                yield model
+            return
+        try:
+            children = list(maps_group.child_models())
+        except Exception:
+            children = []
+        for child in children:
+            if child is None or id(child) in seen:
+                continue
+            if self._is_generated_marker_path_model(child):
+                continue
+            seen.add(id(child))
+            yield child
 
     def _select_star_model(self, model):
         self._refresh_model_selectors()
@@ -2057,7 +2220,7 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             pass
         try:
-            _run(self.session, f"ui mousemode left {name}", log=False)
+            _run(self.session, f"ui mousemode left '{name}'", log=False)
         except Exception:
             pass
 
@@ -2118,6 +2281,622 @@ class CiliaBuilder2Tool(ToolInstance):
             self._restore_ift_pick_hidden_models()
             self._restore_ift_mouse_mode()
             self._keep_tool_visible()
+
+    def _set_marker_path_status(self, text):
+        if hasattr(self, "marker_path_status"):
+            self.marker_path_status.setText(str(text))
+
+    def _on_marker_target_model_changed(self, *_args):
+        if self._marker_path_pick_pending:
+            self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
+
+    def _selected_marker_target_model(self):
+        model_id = self.marker_target_model.currentData() if hasattr(self, "marker_target_model") else None
+        if model_id is None:
+            raise RuntimeError("Select a model to mark first")
+        model = self._model_by_ref(model_id)
+        if model is None:
+            raise RuntimeError("Selected marker target model is no longer available")
+        return model
+
+    def _set_marker_pick_hidden_models(self, target_model):
+        self._restore_marker_pick_hidden_models()
+        keep = set()
+        for model in self._iter_model_tree(target_model):
+            keep.add(id(model))
+        cur = target_model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            keep.add(id(cur))
+            cur = self._model_parent(cur)
+        self._marker_path_pick_hidden_models = []
+        for model in self.session.models.list():
+            if id(model) in keep:
+                continue
+            try:
+                was_display = bool(getattr(model, "display", True))
+            except Exception:
+                was_display = True
+            self._marker_path_pick_hidden_models.append((model, was_display))
+            if was_display:
+                try:
+                    model.display = False
+                except Exception:
+                    pass
+
+    def _restore_marker_pick_hidden_models(self):
+        for model, was_display in self._marker_path_pick_hidden_models:
+            try:
+                model.display = bool(was_display)
+            except Exception:
+                pass
+        self._marker_path_pick_hidden_models = []
+
+    def _update_marker_path_buttons(self):
+        active_action = str(getattr(self, "_marker_path_pick_action", "tube") or "tube")
+        if hasattr(self, "marker_path_pick_btn"):
+            tube_active = bool(self._marker_path_pick_pending and active_action == "tube")
+            self.marker_path_pick_btn.setText("Cancel marker placement" if tube_active else "Place markers for path")
+            self.marker_path_pick_btn.setEnabled((not self._marker_path_pick_pending) or tube_active)
+        if hasattr(self, "marker_pattern_star_btn"):
+            star_active = bool(self._marker_path_pick_pending and active_action == "replicated_star")
+            self.marker_pattern_star_btn.setText(
+                "Cancel marker placement" if star_active else "Place markers for replicated STAR"
+            )
+            self.marker_pattern_star_btn.setEnabled((not self._marker_path_pick_pending) or star_active)
+
+    def _ensure_marker_path_pick_handler(self):
+        if self._marker_path_pick_handlers:
+            return
+        from chimerax.core.selection import SELECTION_CHANGED
+        from chimerax.core.models import MODEL_SELECTION_CHANGED
+        from chimerax import atomic
+
+        self._marker_path_pick_handlers = [
+            self.session.triggers.add_handler(SELECTION_CHANGED, self._on_marker_path_selection_changed),
+            self.session.triggers.add_handler(MODEL_SELECTION_CHANGED, self._on_marker_path_selection_changed),
+            atomic.get_triggers().add_handler("changes", self._on_marker_path_atomic_changed),
+        ]
+
+    def _ensure_marker_path_poll_timer(self):
+        if self._marker_path_poll_timer is not None:
+            return self._marker_path_poll_timer
+        from Qt.QtCore import QTimer
+
+        parent = getattr(getattr(self, "tool_window", None), "ui_area", None)
+        timer = QTimer(parent)
+        timer.setInterval(60)
+        timer.timeout.connect(self._poll_marker_path_progress)
+        self._marker_path_poll_timer = timer
+        return timer
+
+    def _enable_marker_path_mouse_mode(self):
+        try:
+            mm = self.session.ui.mouse_modes
+            prev = mm.mode('left', [])
+            self._marker_path_prev_left_mouse_mode_name = getattr(prev, "name", None)
+            mark_mode = mm.named_mode('mark surface') or mm.named_mode('mark point')
+            if mark_mode is not None:
+                mm.bind_mouse_mode(mouse_button='left', mouse_modifiers=[], mode=mark_mode)
+                return
+        except Exception:
+            pass
+        self._marker_path_prev_left_mouse_mode_name = None
+        try:
+            _run(self.session, "ui mousemode left 'mark surface'", log=False)
+        except Exception:
+            try:
+                _run(self.session, "ui mousemode left 'mark point'", log=False)
+            except Exception:
+                pass
+
+    def _restore_marker_path_mouse_mode(self):
+        name = self._marker_path_prev_left_mouse_mode_name
+        self._marker_path_prev_left_mouse_mode_name = None
+        if not name:
+            return
+        try:
+            mm = self.session.ui.mouse_modes
+            mode = mm.named_mode(name)
+            if mode is not None:
+                mm.bind_mouse_mode(mouse_button='left', mouse_modifiers=[], mode=mode)
+                return
+        except Exception:
+            pass
+        try:
+            _run(self.session, f"ui mousemode left '{name}'", log=False)
+        except Exception:
+            pass
+
+    def _detach_marker_path_temp_models(self):
+        root = self._marker_path_temp_root
+        self._marker_path_temp_root = None
+        self._marker_path_temp_set = None
+        return root
+
+    def _restore_marker_path_marker_settings(self):
+        previous = self._marker_path_prev_marker_settings
+        self._marker_path_prev_marker_settings = None
+        if previous is None:
+            return
+        try:
+            from chimerax.markers.mouse import _mouse_marker_settings
+
+            settings = _mouse_marker_settings(self.session)
+            settings.clear()
+            settings.update(previous)
+        except Exception:
+            pass
+
+    def _close_marker_path_temp_root(self):
+        root = self._detach_marker_path_temp_models()
+        if root is None:
+            return
+        try:
+            self.session.models.close([root])
+        except Exception:
+            pass
+
+    def _cancel_marker_path_pick_mode(self, remove_temp=True, log_message=False):
+        was_pending = bool(self._marker_path_pick_pending)
+        self._marker_path_pick_pending = False
+        self._marker_path_target_count = 0
+        self._marker_path_output_mode = "curve"
+        self._marker_path_pick_action = "tube"
+        self._marker_path_source_star_ref = None
+        try:
+            if self._marker_path_poll_timer is not None:
+                self._marker_path_poll_timer.stop()
+        except Exception:
+            pass
+        self._restore_marker_path_mouse_mode()
+        self._restore_marker_path_marker_settings()
+        self._restore_marker_pick_hidden_models()
+        if remove_temp:
+            self._close_marker_path_temp_root()
+        if log_message and was_pending:
+            self.session.logger.info("Cancelled marker placement mode.")
+        self._set_marker_path_status("Press button, then click in ChimeraX to place markers")
+        self._update_marker_path_buttons()
+
+    def _start_marker_path_pick_mode(self):
+        self._start_marker_pick_mode("tube")
+
+    def _start_marker_pattern_star_pick_mode(self):
+        self._start_marker_pick_mode("replicated_star")
+
+    def _selected_marker_pattern_star_model(self):
+        star_id = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        if star_id is None:
+            raise RuntimeError("Select a STAR model first")
+        star_model = self._model_by_ref(star_id)
+        if star_model is None or not hasattr(star_model, "_cb_star_rows"):
+            raise RuntimeError("Select a STAR model first")
+        return star_model
+
+    def _start_marker_pick_mode(self, pick_action):
+        from Qt.QtWidgets import QMessageBox
+        from chimerax.markers.markers import MarkerSet
+        from chimerax.markers.mouse import _mouse_marker_settings
+        from . import cmd
+
+        try:
+            if self._marker_path_pick_pending:
+                if str(self._marker_path_pick_action or "tube") == str(pick_action or "tube"):
+                    self._cancel_marker_path_pick_mode(remove_temp=True, log_message=True)
+                    return
+                self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
+
+            target_count = int(self.marker_path_count.value()) if hasattr(self, "marker_path_count") else 2
+            output_mode = str(self.marker_path_mode.currentData() or "curve") if hasattr(self, "marker_path_mode") else "curve"
+            if target_count < 2:
+                raise RuntimeError("Marker path needs at least 2 markers")
+            pick_action = str(pick_action or "tube").strip().lower()
+            if pick_action not in ("tube", "replicated_star"):
+                pick_action = "tube"
+            target_model = self._selected_marker_target_model()
+            source_star_model = None
+            if pick_action == "replicated_star":
+                source_star_model = self._selected_marker_pattern_star_model()
+
+            self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
+            self._ensure_marker_path_pick_handler()
+            self._set_marker_pick_hidden_models(target_model)
+            try:
+                _run(self.session, "select clear", log=False)
+            except Exception:
+                pass
+            try:
+                target_model.set_selected(True)
+            except Exception:
+                pass
+
+            temp_set = MarkerSet(self.session, name="Control markers")
+            temp_set._cb_generated_marker_path = True
+            temp_set._cb_generated_marker_path_temp = True
+            temp_set._cb_attach_source = False
+            cmd._add_to_cb_map_group(self.session, temp_set)
+            try:
+                temp_set.display = True
+            except Exception:
+                pass
+            try:
+                temp_set.ball_scale = 1.0
+            except Exception:
+                pass
+
+            settings = _mouse_marker_settings(self.session)
+            self._marker_path_prev_marker_settings = dict(settings)
+            settings["marker set"] = temp_set
+            settings["next_marker_num"] = 1
+            settings["marker color"] = (255, 170, 70, 255)
+            settings["marker radius"] = 6.0
+            settings["link_new_markers"] = False
+
+            self._marker_path_temp_root = temp_set
+            self._marker_path_temp_set = temp_set
+            self._marker_path_target_count = int(target_count)
+            self._marker_path_output_mode = output_mode
+            self._marker_path_pick_action = pick_action
+            self._marker_path_source_star_ref = self._model_ref(source_star_model) if source_star_model is not None else None
+            self._marker_path_pick_pending = True
+            self._ensure_marker_path_poll_timer().start()
+            self._enable_marker_path_mouse_mode()
+            try:
+                _run(self.session, "select clear", log=False)
+            except Exception:
+                pass
+            try:
+                target_model.set_selected(True)
+            except Exception:
+                pass
+            self._set_marker_path_status(
+                f"Marker placement active: 0/{self._marker_path_target_count} placed. Click in ChimeraX."
+            )
+            self._update_marker_path_buttons()
+            target_name = str(getattr(target_model, "name", "") or "").strip() or "selected model"
+            if pick_action == "replicated_star":
+                source_name = str(getattr(source_star_model, "name", "") or "").strip() or "selected STAR"
+                self.session.logger.info(
+                    "Marker placement mode enabled. "
+                    f"Place {self._marker_path_target_count} markers on {target_name} in ChimeraX to build a replicated STAR from {source_name}."
+                )
+            else:
+                self.session.logger.info(
+                    "Marker placement mode enabled. "
+                    f"Place {self._marker_path_target_count} markers on {target_name} in ChimeraX to build a {output_mode} tube."
+                )
+        except Exception as e:
+            self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
+
+    def _marker_path_control_points_from_set(self, marker_set):
+        if marker_set is None:
+            return []
+        try:
+            atoms = list(marker_set.atoms)
+        except Exception:
+            atoms = []
+        ordered = []
+        for atom in atoms:
+            try:
+                order = int(atom.residue.number)
+            except Exception:
+                order = len(ordered) + 1
+            try:
+                xyz = atom.scene_coord
+                point = [float(xyz[0]), float(xyz[1]), float(xyz[2])]
+            except Exception:
+                continue
+            ordered.append((order, point))
+        ordered.sort(key=lambda item: item[0])
+        return [point for _order, point in ordered]
+
+    def _next_marker_path_name(self, mode):
+        display_mode = "Curve" if str(mode or "").lower() == "curve" else "Line"
+        while True:
+            self._marker_path_counter += 1
+            name = f"Marker {display_mode} {self._marker_path_counter}"
+            if self._find_model_by_name(name, require_star=False) is None:
+                return name
+
+    def _create_marker_path_from_points(self, control_points, path_mode):
+        from . import cmd
+
+        mode = str(path_mode or "curve").strip().lower()
+        if mode not in ("curve", "line"):
+            mode = "curve"
+        name = self._next_marker_path_name(mode)
+        tube_radius = float(self.marker_path_radius.value()) if hasattr(self, "marker_path_radius") else 20.0
+        created = cmd.build_marker_path_model(
+            self.session,
+            name=name,
+            control_points=control_points,
+            path_mode=mode,
+            tube_radius=tube_radius,
+        )
+        return created
+
+    def _resolved_axes_from_row(self, row):
+        from .map import _particle_axes_from_row
+
+        ex, ey, ez = _particle_axes_from_row(row)
+        return (
+            np.array(ex, dtype=float),
+            np.array(ey, dtype=float),
+            np.array(ez, dtype=float),
+        )
+
+    def _nearest_star_row_for_point(self, star_model, point):
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        if not rows:
+            raise RuntimeError("Selected STAR model has no rows")
+        want = np.array(point, dtype=float)
+        best = None
+        for row_index, row in enumerate(rows):
+            center = self._row_world_center(row)
+            delta = want - center
+            distance_sq = float(np.dot(delta, delta))
+            if best is None or distance_sq < best["distance_sq"]:
+                best = {
+                    "row_index": int(row_index),
+                    "row": row,
+                    "center": center,
+                    "distance_sq": distance_sq,
+                }
+        if best is None:
+            raise RuntimeError("Could not find a nearest STAR row for a placed marker")
+        return best
+
+    def _create_marker_pattern_star_from_points(self, control_points, source_star_ref):
+        from . import cmd
+        from .io import rows_to_star_text
+
+        star_model = self._model_by_ref(source_star_ref) if source_star_ref is not None else None
+        if star_model is None or not hasattr(star_model, "_cb_star_rows"):
+            raise RuntimeError("Selected STAR model is no longer available")
+        source_rows = getattr(star_model, "_cb_star_rows", None) or []
+        if not source_rows:
+            raise RuntimeError("Selected STAR model has no rows")
+
+        pattern_specs = []
+        for marker_index, point in enumerate(control_points):
+            nearest = self._nearest_star_row_for_point(star_model, point)
+            ex, ey, ez = self._resolved_axes_from_row(nearest["row"])
+            delta = np.array(point, dtype=float) - nearest["center"]
+            local_offset = np.array(
+                [
+                    float(np.dot(delta, ex)),
+                    float(np.dot(delta, ey)),
+                    float(np.dot(delta, ez)),
+                ],
+                dtype=float,
+            )
+            pattern_specs.append(
+                {
+                    "marker_index": int(marker_index),
+                    "source_row_index": int(nearest["row_index"]),
+                    "local_offset": local_offset,
+                }
+            )
+
+        class_num = cmd._next_class_number()
+        star_rows = []
+        for target_index, target_row in enumerate(source_rows):
+            target_center = self._row_world_center(target_row)
+            ex, ey, ez = self._resolved_axes_from_row(target_row)
+            try:
+                target_px = float(target_row.get("rlnImagePixelSize", 1.0) or 1.0)
+            except Exception:
+                target_px = 1.0
+            if target_px <= 0.0:
+                target_px = 1.0
+            try:
+                tube_id = int(float(target_row.get("rlnHelicalTubeID", 1)))
+            except Exception:
+                tube_id = 1
+            for spec in pattern_specs:
+                local_offset = np.array(spec["local_offset"], dtype=float)
+                world = target_center + ex * local_offset[0] + ey * local_offset[1] + ez * local_offset[2]
+                star_rows.append(
+                    {
+                        "rlnTomoName": str(target_row.get("rlnTomoName", "TS_001")),
+                        "rlnCoordinateX": float(world[0]) / float(target_px),
+                        "rlnCoordinateY": float(world[1]) / float(target_px),
+                        "rlnCoordinateZ": float(world[2]) / float(target_px),
+                        "rlnAngleRot": float(target_row.get("rlnAngleRot", 0.0) or 0.0),
+                        "rlnAngleTilt": float(target_row.get("rlnAngleTilt", 0.0) or 0.0),
+                        "rlnAnglePsi": float(target_row.get("rlnAnglePsi", 0.0) or 0.0),
+                        "rlnImagePixelSize": float(target_px),
+                        "rlnHelicalTubeID": int(tube_id),
+                        "rlnClassNumber": int(class_num),
+                        "_cbWorldCoordinateX": float(world[0]),
+                        "_cbWorldCoordinateY": float(world[1]),
+                        "_cbWorldCoordinateZ": float(world[2]),
+                        "_cbAxisX": [float(v) for v in ex],
+                        "_cbAxisY": [float(v) for v in ey],
+                        "_cbAxisZ": [float(v) for v in ez],
+                        "_cb_source_star_ref": source_star_ref,
+                        "_cb_source_star_row_index": int(target_index),
+                        "_cb_marker_pattern_marker_index": int(spec["marker_index"]),
+                        "_cb_marker_pattern_anchor_row_index": int(spec["source_row_index"]),
+                        "_cb_marker_pattern_local_offset": [float(v) for v in local_offset],
+                    }
+                )
+
+        if not star_rows:
+            raise RuntimeError("No STAR rows were generated from the placed markers")
+
+        name = f"Marker Applied STAR {class_num}"
+        star_text = rows_to_star_text(star_rows)
+        created = cmd._create_star_model(
+            self.session,
+            name,
+            star_rows,
+            star_text,
+            True,
+            "relion",
+            True,
+            False,
+        )
+        try:
+            created._cb_marker_pattern_source_star_ref = source_star_ref
+            created._cb_marker_pattern_marker_count = int(len(pattern_specs))
+        except Exception:
+            pass
+        self._inherit_clip_info(created, star_model)
+        self._select_star_model(created)
+        return created
+
+    def _auto_draw_marker_pattern_paths(self, star_model, path_mode, tube_radius):
+        from . import cmd
+
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        groups = {}
+        for row in rows:
+            try:
+                marker_index = int(row.get("_cb_marker_pattern_marker_index", -1))
+            except Exception:
+                marker_index = -1
+            if marker_index < 0:
+                continue
+            try:
+                tube_id = int(float(row.get("rlnHelicalTubeID", 0)))
+            except Exception:
+                tube_id = 0
+            groups.setdefault((tube_id, marker_index), []).append(row)
+
+        created_paths = []
+        mode = str(path_mode or "curve").strip().lower()
+        if mode not in ("curve", "line"):
+            mode = "curve"
+        radius = max(0.1, float(tube_radius))
+
+        for (tube_id, marker_index), group_rows in sorted(groups.items()):
+            group_rows.sort(
+                key=lambda row: (
+                    int(row.get("_cb_source_star_row_index", 0) or 0),
+                    float(row.get("rlnCoordinateZ", 0.0) or 0.0),
+                )
+            )
+            control_points = [
+                [float(v) for v in self._row_world_center(row)]
+                for row in group_rows
+            ]
+            if len(control_points) < 2:
+                continue
+            name = f"{star_model.name} Path t{tube_id} m{marker_index + 1}"
+            created_paths.append(
+                cmd.build_marker_path_model(
+                    self.session,
+                    name=name,
+                    control_points=control_points,
+                    path_mode=mode,
+                    tube_radius=radius,
+                )
+            )
+        return created_paths
+
+    def _finalize_marker_path_pick_result(self, control_points, output_mode, pick_action, source_star_ref, temp_root):
+        from Qt.QtCore import QTimer
+        from Qt.QtWidgets import QMessageBox
+
+        def _finish():
+            try:
+                try:
+                    _run(self.session, "select clear", log=False)
+                except Exception:
+                    pass
+                if temp_root is not None:
+                    try:
+                        self.session.models.close([temp_root])
+                    except Exception:
+                        pass
+                if str(pick_action or "tube") == "replicated_star":
+                    created = self._create_marker_pattern_star_from_points(control_points, source_star_ref)
+                    auto_paths = self._auto_draw_marker_pattern_paths(
+                        created,
+                        output_mode,
+                        float(self.marker_path_radius.value()) if hasattr(self, "marker_path_radius") else 20.0,
+                    )
+                    self._set_marker_path_status(f"Generated: {created.name}")
+                    self.session.logger.info(
+                        f"Generated {created.name} from {len(control_points)} placed markers "
+                        f"({len(getattr(created, '_cb_star_rows', None) or [])} STAR points, {len(auto_paths)} auto paths). "
+                        "Use the normal map attachment section to attach your model."
+                    )
+                else:
+                    created = self._create_marker_path_from_points(control_points, output_mode)
+                    self._set_marker_path_status(f"Generated: {created.name}")
+                    self.session.logger.info(
+                        f"Generated {created.name} from {len(control_points)} placed markers."
+                    )
+            except Exception as e:
+                self.session.logger.error(str(e))
+                QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+            finally:
+                self._refresh_model_selectors()
+                self._keep_tool_visible()
+
+        QTimer.singleShot(0, _finish)
+
+    def _poll_marker_path_progress(self):
+        if not self._marker_path_pick_pending:
+            try:
+                if self._marker_path_poll_timer is not None:
+                    self._marker_path_poll_timer.stop()
+            except Exception:
+                pass
+            return
+        marker_set = self._marker_path_temp_set
+        if marker_set is None:
+            self._cancel_marker_path_pick_mode(remove_temp=False, log_message=False)
+            return
+        try:
+            count = int(len(marker_set.residues))
+        except Exception:
+            try:
+                count = int(len(marker_set.atoms))
+            except Exception:
+                count = 0
+        if count <= 0:
+            return
+        self._set_marker_path_status(
+            f"Marker placement active: {count}/{self._marker_path_target_count} placed. Click in ChimeraX."
+        )
+        if count < self._marker_path_target_count:
+            return
+        try:
+            control_points = self._marker_path_control_points_from_set(marker_set)
+            output_mode = self._marker_path_output_mode
+            pick_action = self._marker_path_pick_action
+            source_star_ref = self._marker_path_source_star_ref
+            temp_root = self._detach_marker_path_temp_models()
+            self._cancel_marker_path_pick_mode(remove_temp=False, log_message=False)
+            self._finalize_marker_path_pick_result(
+                control_points,
+                output_mode,
+                pick_action,
+                source_star_ref,
+                temp_root,
+            )
+        except Exception as e:
+            from Qt.QtWidgets import QMessageBox
+
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+            self._refresh_model_selectors()
+            self._keep_tool_visible()
+
+    def _on_marker_path_selection_changed(self, *_args):
+        self._poll_marker_path_progress()
+
+    def _on_marker_path_atomic_changed(self, *_args):
+        self._poll_marker_path_progress()
 
     def _ift_train_geometry(self, star_model, tube_id):
         rows = getattr(star_model, "_cb_star_rows", None) or []
@@ -3130,6 +3909,26 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.session.logger.warning(f"Skipping membrane model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
         return out
 
+    def _generated_marker_path_models(self):
+        out = []
+        for model in self._all_session_models():
+            try:
+                state = getattr(model, "_cb_marker_path_state", None)
+                if not state:
+                    continue
+                out.append(
+                    {
+                        "name": str(getattr(model, "name", "Marker path") or "Marker path"),
+                        "state": state,
+                        "display": bool(getattr(model, "display", True)),
+                    }
+                )
+            except Exception as e:
+                self.session.logger.warning(
+                    f"Skipping marker path model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})"
+                )
+        return out
+
     def _attach_source_models_state(self, save_dir, session_stem, export_cache):
         out = []
         seen_paths = set()
@@ -3233,6 +4032,9 @@ class CiliaBuilder2Tool(ToolInstance):
             "membrane_particle_signaling_pct": float(self.membrane_particle_signaling_pct.value()),
             "membrane_particle_scaffold_pct": float(self.membrane_particle_scaffold_pct.value()),
             "membrane_particle_lipids_pct": float(self.membrane_particle_lipids_pct.value()),
+            "marker_path_count": int(self.marker_path_count.value()) if hasattr(self, "marker_path_count") else 4,
+            "marker_path_mode": str(self.marker_path_mode.currentData() or "curve") if hasattr(self, "marker_path_mode") else "curve",
+            "marker_path_radius": float(self.marker_path_radius.value()) if hasattr(self, "marker_path_radius") else 20.0,
             "ift_distance": float(self.ift_distance.value()),
             "ift_mode": str(self.ift_mode.currentData() or "train"),
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
@@ -3295,6 +4097,14 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_particle_lipids_pct.setValue(
             float(state.get("membrane_particle_lipids_pct", self.membrane_particle_lipids_pct.value()))
         )
+        if hasattr(self, "marker_path_count"):
+            self.marker_path_count.setValue(int(state.get("marker_path_count", self.marker_path_count.value())))
+        if hasattr(self, "marker_path_mode"):
+            idx = self.marker_path_mode.findData(str(state.get("marker_path_mode", self.marker_path_mode.currentData())))
+            if idx >= 0:
+                self.marker_path_mode.setCurrentIndex(idx)
+        if hasattr(self, "marker_path_radius"):
+            self.marker_path_radius.setValue(float(state.get("marker_path_radius", self.marker_path_radius.value())))
         self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
         if hasattr(self, "ift_mode"):
             idx = self.ift_mode.findData(str(state.get("ift_mode", self.ift_mode.currentData())))
@@ -3388,6 +4198,41 @@ class CiliaBuilder2Tool(ToolInstance):
                     created_state = getattr(created, "_cb_membrane_state", None) or {}
                     created_state.update(state)
                     created._cb_membrane_state = created_state
+                except Exception:
+                    pass
+                created.display = bool(item.get("display", True))
+            except Exception:
+                pass
+
+    def _restore_generated_marker_paths(self, models_state):
+        from . import cmd
+
+        for item in models_state or []:
+            state = item.get("state", None) or {}
+            name = str(item.get("name", "") or "").strip() or "Marker path"
+            control_points = state.get("control_points", None) or []
+            path_mode = str(state.get("path_mode", "curve") or "curve")
+            if len(control_points) < 2:
+                continue
+            exists = False
+            for model in self._all_session_models():
+                if getattr(model, "_cb_marker_path_state", None) and str(getattr(model, "name", "") or "") == name:
+                    exists = True
+                    break
+            if exists:
+                continue
+            try:
+                created = cmd.build_marker_path_model(
+                    self.session,
+                    name=name,
+                    control_points=control_points,
+                    path_mode=path_mode,
+                    tube_radius=float(state.get("tube_radius", state.get("radius", 20.0)) or 20.0),
+                )
+                try:
+                    created_state = getattr(created, "_cb_marker_path_state", None) or {}
+                    created_state.update(state)
+                    created._cb_marker_path_state = created_state
                 except Exception:
                     pass
                 created.display = bool(item.get("display", True))
@@ -3550,6 +4395,7 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_sources = self._attach_source_models_state(save_dir, session_stem, export_cache)
             generated_star_models = self._generated_star_models()
             generated_membranes = self._generated_membrane_models()
+            generated_marker_paths = self._generated_marker_path_models()
             attachments = self._attachment_models_state(save_dir, session_stem, export_cache)
             payload = {
                 "format": "ciliabuilder2_session",
@@ -3559,6 +4405,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 "attach_sources": attach_sources,
                 "generated_star_models": generated_star_models,
                 "generated_membranes": generated_membranes,
+                "generated_marker_paths": generated_marker_paths,
                 "attachments": attachments,
             }
             with open(path, "w", encoding="utf-8") as f:
@@ -3626,6 +4473,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self._restore_attach_source_models(source_items, base_dir=base_dir)
             self._restore_generated_star_models(payload.get("generated_star_models", []))
             self._restore_generated_membranes(payload.get("generated_membranes", []))
+            self._restore_generated_marker_paths(payload.get("generated_marker_paths", []))
             self._restore_attachments(payload.get("attachments", []))
             self._refresh_model_selectors()
 
@@ -3673,6 +4521,8 @@ class CiliaBuilder2Tool(ToolInstance):
                     f"({int(result.get('n_membrane_particles', 0))} particles across "
                     f"{int(result.get('n_membranes', 0))} membrane compartments)."
                 )
+            if result.get("cellpack_cif_path", None):
+                msg += f" Membrane mmCIF: {result['cellpack_cif_path']}."
             self.session.logger.info(msg)
         except Exception as e:
             self.session.logger.error(str(e))

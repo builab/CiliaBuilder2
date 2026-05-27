@@ -222,6 +222,98 @@ def _add_to_cb_membrane_group(session, model):
     return model
 
 
+def _marker_path_tangents(control_points):
+    points = [np.array(p, dtype=float) for p in (control_points or [])]
+    if len(points) < 2:
+        return []
+    tangents = []
+    for index, point in enumerate(points):
+        if index == 0:
+            vec = points[1] - point
+        elif index == len(points) - 1:
+            vec = point - points[index - 1]
+        else:
+            vec = points[index + 1] - points[index - 1]
+        norm = float(np.linalg.norm(vec))
+        if norm <= 1e-9:
+            vec = np.array((0.0, 0.0, 1.0), dtype=float)
+            norm = 1.0
+        tangents.append(tuple(float(v) for v in (vec / norm)))
+    return tangents
+
+
+def build_marker_path_model(
+    session,
+    name,
+    control_points,
+    path_mode="curve",
+    color=(255, 170, 70, 255),
+    tube_radius=20.0,
+    segment_subdivisions=12,
+    circle_subdivisions=18,
+):
+    from chimerax.core.models import Surface
+    from chimerax.surface.tube import tube_spline, tube_through_points
+
+    points = []
+    for point in control_points or []:
+        try:
+            xyz = tuple(float(v) for v in point[:3])
+        except Exception:
+            continue
+        if len(xyz) == 3:
+            points.append(xyz)
+    if len(points) < 2:
+        raise ValueError("Marker path needs at least 2 control points")
+
+    mode = str(path_mode or "curve").strip().lower()
+    if mode not in ("curve", "line"):
+        mode = "curve"
+    tube_radius = max(0.1, float(tube_radius))
+
+    if mode == "curve" and len(points) >= 3:
+        varray, narray, tarray = tube_spline(
+            np.array(points, dtype=np.float32),
+            radius=float(tube_radius),
+            segment_subdivisions=max(2, int(segment_subdivisions)),
+            circle_subdivisions=max(6, int(circle_subdivisions)),
+        )
+    else:
+        tangents = _marker_path_tangents(points)
+        varray, narray, tarray = tube_through_points(
+            np.array(points, dtype=np.float32),
+            np.array(tangents, dtype=np.float32),
+            radius=float(tube_radius),
+            circle_subdivisions=max(6, int(circle_subdivisions)),
+        )
+
+    root = Model(name, session)
+    root._cb_generated_marker_path = True
+    root._cb_attach_source = False
+    root._cb_marker_path_state = {
+        "control_points": [[float(v) for v in point] for point in points],
+        "path_mode": mode,
+        "tube_radius": float(tube_radius),
+        "display_mode": "tube_surface",
+    }
+    _add_to_cb_map_group(session, root)
+
+    surface = Surface("Tube", session)
+    surface.set_geometry(
+        np.array(varray, dtype=np.float32),
+        np.array(narray, dtype=np.float32),
+        np.array(tarray, dtype=np.int32),
+    )
+    surface._cb_generated_marker_path = True
+    surface._cb_attach_source = False
+    try:
+        surface.color = color
+    except Exception:
+        pass
+    root.add([surface])
+    return root
+
+
 def _annulus_cap_triangles(outer_ring, inner_ring, reverse=False):
     tris = []
     nc = len(outer_ring)
