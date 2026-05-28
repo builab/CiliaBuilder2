@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import tempfile
 import numpy as np
 
 from chimerax.core.tools import ToolInstance
@@ -302,8 +303,10 @@ class CiliaBuilder2Tool(ToolInstance):
         self._marker_path_target_count = 0
         self._marker_path_output_mode = "curve"
         self._marker_path_pick_action = "tube"
+        self._marker_path_template_ref = None
         self._marker_path_source_star_ref = None
         self._marker_path_poll_timer = None
+        self._geometric_draw_counter = 0
         self.tool_window = None
         self._build_ui()
 
@@ -324,6 +327,7 @@ class CiliaBuilder2Tool(ToolInstance):
             QFileDialog,
             QLineEdit,
             QStackedWidget,
+            QTabBar,
             QTabWidget,
         )
         from Qt.QtGui import QDoubleValidator, QIntValidator
@@ -806,6 +810,29 @@ class CiliaBuilder2Tool(ToolInstance):
         export_cellpack_btn.clicked.connect(self._export_cellpack_package)
         btn_lay.addWidget(export_cellpack_btn)
 
+        align_box = QGroupBox("Auto Z-align map/model", session_page)
+        align_layout = QVBoxLayout(align_box)
+
+        align_model_row = QWidget(session_page)
+        align_model_lay = QHBoxLayout(align_model_row)
+        align_model_lay.setContentsMargins(0, 0, 0, 0)
+        align_model_lay.addWidget(QLabel("Model", align_model_row))
+        self.align_z_model = RefreshingComboBox(self._refresh_model_selectors, align_model_row)
+        self.align_z_model.setMinimumContentsLength(24)
+        self.align_z_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        align_model_lay.addWidget(self.align_z_model, 1)
+        align_layout.addWidget(align_model_row)
+
+        align_run_row = QWidget(session_page)
+        align_run_lay = QHBoxLayout(align_run_row)
+        align_run_lay.setContentsMargins(0, 0, 0, 0)
+        auto_align_btn = QPushButton("Auto Z-align", align_run_row)
+        auto_align_btn.clicked.connect(self._auto_z_align_selected_model)
+        align_run_lay.addWidget(auto_align_btn)
+        align_run_lay.addStretch(1)
+        align_layout.addWidget(align_run_row)
+        btn_lay.addWidget(align_box)
+
         btn_lay.addStretch(1)
 
         session_page_layout.addWidget(btn_row)
@@ -907,10 +934,23 @@ class CiliaBuilder2Tool(ToolInstance):
         marker_page = QWidget(attach_page)
         marker_page_layout = QVBoxLayout(marker_page)
         marker_page_layout.setContentsMargins(0, 0, 0, 0)
-        attach_modes.addTab(marker_page, "Marker placement")
+        attach_modes.addTab(marker_page, "Geometric drawing")
 
-        marker_box = QGroupBox("Marker path", marker_page)
-        marker_layout = QVBoxLayout(marker_box)
+        draw_box = QGroupBox("Geometric drawing", marker_page)
+        draw_layout = QVBoxLayout(draw_box)
+
+        draw_mode_row = QWidget(marker_page)
+        draw_mode_lay = QHBoxLayout(draw_mode_row)
+        draw_mode_lay.setContentsMargins(0, 0, 0, 0)
+        draw_mode_lay.addWidget(QLabel("Draw type", draw_mode_row))
+        self._geometric_draw_mode_order = ["point", "sphere", "cylinder", "curve", "line"]
+        self.geometric_draw_mode_bar = QTabBar(draw_mode_row)
+        self.geometric_draw_mode_bar.setExpanding(False)
+        for label in ("Point", "Sphere", "Cylinder", "Curve", "Line"):
+            self.geometric_draw_mode_bar.addTab(label)
+        self.geometric_draw_mode_bar.currentChanged.connect(self._on_geometric_draw_mode_changed)
+        draw_mode_lay.addWidget(self.geometric_draw_mode_bar, 1)
+        draw_layout.addWidget(draw_mode_row)
 
         marker_count_row = QWidget(marker_page)
         marker_count_lay = QHBoxLayout(marker_count_row)
@@ -920,28 +960,36 @@ class CiliaBuilder2Tool(ToolInstance):
         self.marker_path_count.setRange(2, 1000)
         self.marker_path_count.setValue(4)
         marker_count_lay.addWidget(self.marker_path_count)
-        marker_layout.addWidget(marker_count_row)
+        draw_layout.addWidget(marker_count_row)
+        self._geometric_draw_count_row = marker_count_row
 
         marker_target_row = QWidget(marker_page)
         marker_target_lay = QHBoxLayout(marker_target_row)
         marker_target_lay.setContentsMargins(0, 0, 0, 0)
-        marker_target_lay.addWidget(QLabel("Mark on model", marker_target_row))
+        marker_target_lay.addWidget(QLabel("Draw on model", marker_target_row))
         self.marker_target_model = RefreshingComboBox(self._refresh_model_selectors, marker_target_row)
         self.marker_target_model.setMinimumContentsLength(24)
         self.marker_target_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.marker_target_model.currentIndexChanged.connect(self._on_marker_target_model_changed)
         marker_target_lay.addWidget(self.marker_target_model, 1)
-        marker_layout.addWidget(marker_target_row)
+        draw_layout.addWidget(marker_target_row)
 
-        marker_mode_row = QWidget(marker_page)
-        marker_mode_lay = QHBoxLayout(marker_mode_row)
-        marker_mode_lay.setContentsMargins(0, 0, 0, 0)
-        marker_mode_lay.addWidget(QLabel("Output", marker_mode_row))
-        self.marker_path_mode = QComboBox(marker_mode_row)
+        self.marker_path_mode = QComboBox(marker_page)
         self.marker_path_mode.addItem("Curve", "curve")
         self.marker_path_mode.addItem("Line", "line")
-        marker_mode_lay.addWidget(self.marker_path_mode, 1)
-        marker_layout.addWidget(marker_mode_row)
+        self.marker_path_mode.hide()
+
+        draw_radius_row = QWidget(marker_page)
+        draw_radius_lay = QHBoxLayout(draw_radius_row)
+        draw_radius_lay.setContentsMargins(0, 0, 0, 0)
+        draw_radius_lay.addWidget(QLabel("Primitive radius", draw_radius_row))
+        self.draw_marker_radius = TypedOnlyDoubleSpinBox(draw_radius_row)
+        self.draw_marker_radius.setRange(0.1, 1e9)
+        self.draw_marker_radius.setDecimals(2)
+        self.draw_marker_radius.setValue(12.0)
+        draw_radius_lay.addWidget(self.draw_marker_radius)
+        draw_layout.addWidget(draw_radius_row)
+        self._geometric_draw_primitive_radius_row = draw_radius_row
 
         marker_radius_row = QWidget(marker_page)
         marker_radius_lay = QHBoxLayout(marker_radius_row)
@@ -952,29 +1000,30 @@ class CiliaBuilder2Tool(ToolInstance):
         self.marker_path_radius.setDecimals(2)
         self.marker_path_radius.setValue(20.0)
         marker_radius_lay.addWidget(self.marker_path_radius)
-        marker_layout.addWidget(marker_radius_row)
+        draw_layout.addWidget(marker_radius_row)
+        self._geometric_draw_tube_radius_row = marker_radius_row
 
-        marker_btn_row = QWidget(marker_page)
-        marker_btn_lay = QHBoxLayout(marker_btn_row)
-        marker_btn_lay.setContentsMargins(0, 0, 0, 0)
-        self.marker_path_pick_btn = QPushButton("Place markers for path", marker_btn_row)
-        self.marker_path_pick_btn.clicked.connect(self._start_marker_path_pick_mode)
-        marker_btn_lay.addWidget(self.marker_path_pick_btn)
-        marker_btn_lay.addStretch(1)
-        marker_layout.addWidget(marker_btn_row)
+        draw_btn_row = QWidget(marker_page)
+        draw_btn_lay = QHBoxLayout(draw_btn_row)
+        draw_btn_lay.setContentsMargins(0, 0, 0, 0)
+        self.geometric_draw_pick_btn = QPushButton("Place curve markers", draw_btn_row)
+        self.geometric_draw_pick_btn.clicked.connect(self._start_selected_geometric_draw_pick_mode)
+        draw_btn_lay.addWidget(self.geometric_draw_pick_btn)
+        draw_btn_lay.addStretch(1)
+        draw_layout.addWidget(draw_btn_row)
 
         marker_apply_row = QWidget(marker_page)
         marker_apply_lay = QHBoxLayout(marker_apply_row)
         marker_apply_lay.setContentsMargins(0, 0, 0, 0)
-        self.marker_pattern_star_btn = QPushButton("Place markers for replicated STAR", marker_apply_row)
+        self.marker_pattern_star_btn = QPushButton("Replicate marker path onto STAR", marker_apply_row)
         self.marker_pattern_star_btn.clicked.connect(self._start_marker_pattern_star_pick_mode)
         marker_apply_lay.addWidget(self.marker_pattern_star_btn)
         marker_apply_lay.addStretch(1)
-        marker_layout.addWidget(marker_apply_row)
+        draw_layout.addWidget(marker_apply_row)
 
-        self.marker_path_status = QLabel("Press button, then click in ChimeraX to place markers", marker_box)
-        marker_layout.addWidget(self.marker_path_status)
-        marker_page_layout.addWidget(marker_box)
+        self.marker_path_status = QLabel("Press button, then click in ChimeraX to draw", draw_box)
+        draw_layout.addWidget(self.marker_path_status)
+        marker_page_layout.addWidget(draw_box)
         marker_page_layout.addStretch(1)
 
         tweak_box = QGroupBox("Manual tweak to template", main)
@@ -1056,12 +1105,106 @@ class CiliaBuilder2Tool(ToolInstance):
             dw.show()
         except Exception:
             pass
+        try:
+            tab_bar = sidebar_tabs.tabBar()
+            attach_index = sidebar_tabs.indexOf(attach_page)
+            if attach_index >= 0:
+                tab_bar.moveTab(attach_index, 1)
+            session_index = sidebar_tabs.indexOf(session_page)
+            if session_index >= 0:
+                tab_bar.moveTab(session_index, 2)
+        except Exception:
+            pass
         self._refresh_model_selectors()
         self._update_ift_type_visibility()
+        self._set_geometric_draw_mode("curve")
+        self._update_marker_path_buttons()
 
     def _model_ref(self, model):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
+
+    def _normalize_rgba(self, rgba):
+        if rgba is None:
+            return None
+        try:
+            values = [int(round(float(v))) for v in list(rgba)[:4]]
+        except Exception:
+            return None
+        if len(values) == 3:
+            values.append(255)
+        if len(values) < 4:
+            return None
+        return [max(0, min(255, int(v))) for v in values[:4]]
+
+    def _model_direct_color(self, model):
+        for attr in ("color", "overall_color"):
+            try:
+                rgba = getattr(model, attr, None)
+            except Exception:
+                rgba = None
+            normalized = self._normalize_rgba(rgba)
+            if normalized is not None:
+                return normalized
+        return None
+
+    def _capture_model_color_state(self, model):
+        if model is None:
+            return []
+
+        entries = []
+
+        def walk(node, path):
+            color = self._model_direct_color(node)
+            if color is not None:
+                entries.append(
+                    {
+                        "path": [int(p) for p in path],
+                        "name": str(getattr(node, "name", "") or ""),
+                        "rgba": color,
+                    }
+                )
+            try:
+                children = list(node.child_models())
+            except Exception:
+                children = []
+            for index, child in enumerate(children):
+                walk(child, path + [int(index)])
+
+        walk(model, [])
+        return entries
+
+    def _model_tree_node_by_path(self, model, path):
+        node = model
+        for index in path or []:
+            try:
+                children = list(node.child_models())
+            except Exception:
+                return None
+            if index < 0 or index >= len(children):
+                return None
+            node = children[int(index)]
+        return node
+
+    def _apply_model_color_state(self, model, color_state):
+        if model is None:
+            return
+        for entry in color_state or []:
+            if not isinstance(entry, dict):
+                continue
+            rgba = self._normalize_rgba(entry.get("rgba", None))
+            if rgba is None:
+                continue
+            node = self._model_tree_node_by_path(model, entry.get("path", []))
+            if node is None:
+                continue
+            try:
+                node.color = tuple(rgba)
+            except Exception:
+                try:
+                    node.overall_color = tuple(rgba)
+                except Exception:
+                    pass
 
     def _candidate_model_paths(self, model):
         paths = []
@@ -1238,7 +1381,10 @@ class CiliaBuilder2Tool(ToolInstance):
 
         out_path = os.path.join(save_dir, self._session_copy_name(model, session_stem, ext))
         source_path = self._model_source_path(model)
-        if source_path and os.path.exists(source_path):
+        if str(ext or "").lower() in (".glb", ".gltf"):
+            # Export the live scene model so session saves preserve current recoloring.
+            self._export_live_model_copy_for_session(model, out_path, ext)
+        elif source_path and os.path.exists(source_path):
             import shutil
             shutil.copy2(source_path, out_path)
         else:
@@ -1685,6 +1831,7 @@ class CiliaBuilder2Tool(ToolInstance):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         marker_target_current = self.marker_target_model.currentData() if hasattr(self, "marker_target_model") else None
+        align_z_current = self.align_z_model.currentData() if hasattr(self, "align_z_model") else None
         star_has_models = False
         map_has_models = False
 
@@ -1810,6 +1957,33 @@ class CiliaBuilder2Tool(ToolInstance):
             self.tweak_open_model.setEnabled(tweak_has_models)
             self.tweak_open_model.blockSignals(False)
 
+        if hasattr(self, "align_z_model"):
+            self.align_z_model.blockSignals(True)
+            self.align_z_model.clear()
+            self.align_z_model.addItem("None", None)
+            align_has_models = False
+            for m in self._selector_attach_models():
+                ref = self._model_ref(m)
+                if ref is None or not self._is_selector_attach_source(m):
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.align_z_model.addItem(label, str(ref))
+                align_has_models = True
+            if align_z_current is not None:
+                idx = self.align_z_model.findData(str(align_z_current))
+                if idx >= 0:
+                    self.align_z_model.setCurrentIndex(idx)
+                else:
+                    preferred = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+                    idx = self.align_z_model.findData(str(preferred)) if preferred is not None else -1
+                    self.align_z_model.setCurrentIndex(idx if idx >= 0 else (1 if self.align_z_model.count() > 1 else 0))
+            else:
+                preferred = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+                idx = self.align_z_model.findData(str(preferred)) if preferred is not None else -1
+                self.align_z_model.setCurrentIndex(idx if idx >= 0 else (1 if self.align_z_model.count() > 1 else 0))
+            self.align_z_model.setEnabled(align_has_models)
+            self.align_z_model.blockSignals(False)
+
         if hasattr(self, "attach_selected_btn"):
             self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
         self._on_attach_selector_changed()
@@ -1882,6 +2056,293 @@ class CiliaBuilder2Tool(ToolInstance):
                 dw.activateWindow()
         except Exception:
             pass
+
+    def _browse_align_z_save(self):
+        from Qt.QtWidgets import QFileDialog
+
+        path, _ = QFileDialog.getSaveFileName(
+            self.tool_window.ui_area,
+            "Save aligned model",
+            self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
+            "Model files (*.mrc *.map *.ccp4 *.mrcs *.glb *.gltf *.stl *.pdb *.cif *.mmcif);;All files (*)",
+        )
+        if path and hasattr(self, "align_z_save_path"):
+            self.align_z_save_path.setText(str(path))
+
+    def _model_local_center(self, model):
+        from .map import _copy_source_instance
+        from chimerax.geometry import Place
+
+        probe = _copy_source_instance(self.session, model) if model is not None else None
+        target = probe if probe is not None else model
+        if target is None:
+            return np.zeros(3, dtype=float)
+        try:
+            try:
+                target.position = Place()
+            except Exception:
+                pass
+            bounds = target.bounds()
+            if bounds is None:
+                return np.zeros(3, dtype=float)
+            center = bounds.center()
+            return np.array([float(center[0]), float(center[1]), float(center[2])], dtype=float)
+        except Exception:
+            return np.zeros(3, dtype=float)
+        finally:
+            if probe is not None:
+                try:
+                    self.session.models.close([probe])
+                except Exception:
+                    pass
+
+    def _volume_density_long_axis_local(self, model, max_points=200000):
+        if model is None or not self._is_volume_like(model):
+            return None
+        try:
+            matrix = np.array(model.full_matrix(), dtype=np.float32)
+        except Exception:
+            try:
+                data = getattr(model, "data", None)
+                matrix = np.array(data.full_matrix(), dtype=np.float32)
+            except Exception:
+                return None
+        if matrix.size == 0:
+            return None
+        values = np.abs(matrix)
+        nz = values[values > 0]
+        if nz.size == 0:
+            return None
+        threshold = float(np.percentile(nz, 80.0))
+        mask = values >= threshold
+        coords = np.argwhere(mask)
+        if len(coords) < 3:
+            return None
+        weights = values[mask].astype(np.float64)
+        if len(coords) > int(max_points):
+            step = int(math.ceil(float(len(coords)) / float(max_points)))
+            coords = coords[::step]
+            weights = weights[::step]
+        step_xyz = self._volume_voxel_size(model) or (1.0, 1.0, 1.0)
+        xyz = np.column_stack(
+            (
+                coords[:, 2].astype(np.float64) * float(step_xyz[0]),
+                coords[:, 1].astype(np.float64) * float(step_xyz[1]),
+                coords[:, 0].astype(np.float64) * float(step_xyz[2]),
+            )
+        )
+        total_weight = float(np.sum(weights))
+        if total_weight <= 1e-12:
+            return None
+        center = np.sum(xyz * weights[:, None], axis=0) / total_weight
+        dv = xyz - center[None, :]
+        cov = (dv * weights[:, None]).T @ dv
+        evals, evecs = np.linalg.eigh(cov)
+        axis = np.array(evecs[:, int(np.argmax(evals))], dtype=float)
+        norm = float(np.linalg.norm(axis))
+        if norm <= 1e-12:
+            return None
+        axis = axis / norm
+        if axis[2] < 0.0:
+            axis = -axis
+        return axis
+
+    def _auto_z_alignment_axis_local(self, model):
+        from .map import _source_long_axis_local
+
+        axis = None
+        if self._is_volume_like(model):
+            axis = self._volume_density_long_axis_local(model)
+        if axis is None:
+            try:
+                axis = np.array(_source_long_axis_local(self.session, model), dtype=float)
+            except Exception:
+                axis = None
+        if axis is None:
+            raise RuntimeError("Could not determine a long axis for the selected model")
+        norm = float(np.linalg.norm(axis))
+        if norm <= 1e-12:
+            raise RuntimeError("Selected model has an invalid long axis")
+        axis = axis / norm
+        if axis[2] < 0.0:
+            axis = -axis
+        return axis
+
+    def _rotation_place_about_center(self, center, rotation_matrix):
+        from chimerax.geometry import Place
+
+        rot = np.array(rotation_matrix, dtype=float).reshape((3, 3))
+        center = np.array(center, dtype=float).reshape((3,))
+        origin = center - (rot @ center)
+        return Place(axes=(rot[:, 0], rot[:, 1], rot[:, 2]), origin=origin)
+
+    def _default_aligned_save_path(self, model):
+        source_path = self._model_source_path(model)
+        if source_path:
+            stem, ext = os.path.splitext(os.path.abspath(os.path.expanduser(str(source_path))))
+            if ext:
+                return f"{stem}_z_aligned{ext}"
+        name = str(getattr(model, "name", "") or "aligned_model").strip() or "aligned_model"
+        if self._is_volume_like(model):
+            ext = ".mrc"
+        elif self._is_glb_like(model):
+            ext = ".glb"
+        elif self._is_atomic_like(model):
+            ext = ".cif"
+        else:
+            ext = ".stl"
+        safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in name).strip("._") or "aligned_model"
+        return os.path.abspath(os.path.join(os.path.expanduser("~/"), f"{safe}_z_aligned{ext}"))
+
+    def _unique_output_path(self, path):
+        candidate = os.path.abspath(os.path.expanduser(str(path or "")))
+        if not candidate:
+            return candidate
+        if not os.path.exists(candidate):
+            return candidate
+        stem, ext = os.path.splitext(candidate)
+        suffix = 2
+        while True:
+            probe = f"{stem}_{suffix}{ext}"
+            if not os.path.exists(probe):
+                return probe
+            suffix += 1
+
+    def _auto_z_align_selected_model(self):
+        from Qt.QtWidgets import QMessageBox
+        from .cmd import _add_to_cb_map_group
+        from .map import _copy_source_instance, _rotation_align_vector_to_vector
+
+        def ensure_model_added(model):
+            if model is None:
+                return
+            try:
+                if model in self.session.models.list():
+                    return
+            except Exception:
+                pass
+            self.session.models.add([model])
+
+        temp_models = []
+        temp_paths = []
+        try:
+            self._refresh_model_selectors()
+            model_id = self.align_z_model.currentData() if hasattr(self, "align_z_model") else None
+            if model_id is None:
+                model_id = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
+            if model_id is None:
+                raise RuntimeError("Select a map/model to align first")
+            source_model = self._model_by_ref(model_id)
+            if source_model is None or not self._is_attach_source(source_model):
+                raise RuntimeError("Selected model is no longer available for Z alignment")
+
+            save_path = os.path.expanduser(self.align_z_save_path.text().strip()) if hasattr(self, "align_z_save_path") else ""
+            if not save_path:
+                save_path = self._unique_output_path(self._default_aligned_save_path(source_model))
+            save_dir = os.path.dirname(save_path)
+            if save_dir and not os.path.exists(save_dir):
+                os.makedirs(save_dir, exist_ok=True)
+
+            axis = self._auto_z_alignment_axis_local(source_model)
+            target_axis = np.array([0.0, 0.0, 1.0], dtype=float)
+            rot = np.array(_rotation_align_vector_to_vector(axis, target_axis), dtype=float)
+            center = self._model_local_center(source_model)
+            transform = self._rotation_place_about_center(center, rot)
+            source_color_state = self._capture_model_color_state(source_model)
+
+            if self._is_volume_like(source_model):
+                ref_grid = _copy_source_instance(self.session, source_model)
+                if ref_grid is None:
+                    suffix = os.path.splitext(str(self._model_source_path(source_model) or ""))[1].lower() or ".mrc"
+                    fd, temp_ref_path = tempfile.mkstemp(prefix="cb_align_ref_", suffix=suffix)
+                    os.close(fd)
+                    temp_paths.append(temp_ref_path)
+                    _run(self.session, f'save "{temp_ref_path}" #{self._model_ref(source_model)}')
+                    before = set(self.session.models.list())
+                    _run(self.session, f'open "{temp_ref_path}"')
+                    opened = [m for m in self.session.models.list() if m not in before]
+                    ref_grid = self._pick_opened_model(opened, self._is_volume_like)
+                if ref_grid is None:
+                    source_path = self._model_source_path(source_model)
+                    if source_path and os.path.exists(source_path):
+                        before = set(self.session.models.list())
+                        _run(self.session, f'open "{source_path}"')
+                        opened = [m for m in self.session.models.list() if m not in before]
+                        ref_grid = self._pick_opened_model(opened, self._is_volume_like)
+                if ref_grid is None:
+                    raise RuntimeError("Could not create a temporary reference grid for the selected map")
+                temp_models.append(ref_grid)
+                ensure_model_added(ref_grid)
+                self._zero_map_origin_index(ref_grid)
+                try:
+                    ref_grid.position = transform
+                except Exception:
+                    raise RuntimeError("Could not orient the temporary reference grid")
+                try:
+                    ref_grid.display = False
+                except Exception:
+                    pass
+                resampled_new = self._command_created_models(
+                    f"volume resample #{self._model_ref(source_model)} onGrid #{self._model_ref(ref_grid)}"
+                )
+                if not resampled_new:
+                    raise RuntimeError("volume resample did not create an aligned map")
+                aligned_live = self._pick_opened_model(resampled_new, self._is_volume_like)
+                if aligned_live is None:
+                    raise RuntimeError("volume resample did not create a usable aligned map")
+                temp_models.append(aligned_live)
+                self._zero_map_origin_index(aligned_live)
+            else:
+                aligned_live = _copy_source_instance(self.session, source_model)
+                if aligned_live is None:
+                    raise RuntimeError("Could not copy the selected model for Z alignment")
+                temp_models.append(aligned_live)
+                ensure_model_added(aligned_live)
+                try:
+                    aligned_live.position = transform
+                except Exception:
+                    raise RuntimeError("Could not apply the Z-alignment transform")
+
+            self._apply_model_color_state(aligned_live, source_color_state)
+            _run(self.session, f'save "{save_path}" #{self._model_ref(aligned_live)}')
+
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{save_path}"')
+            reopened = [m for m in self.session.models.list() if m not in before]
+            aligned_model = self._choose_opened_source_model(reopened)
+            if aligned_model is None:
+                raise RuntimeError("Aligned file saved but could not be reopened")
+            self._store_model_saved_path(aligned_model, save_path)
+            aligned_model._cb_attach_source = True
+            self._apply_model_color_state(aligned_model, source_color_state)
+            try:
+                _add_to_cb_map_group(self.session, aligned_model)
+            except Exception:
+                pass
+            try:
+                aligned_model.display = True
+            except Exception:
+                pass
+            self._select_map_model(aligned_model)
+            self.session.logger.info(f"Auto Z-aligned model saved: {save_path}")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            if getattr(getattr(self, "tool_window", None), "ui_area", None) is not None:
+                QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            for model in temp_models:
+                try:
+                    self.session.models.close([model])
+                except Exception:
+                    pass
+            for path in temp_paths:
+                try:
+                    if path and os.path.exists(path):
+                        os.remove(path)
+                except Exception:
+                    pass
+            self._refresh_model_selectors()
+            self._keep_tool_visible()
 
     def _browse_tweak_template(self):
         from Qt.QtWidgets import QFileDialog
@@ -2286,6 +2747,79 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "marker_path_status"):
             self.marker_path_status.setText(str(text))
 
+    def _current_geometric_draw_mode(self):
+        modes = list(getattr(self, "_geometric_draw_mode_order", ["point", "sphere", "cylinder", "curve", "line"]))
+        bar = getattr(self, "geometric_draw_mode_bar", None)
+        if bar is not None:
+            idx = int(bar.currentIndex())
+            if 0 <= idx < len(modes):
+                return str(modes[idx])
+        if hasattr(self, "marker_path_mode"):
+            return "line" if str(self.marker_path_mode.currentData() or "curve").strip().lower() == "line" else "curve"
+        return "curve"
+
+    def _set_geometric_draw_mode(self, mode):
+        mode = str(mode or "").strip().lower()
+        modes = list(getattr(self, "_geometric_draw_mode_order", ["point", "sphere", "cylinder", "curve", "line"]))
+        if hasattr(self, "marker_path_mode") and mode in ("curve", "line"):
+            idx = self.marker_path_mode.findData(mode)
+            if idx >= 0 and self.marker_path_mode.currentIndex() != idx:
+                self.marker_path_mode.setCurrentIndex(idx)
+        bar = getattr(self, "geometric_draw_mode_bar", None)
+        if bar is not None and mode in modes:
+            want = modes.index(mode)
+            if bar.currentIndex() != want:
+                bar.setCurrentIndex(want)
+
+    def _active_geometric_draw_mode(self):
+        action = str(getattr(self, "_marker_path_pick_action", "tube") or "tube").strip().lower()
+        if action in ("point", "sphere", "cylinder"):
+            return action
+        if action == "tube":
+            return "line" if str(getattr(self, "_marker_path_output_mode", "curve") or "curve").strip().lower() == "line" else "curve"
+        return None
+
+    def _geometric_draw_button_text(self, mode=None):
+        mode = str(mode or self._current_geometric_draw_mode()).strip().lower()
+        return {
+            "point": "Place point",
+            "sphere": "Place sphere",
+            "cylinder": "Draw cylinder",
+            "line": "Place line markers",
+            "curve": "Place curve markers",
+        }.get(mode, "Place curve markers")
+
+    def _geometric_draw_idle_status(self, mode=None):
+        mode = str(mode or self._current_geometric_draw_mode()).strip().lower()
+        return {
+            "point": "Press button, then click in ChimeraX to place a point",
+            "sphere": "Press button, then click in ChimeraX to place a sphere",
+            "cylinder": "Press button, then click twice in ChimeraX to draw a cylinder",
+            "line": "Press button, then click in ChimeraX to place line markers",
+            "curve": "Press button, then click in ChimeraX to place curve markers",
+        }.get(mode, "Press button, then click in ChimeraX to draw")
+
+    def _update_geometric_draw_controls(self):
+        mode = self._current_geometric_draw_mode()
+        if mode in ("curve", "line") and hasattr(self, "marker_path_mode"):
+            idx = self.marker_path_mode.findData(mode)
+            if idx >= 0 and self.marker_path_mode.currentIndex() != idx:
+                self.marker_path_mode.setCurrentIndex(idx)
+        if hasattr(self, "_geometric_draw_count_row"):
+            self._geometric_draw_count_row.setVisible(mode in ("curve", "line"))
+        if hasattr(self, "_geometric_draw_primitive_radius_row"):
+            self._geometric_draw_primitive_radius_row.setVisible(mode in ("point", "sphere", "cylinder"))
+        if hasattr(self, "_geometric_draw_tube_radius_row"):
+            self._geometric_draw_tube_radius_row.setVisible(mode in ("curve", "line"))
+        if hasattr(self, "geometric_draw_mode_bar"):
+            self.geometric_draw_mode_bar.setEnabled(not self._marker_path_pick_pending)
+        if not self._marker_path_pick_pending:
+            self._set_marker_path_status(self._geometric_draw_idle_status(mode))
+
+    def _on_geometric_draw_mode_changed(self, *_args):
+        self._update_geometric_draw_controls()
+        self._update_marker_path_buttons()
+
     def _on_marker_target_model_changed(self, *_args):
         if self._marker_path_pick_pending:
             self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
@@ -2351,17 +2885,16 @@ class CiliaBuilder2Tool(ToolInstance):
             pass
 
     def _update_marker_path_buttons(self):
-        active_action = str(getattr(self, "_marker_path_pick_action", "tube") or "tube")
-        if hasattr(self, "marker_path_pick_btn"):
-            tube_active = bool(self._marker_path_pick_pending and active_action == "tube")
-            self.marker_path_pick_btn.setText("Cancel marker placement" if tube_active else "Place markers for path")
-            self.marker_path_pick_btn.setEnabled((not self._marker_path_pick_pending) or tube_active)
+        current_mode = self._current_geometric_draw_mode()
+        active_mode = self._active_geometric_draw_mode()
+        if hasattr(self, "geometric_draw_pick_btn"):
+            same_mode_active = bool(self._marker_path_pick_pending and active_mode == current_mode)
+            self.geometric_draw_pick_btn.setText("Cancel drawing" if same_mode_active else self._geometric_draw_button_text(current_mode))
+            self.geometric_draw_pick_btn.setEnabled((not self._marker_path_pick_pending) or same_mode_active)
         if hasattr(self, "marker_pattern_star_btn"):
-            star_active = bool(self._marker_path_pick_pending and active_action == "replicated_star")
-            self.marker_pattern_star_btn.setText(
-                "Cancel marker placement" if star_active else "Place markers for replicated STAR"
-            )
-            self.marker_pattern_star_btn.setEnabled((not self._marker_path_pick_pending) or star_active)
+            self.marker_pattern_star_btn.setText("Replicate marker path onto STAR")
+            self.marker_pattern_star_btn.setEnabled(not self._marker_path_pick_pending)
+        self._update_geometric_draw_controls()
 
     def _ensure_marker_path_pick_handler(self):
         if self._marker_path_pick_handlers:
@@ -2473,15 +3006,59 @@ class CiliaBuilder2Tool(ToolInstance):
         if remove_temp:
             self._close_marker_path_temp_root()
         if log_message and was_pending:
-            self.session.logger.info("Cancelled marker placement mode.")
-        self._set_marker_path_status("Press button, then click in ChimeraX to place markers")
+            self.session.logger.info("Cancelled drawing mode.")
+        self._set_marker_path_status(self._geometric_draw_idle_status())
         self._update_marker_path_buttons()
 
     def _start_marker_path_pick_mode(self):
         self._start_marker_pick_mode("tube")
 
+    def _start_selected_geometric_draw_pick_mode(self):
+        mode = self._current_geometric_draw_mode()
+        if mode == "point":
+            self._start_marker_pick_mode("point")
+        elif mode == "sphere":
+            self._start_marker_pick_mode("sphere")
+        elif mode == "cylinder":
+            self._start_marker_pick_mode("cylinder")
+        else:
+            self._start_marker_pick_mode("tube", output_mode_override=mode)
+
+    def _start_draw_point_pick_mode(self):
+        self._start_marker_pick_mode("point")
+
+    def _start_draw_sphere_pick_mode(self):
+        self._start_marker_pick_mode("sphere")
+
+    def _start_draw_cylinder_pick_mode(self):
+        self._start_marker_pick_mode("cylinder")
+
     def _start_marker_pattern_star_pick_mode(self):
-        self._start_marker_pick_mode("replicated_star")
+        from Qt.QtWidgets import QMessageBox
+
+        try:
+            if self._marker_path_pick_pending:
+                raise RuntimeError("Finish or cancel marker placement first")
+            source_star_model = self._selected_marker_pattern_star_model()
+            _template_model, control_points, output_mode, tube_radius = self._marker_path_template_details()
+            created = self._create_marker_pattern_star_from_points(
+                control_points,
+                self._model_ref(source_star_model),
+            )
+            auto_paths = self._auto_draw_marker_pattern_paths(created, output_mode, tube_radius)
+            self._hide_generated_marker_pattern_star(created)
+            self._set_marker_path_status(f"Generated: {created.name}")
+            self.session.logger.info(
+                f"Generated {created.name} from {len(control_points)} template markers "
+                f"({len(getattr(created, '_cb_star_rows', None) or [])} STAR points, {len(auto_paths)} auto paths). "
+                "Use the normal map attachment section to attach your model."
+            )
+            self._refresh_model_selectors()
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
 
     def _selected_marker_pattern_star_model(self):
         star_id = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
@@ -2492,7 +3069,62 @@ class CiliaBuilder2Tool(ToolInstance):
             raise RuntimeError("Select a STAR model first")
         return star_model
 
-    def _start_marker_pick_mode(self, pick_action):
+    def _marker_path_template_details(self):
+        def _state_for(model):
+            state = getattr(model, "_cb_marker_path_state", None) or {}
+            control_points = state.get("control_points", None) or []
+            if len(control_points) < 2:
+                return None
+            role = str(state.get("role", getattr(model, "_cb_marker_path_role", "") or "") or "").strip().lower()
+            if role and role != "template":
+                return None
+            try:
+                creation_index = int(state.get("creation_index", 0) or 0)
+            except Exception:
+                creation_index = 0
+            path_mode = str(state.get("path_mode", "curve") or "curve").strip().lower() or "curve"
+            if path_mode not in ("curve", "line"):
+                path_mode = "curve"
+            try:
+                tube_radius = max(0.1, float(state.get("tube_radius", state.get("radius", 20.0)) or 20.0))
+            except Exception:
+                tube_radius = 20.0
+            return {
+                "model": model,
+                "state": state,
+                "control_points": [[float(v) for v in point[:3]] for point in control_points],
+                "path_mode": path_mode,
+                "tube_radius": tube_radius,
+                "creation_index": creation_index,
+            }
+
+        template_model = self._model_by_ref(self._marker_path_template_ref) if self._marker_path_template_ref else None
+        preferred = _state_for(template_model) if template_model is not None else None
+        if preferred is None:
+            candidates = []
+            for model in self._all_session_models():
+                info = _state_for(model)
+                if info is not None:
+                    candidates.append(info)
+            if candidates:
+                preferred = max(
+                    candidates,
+                    key=lambda item: (
+                        int(item["creation_index"]),
+                        str(getattr(item["model"], "name", "") or ""),
+                    ),
+                )
+        if preferred is None:
+            raise RuntimeError("Create a marker path first with 'Place markers for path'")
+        self._marker_path_template_ref = self._model_ref(preferred["model"])
+        return (
+            preferred["model"],
+            preferred["control_points"],
+            preferred["path_mode"],
+            preferred["tube_radius"],
+        )
+
+    def _start_marker_pick_mode(self, pick_action, output_mode_override=None):
         from Qt.QtWidgets import QMessageBox
         from chimerax.markers.markers import MarkerSet
         from chimerax.markers.mouse import _mouse_marker_settings
@@ -2506,12 +3138,19 @@ class CiliaBuilder2Tool(ToolInstance):
                 self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
 
             target_count = int(self.marker_path_count.value()) if hasattr(self, "marker_path_count") else 2
-            output_mode = str(self.marker_path_mode.currentData() or "curve") if hasattr(self, "marker_path_mode") else "curve"
-            if target_count < 2:
-                raise RuntimeError("Marker path needs at least 2 markers")
+            output_mode = str(output_mode_override or (self.marker_path_mode.currentData() if hasattr(self, "marker_path_mode") else "curve") or "curve")
+            output_mode = output_mode.strip().lower() or "curve"
+            if output_mode not in ("curve", "line"):
+                output_mode = "curve"
             pick_action = str(pick_action or "tube").strip().lower()
-            if pick_action not in ("tube", "replicated_star"):
+            if pick_action not in ("tube", "replicated_star", "point", "sphere", "cylinder"):
                 pick_action = "tube"
+            if pick_action in ("point", "sphere"):
+                target_count = 1
+            elif pick_action == "cylinder":
+                target_count = 2
+            elif target_count < 2:
+                raise RuntimeError("Marker path needs at least 2 markers")
             target_model = self._selected_marker_target_model()
             source_star_model = None
             if pick_action == "replicated_star":
@@ -2553,7 +3192,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self._enable_marker_path_mouse_mode()
             self._select_marker_target_for_pick(target_model)
             self._set_marker_path_status(
-                f"Marker placement active: 0/{self._marker_path_target_count} placed. Click in ChimeraX."
+                f"Drawing active: 0/{self._marker_path_target_count} placed. Click in ChimeraX."
             )
             self._update_marker_path_buttons()
             target_name = str(getattr(target_model, "name", "") or "").strip() or "selected model"
@@ -2562,6 +3201,21 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.session.logger.info(
                     "Marker placement mode enabled. "
                     f"Place {self._marker_path_target_count} markers on {target_name} in ChimeraX to build a replicated STAR from {source_name}."
+                )
+            elif pick_action == "point":
+                self.session.logger.info(
+                    "Marker placement mode enabled. "
+                    f"Click once on {target_name} in ChimeraX to place a point."
+                )
+            elif pick_action == "sphere":
+                self.session.logger.info(
+                    "Marker placement mode enabled. "
+                    f"Click once on {target_name} in ChimeraX to place a sphere."
+                )
+            elif pick_action == "cylinder":
+                self.session.logger.info(
+                    "Marker placement mode enabled. "
+                    f"Click twice on {target_name} in ChimeraX to draw a cylinder."
                 )
             else:
                 self.session.logger.info(
@@ -2605,6 +3259,23 @@ class CiliaBuilder2Tool(ToolInstance):
             if self._find_model_by_name(name, require_star=False) is None:
                 return name
 
+    def _next_marker_pattern_group_name(self, star_model_name):
+        base = f"{str(star_model_name or '').strip() or 'Marker Applied STAR'} Paths"
+        name = base
+        suffix = 2
+        while self._find_model_by_name(name, require_star=False) is not None:
+            name = f"{base} {suffix}"
+            suffix += 1
+        return name
+
+    def _next_geometric_drawing_name(self, kind):
+        base = str(kind or "Drawing").strip() or "Drawing"
+        while True:
+            self._geometric_draw_counter += 1
+            name = f"{base} {self._geometric_draw_counter}"
+            if self._find_model_by_name(name, require_star=False) is None:
+                return name
+
     def _create_marker_path_from_points(self, control_points, path_mode):
         from . import cmd
 
@@ -2620,6 +3291,63 @@ class CiliaBuilder2Tool(ToolInstance):
             path_mode=mode,
             tube_radius=tube_radius,
         )
+        try:
+            state = getattr(created, "_cb_marker_path_state", None) or {}
+            state["role"] = "template"
+            state["creation_index"] = int(self._marker_path_counter)
+            created._cb_marker_path_state = state
+            created._cb_marker_path_role = "template"
+            self._marker_path_template_ref = self._model_ref(created)
+        except Exception:
+            pass
+        return created
+
+    def _create_point_drawing_from_points(self, control_points, sphere_mode=False):
+        from . import cmd
+
+        if not control_points:
+            raise RuntimeError("Point drawing needs at least 1 picked point")
+        radius = float(self.draw_marker_radius.value()) if hasattr(self, "draw_marker_radius") else 12.0
+        point_radius = max(1.0, radius if sphere_mode else (0.35 * radius))
+        name = self._next_geometric_drawing_name("Sphere" if sphere_mode else "Point")
+        created = cmd.build_marker_point_model(
+            self.session,
+            name=name,
+            control_points=[control_points[0]],
+            marker_radius=point_radius,
+            display_mode="sphere_marker" if sphere_mode else "point_marker",
+        )
+        try:
+            state = getattr(created, "_cb_marker_path_state", None) or {}
+            state["role"] = "drawing"
+            created._cb_marker_path_state = state
+            created._cb_marker_path_role = "drawing"
+        except Exception:
+            pass
+        return created
+
+    def _create_cylinder_from_points(self, control_points):
+        from . import cmd
+
+        if len(control_points) < 2:
+            raise RuntimeError("Cylinder drawing needs 2 picked points")
+        radius = float(self.draw_marker_radius.value()) if hasattr(self, "draw_marker_radius") else 12.0
+        name = self._next_geometric_drawing_name("Cylinder")
+        created = cmd.build_marker_path_model(
+            self.session,
+            name=name,
+            control_points=control_points[:2],
+            path_mode="line",
+            tube_radius=radius,
+        )
+        try:
+            state = getattr(created, "_cb_marker_path_state", None) or {}
+            state["role"] = "drawing"
+            state["display_mode"] = "cylinder_tube"
+            created._cb_marker_path_state = state
+            created._cb_marker_path_role = "drawing"
+        except Exception:
+            pass
         return created
 
     def _resolved_axes_from_row(self, row):
@@ -2723,6 +3451,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "_cbAxisZ": [float(v) for v in ez],
                         "_cb_source_star_ref": source_star_ref,
                         "_cb_source_star_row_index": int(target_index),
+                        "_cb_marker_pattern_target_row_index": int(target_index),
                         "_cb_marker_pattern_marker_index": int(spec["marker_index"]),
                         "_cb_marker_pattern_anchor_row_index": int(spec["source_row_index"]),
                         "_cb_marker_pattern_local_offset": [float(v) for v in local_offset],
@@ -2755,33 +3484,37 @@ class CiliaBuilder2Tool(ToolInstance):
 
     def _auto_draw_marker_pattern_paths(self, star_model, path_mode, tube_radius):
         from . import cmd
+        from chimerax.core.models import Model
 
         rows = getattr(star_model, "_cb_star_rows", None) or []
         groups = {}
         for row in rows:
             try:
-                marker_index = int(row.get("_cb_marker_pattern_marker_index", -1))
+                target_row_index = int(
+                    row.get(
+                        "_cb_marker_pattern_target_row_index",
+                        row.get("_cb_source_star_row_index", -1),
+                    )
+                )
             except Exception:
-                marker_index = -1
-            if marker_index < 0:
+                target_row_index = -1
+            if target_row_index < 0:
                 continue
-            try:
-                tube_id = int(float(row.get("rlnHelicalTubeID", 0)))
-            except Exception:
-                tube_id = 0
-            groups.setdefault((tube_id, marker_index), []).append(row)
+            groups.setdefault(target_row_index, []).append(row)
 
         created_paths = []
         mode = str(path_mode or "curve").strip().lower()
         if mode not in ("curve", "line"):
             mode = "curve"
         radius = max(0.1, float(tube_radius))
+        group_root = None
+        group_name = self._next_marker_pattern_group_name(getattr(star_model, "name", "Marker Applied STAR"))
 
-        for (tube_id, marker_index), group_rows in sorted(groups.items()):
+        for target_row_index, group_rows in sorted(groups.items()):
             group_rows.sort(
                 key=lambda row: (
-                    int(row.get("_cb_source_star_row_index", 0) or 0),
-                    float(row.get("rlnCoordinateZ", 0.0) or 0.0),
+                    int(row.get("_cb_marker_pattern_marker_index", 0) or 0),
+                    int(row.get("_cb_marker_pattern_anchor_row_index", 0) or 0),
                 )
             )
             control_points = [
@@ -2790,17 +3523,55 @@ class CiliaBuilder2Tool(ToolInstance):
             ]
             if len(control_points) < 2:
                 continue
-            name = f"{star_model.name} Path t{tube_id} m{marker_index + 1}"
-            created_paths.append(
-                cmd.build_marker_path_model(
-                    self.session,
-                    name=name,
-                    control_points=control_points,
-                    path_mode=mode,
-                    tube_radius=radius,
-                )
+            first_row = group_rows[0]
+            try:
+                tube_id = int(float(first_row.get("rlnHelicalTubeID", 0)))
+            except Exception:
+                tube_id = 0
+            if group_root is None:
+                group_root = Model(group_name, self.session)
+                group_root._cb_generated_marker_path = True
+                group_root._cb_attach_source = False
+                group_root._cb_marker_path_role = "replicated_auto_group"
+                group_root._cb_marker_pattern_source_star_ref = self._model_ref(star_model)
+                cmd._add_to_cb_map_group(self.session, group_root)
+            name = f"{star_model.name} Path t{tube_id} g{target_row_index + 1}"
+            created = cmd.build_marker_path_model(
+                self.session,
+                name=name,
+                control_points=control_points,
+                path_mode=mode,
+                tube_radius=radius,
             )
+            try:
+                state = getattr(created, "_cb_marker_path_state", None) or {}
+                state["role"] = "replicated_auto"
+                state["marker_pattern_source_star_ref"] = self._model_ref(star_model)
+                state["marker_pattern_target_row_index"] = int(target_row_index)
+                state["marker_pattern_group_name"] = str(group_name)
+                created._cb_marker_path_state = state
+                created._cb_marker_path_role = "replicated_auto"
+            except Exception:
+                pass
+            try:
+                group_root.add([created])
+            except Exception:
+                pass
+            created_paths.append(created)
+        if group_root is not None and not created_paths:
+            try:
+                self.session.models.close([group_root])
+            except Exception:
+                pass
         return created_paths
+
+    def _hide_generated_marker_pattern_star(self, star_model):
+        if star_model is None:
+            return
+        try:
+            star_model.display = False
+        except Exception:
+            pass
 
     def _finalize_marker_path_pick_result(self, control_points, output_mode, pick_action, source_star_ref, temp_root):
         from Qt.QtCore import QTimer
@@ -2824,12 +3595,25 @@ class CiliaBuilder2Tool(ToolInstance):
                         output_mode,
                         float(self.marker_path_radius.value()) if hasattr(self, "marker_path_radius") else 20.0,
                     )
+                    self._hide_generated_marker_pattern_star(created)
                     self._set_marker_path_status(f"Generated: {created.name}")
                     self.session.logger.info(
                         f"Generated {created.name} from {len(control_points)} placed markers "
                         f"({len(getattr(created, '_cb_star_rows', None) or [])} STAR points, {len(auto_paths)} auto paths). "
                         "Use the normal map attachment section to attach your model."
                     )
+                elif str(pick_action or "tube") == "point":
+                    created = self._create_point_drawing_from_points(control_points, sphere_mode=False)
+                    self._set_marker_path_status(f"Generated: {created.name}")
+                    self.session.logger.info(f"Generated {created.name} from 1 placed point.")
+                elif str(pick_action or "tube") == "sphere":
+                    created = self._create_point_drawing_from_points(control_points, sphere_mode=True)
+                    self._set_marker_path_status(f"Generated: {created.name}")
+                    self.session.logger.info(f"Generated {created.name} from 1 placed point.")
+                elif str(pick_action or "tube") == "cylinder":
+                    created = self._create_cylinder_from_points(control_points)
+                    self._set_marker_path_status(f"Generated: {created.name}")
+                    self.session.logger.info(f"Generated {created.name} from 2 placed points.")
                 else:
                     created = self._create_marker_path_from_points(control_points, output_mode)
                     self._set_marker_path_status(f"Generated: {created.name}")
@@ -2867,7 +3651,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if count <= 0:
             return
         self._set_marker_path_status(
-            f"Marker placement active: {count}/{self._marker_path_target_count} placed. Click in ChimeraX."
+            f"Drawing active: {count}/{self._marker_path_target_count} placed. Click in ChimeraX."
         )
         if count < self._marker_path_target_count:
             return
@@ -3884,6 +4668,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "rows": rows,
                         "star_text": getattr(model, "_cb_star_text", None),
                         "display": bool(getattr(model, "display", True)),
+                        "color_state": self._capture_model_color_state(model),
                         "clip_info": getattr(model, "_cb_random_clip_info", None),
                         "under_cb_star_group": self._is_under_cb_group(model, "star_models"),
                     }
@@ -3904,6 +4689,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "name": str(getattr(model, "name", "Membrane") or "Membrane"),
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
+                        "color_state": self._capture_model_color_state(model),
                     }
                 )
             except Exception as e:
@@ -3922,6 +4708,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "name": str(getattr(model, "name", "Marker path") or "Marker path"),
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
+                        "color_state": self._capture_model_color_state(model),
                     }
                 )
             except Exception as e:
@@ -3959,6 +4746,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,
                         "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "display": bool(getattr(model, "display", True)),
+                        "color_state": self._capture_model_color_state(model),
                         "under_cb_map_group": self._is_under_cb_group(model, "maps"),
                     }
                 )
@@ -4003,6 +4791,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
                         "x_movement": float(getattr(out_root, "_cb_attachment_x_movement", 0.0) or 0.0),
                         "display": bool(getattr(out_root, "display", True)),
+                        "color_state": self._capture_model_color_state(out_root),
                     }
                 )
             except Exception as e:
@@ -4034,8 +4823,10 @@ class CiliaBuilder2Tool(ToolInstance):
             "membrane_particle_scaffold_pct": float(self.membrane_particle_scaffold_pct.value()),
             "membrane_particle_lipids_pct": float(self.membrane_particle_lipids_pct.value()),
             "marker_path_count": int(self.marker_path_count.value()) if hasattr(self, "marker_path_count") else 4,
+            "geometric_draw_mode": self._current_geometric_draw_mode(),
             "marker_path_mode": str(self.marker_path_mode.currentData() or "curve") if hasattr(self, "marker_path_mode") else "curve",
             "marker_path_radius": float(self.marker_path_radius.value()) if hasattr(self, "marker_path_radius") else 20.0,
+            "draw_marker_radius": float(self.draw_marker_radius.value()) if hasattr(self, "draw_marker_radius") else 12.0,
             "ift_distance": float(self.ift_distance.value()),
             "ift_mode": str(self.ift_mode.currentData() or "train"),
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
@@ -4051,6 +4842,8 @@ class CiliaBuilder2Tool(ToolInstance):
             "attach_y_rotation": float(self.attach_y_rotation.value()),
             "attach_x_movement": float(self.attach_x_movement.value()),
             "pixel_size": float(self.pixel_size.value()),
+            "align_z_model": self._combo_state(self.align_z_model) if hasattr(self, "align_z_model") else {"id": None, "text": ""},
+            "align_z_save_path": self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
             "tweak_source_path": self.tweak_source_path.text().strip() if hasattr(self, "tweak_source_path") else "",
             "tweak_template_path": self.tweak_template_path.text().strip() if hasattr(self, "tweak_template_path") else "",
             "tweak_save_path": self.tweak_save_path.text().strip() if hasattr(self, "tweak_save_path") else "",
@@ -4104,8 +4897,15 @@ class CiliaBuilder2Tool(ToolInstance):
             idx = self.marker_path_mode.findData(str(state.get("marker_path_mode", self.marker_path_mode.currentData())))
             if idx >= 0:
                 self.marker_path_mode.setCurrentIndex(idx)
+        if hasattr(self, "geometric_draw_mode_bar"):
+            geometric_mode = str(state.get("geometric_draw_mode", "") or "").strip().lower()
+            if not geometric_mode:
+                geometric_mode = str(state.get("marker_path_mode", self._current_geometric_draw_mode()) or "").strip().lower() or "curve"
+            self._set_geometric_draw_mode(geometric_mode)
         if hasattr(self, "marker_path_radius"):
             self.marker_path_radius.setValue(float(state.get("marker_path_radius", self.marker_path_radius.value())))
+        if hasattr(self, "draw_marker_radius"):
+            self.draw_marker_radius.setValue(float(state.get("draw_marker_radius", self.draw_marker_radius.value())))
         self.ift_distance.setValue(float(state.get("ift_distance", self.ift_distance.value())))
         if hasattr(self, "ift_mode"):
             idx = self.ift_mode.findData(str(state.get("ift_mode", self.ift_mode.currentData())))
@@ -4128,12 +4928,15 @@ class CiliaBuilder2Tool(ToolInstance):
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
         self.attach_x_movement.setValue(float(state.get("attach_x_movement", self.attach_x_movement.value())))
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
+        if hasattr(self, "align_z_save_path"):
+            self.align_z_save_path.setText(str(state.get("align_z_save_path", self.align_z_save_path.text()) or ""))
         if hasattr(self, "tweak_source_path"):
             self.tweak_source_path.setText(str(state.get("tweak_source_path", self.tweak_source_path.text()) or ""))
         if hasattr(self, "tweak_template_path"):
             self.tweak_template_path.setText(str(state.get("tweak_template_path", self.tweak_template_path.text()) or ""))
         if hasattr(self, "tweak_save_path"):
             self.tweak_save_path.setText(str(state.get("tweak_save_path", self.tweak_save_path.text()) or ""))
+        self._update_marker_path_buttons()
 
     def _restore_generated_star_models(self, models_state):
         from . import cmd
@@ -4157,6 +4960,7 @@ class CiliaBuilder2Tool(ToolInstance):
             created._cb_random_clip_info = item.get("clip_info", None)
             cmd._render_star_model(self.session, created, rows, True)
             self._remember_restored_session_star(created, item)
+            self._apply_model_color_state(created, item.get("color_state", []))
             try:
                 created.display = bool(item.get("display", True))
             except Exception:
@@ -4201,6 +5005,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     created._cb_membrane_state = created_state
                 except Exception:
                     pass
+                self._apply_model_color_state(created, item.get("color_state", []))
                 created.display = bool(item.get("display", True))
             except Exception:
                 pass
@@ -4213,7 +5018,9 @@ class CiliaBuilder2Tool(ToolInstance):
             name = str(item.get("name", "") or "").strip() or "Marker path"
             control_points = state.get("control_points", None) or []
             path_mode = str(state.get("path_mode", "curve") or "curve")
-            if len(control_points) < 2:
+            display_mode = str(state.get("display_mode", "") or "").strip().lower()
+            min_points = 1 if display_mode in ("point_marker", "sphere_marker") else 2
+            if len(control_points) < min_points:
                 continue
             exists = False
             for model in self._all_session_models():
@@ -4223,19 +5030,29 @@ class CiliaBuilder2Tool(ToolInstance):
             if exists:
                 continue
             try:
-                created = cmd.build_marker_path_model(
-                    self.session,
-                    name=name,
-                    control_points=control_points,
-                    path_mode=path_mode,
-                    tube_radius=float(state.get("tube_radius", state.get("radius", 20.0)) or 20.0),
-                )
+                if display_mode in ("point_marker", "sphere_marker"):
+                    created = cmd.build_marker_point_model(
+                        self.session,
+                        name=name,
+                        control_points=control_points,
+                        marker_radius=float(state.get("marker_radius", state.get("radius", 8.0)) or 8.0),
+                        display_mode=display_mode,
+                    )
+                else:
+                    created = cmd.build_marker_path_model(
+                        self.session,
+                        name=name,
+                        control_points=control_points,
+                        path_mode=path_mode,
+                        tube_radius=float(state.get("tube_radius", state.get("radius", 20.0)) or 20.0),
+                    )
                 try:
                     created_state = getattr(created, "_cb_marker_path_state", None) or {}
                     created_state.update(state)
                     created._cb_marker_path_state = created_state
                 except Exception:
                     pass
+                self._apply_model_color_state(created, item.get("color_state", []))
                 created.display = bool(item.get("display", True))
             except Exception:
                 pass
@@ -4279,6 +5096,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 if path:
                     self._store_model_saved_path(source_model, path)
                 self._remember_restored_session_source(source_model, item)
+                self._apply_model_color_state(source_model, item.get("color_state", []))
             except Exception:
                 pass
 
@@ -4353,6 +5171,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 out_root.display = bool(item.get("display", True))
             except Exception:
                 pass
+            self._apply_model_color_state(out_root, item.get("color_state", []))
             attach_key = self._attach_key(star_model, map_model)
             self._attached_results[attach_key] = out_root
             self._last_attached_result = out_root
@@ -4483,6 +5302,8 @@ class CiliaBuilder2Tool(ToolInstance):
             self._select_combo_saved(self.sel_map_model, selected.get("map_model"))
             if hasattr(self, "ift_train_star_model"):
                 self._select_combo_saved(self.ift_train_star_model, selected.get("ift_train_star_model"))
+            if hasattr(self, "align_z_model"):
+                self._select_combo_saved(self.align_z_model, payload.get("ui", {}).get("align_z_model"))
 
             try:
                 _run(self.session, "view orient")
@@ -4961,13 +5782,16 @@ class CiliaBuilder2Tool(ToolInstance):
         self._last_attached_result = out_root
         self._attached_results[attach_key] = out_root
 
-        current_star_id = self._model_ref(star_model) or star_id
-        current_map_id = self._model_ref(map_model) or map_id
-
+        self._archive_attach_source_model(map_model)
+        current_star_id = self._model_ref(star_model) or str(star_id)
+        current_map_id = self._model_ref(map_model) or str(map_id)
         self._last_attach_star_id = current_star_id
         self._last_attach_map_id = current_map_id
-
-        self._archive_attach_source_model(map_model)
+        try:
+            out_root._cb_attachment_source_ref = current_map_id
+            out_root._cb_attachment_star_ref = current_star_id
+        except Exception:
+            pass
         try:
             star_model.display = False
         except Exception:
@@ -4978,6 +5802,15 @@ class CiliaBuilder2Tool(ToolInstance):
             # Keep attachment usable even if clip application fails.
             pass
         self._refresh_model_selectors()
+        if remember_selection:
+            try:
+                self._select_star_model(star_model)
+            except Exception:
+                pass
+            try:
+                self._select_map_model(map_model)
+            except Exception:
+                pass
 
     def _reattach_with_current_settings(self, _value):
         from Qt.QtWidgets import QMessageBox

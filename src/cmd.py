@@ -314,6 +314,47 @@ def build_marker_path_model(
     return root
 
 
+def build_marker_point_model(
+    session,
+    name,
+    control_points,
+    color=(255, 170, 70, 255),
+    marker_radius=8.0,
+    display_mode="point_marker",
+):
+    from chimerax.markers.markers import MarkerSet
+
+    points = []
+    for point in control_points or []:
+        try:
+            xyz = tuple(float(v) for v in point[:3])
+        except Exception:
+            continue
+        if len(xyz) == 3:
+            points.append(xyz)
+    if not points:
+        raise ValueError("Marker point model needs at least 1 control point")
+
+    radius = max(0.1, float(marker_radius))
+    root = Model(name, session)
+    root._cb_generated_marker_path = True
+    root._cb_attach_source = False
+    root._cb_marker_path_state = {
+        "control_points": [[float(v) for v in point] for point in points],
+        "marker_radius": float(radius),
+        "display_mode": str(display_mode or "point_marker"),
+    }
+    _add_to_cb_map_group(session, root)
+
+    marker_set = MarkerSet(session, name="Markers")
+    marker_set._cb_generated_marker_path = True
+    marker_set._cb_attach_source = False
+    root.add([marker_set])
+    for point in points:
+        marker_set.create_marker(point, color, radius)
+    return root
+
+
 def _annulus_cap_triangles(outer_ring, inner_ring, reverse=False):
     tris = []
     nc = len(outer_ring)

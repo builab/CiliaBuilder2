@@ -327,11 +327,34 @@ def _copy_source_instance(session, src):
 
 
 def _copy_gltf_tree(session, src):
+    def copy_node_color(src_node, dst_node):
+        for attr in ("color", "overall_color"):
+            try:
+                rgba = getattr(src_node, attr, None)
+            except Exception:
+                rgba = None
+            if rgba is None:
+                continue
+            try:
+                values = tuple(int(round(float(v))) for v in list(rgba)[:4])
+            except Exception:
+                continue
+            try:
+                dst_node.color = values
+            except Exception:
+                pass
+            try:
+                dst_node.overall_color = values
+            except Exception:
+                pass
+            return
+
     def clone_node(node):
         try:
             if hasattr(node, "copy"):
                 clone = node.copy()
                 if clone is not None:
+                    copy_node_color(node, clone)
                     return clone
         except Exception:
             pass
@@ -343,6 +366,7 @@ def _copy_gltf_tree(session, src):
 
         if children:
             clone = Model(str(getattr(node, "name", "gltf node")), session)
+            copy_node_color(node, clone)
             try:
                 clone.position = node.position
             except Exception:
@@ -365,10 +389,7 @@ def _copy_gltf_tree(session, src):
             ta = getattr(node, "triangles", None)
             if va is not None and ta is not None and hasattr(clone, "set_geometry"):
                 clone.set_geometry(va, na, ta)
-                try:
-                    clone.color = node.color
-                except Exception:
-                    pass
+                copy_node_color(node, clone)
                 try:
                     clone.position = node.position
                 except Exception:
@@ -385,9 +406,11 @@ def _copy_gltf_tree(session, src):
 
     root = clone_node(src)
     if root is not None:
+        copy_node_color(src, root)
         return root
 
     root = Model(str(getattr(src, "name", "gltf root")), session)
+    copy_node_color(src, root)
     try:
         root.position = src.position
     except Exception:
