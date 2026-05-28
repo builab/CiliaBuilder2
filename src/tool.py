@@ -2333,6 +2333,23 @@ class CiliaBuilder2Tool(ToolInstance):
                 pass
         self._marker_path_pick_hidden_models = []
 
+    def _select_marker_target_for_pick(self, model):
+        try:
+            _run(self.session, "select clear", log=False)
+        except Exception:
+            pass
+        ref = self._model_ref(model)
+        if ref is not None:
+            try:
+                _run(self.session, f"select #{ref}", log=False)
+                return
+            except Exception:
+                pass
+        try:
+            model.set_selected(True)
+        except Exception:
+            pass
+
     def _update_marker_path_buttons(self):
         active_action = str(getattr(self, "_marker_path_pick_action", "tube") or "tube")
         if hasattr(self, "marker_path_pick_btn"):
@@ -2503,15 +2520,6 @@ class CiliaBuilder2Tool(ToolInstance):
             self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
             self._ensure_marker_path_pick_handler()
             self._set_marker_pick_hidden_models(target_model)
-            try:
-                _run(self.session, "select clear", log=False)
-            except Exception:
-                pass
-            try:
-                target_model.set_selected(True)
-            except Exception:
-                pass
-
             temp_set = MarkerSet(self.session, name="Control markers")
             temp_set._cb_generated_marker_path = True
             temp_set._cb_generated_marker_path_temp = True
@@ -2543,14 +2551,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self._marker_path_pick_pending = True
             self._ensure_marker_path_poll_timer().start()
             self._enable_marker_path_mouse_mode()
-            try:
-                _run(self.session, "select clear", log=False)
-            except Exception:
-                pass
-            try:
-                target_model.set_selected(True)
-            except Exception:
-                pass
+            self._select_marker_target_for_pick(target_model)
             self._set_marker_path_status(
                 f"Marker placement active: 0/{self._marker_path_target_count} placed. Click in ChimeraX."
             )
