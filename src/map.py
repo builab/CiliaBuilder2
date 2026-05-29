@@ -2,6 +2,7 @@
 
 import math
 import os
+import tempfile
 import numpy as np
 
 from chimerax.core.models import Model
@@ -252,6 +253,59 @@ def _particle_axes_from_row(row):
 
 def _copy_source_instance(session, src):
     if _is_glb_like_model(src):
+        cls_name = src.__class__.__name__.lower()
+        if "gltf" in cls_name or "glb" in cls_name:
+            path = getattr(src, "path", None)
+            if not path:
+                try:
+                    path = src.data.path
+                except Exception:
+                    path = None
+            if not path:
+                try:
+                    path = src.filename
+                except Exception:
+                    path = None
+            if path and os.path.exists(str(path)):
+                try:
+                    before = set(session.models.list())
+                    _run(session, f'open "{path}"')
+                    opened = [m for m in session.models.list() if m not in before]
+                    top_level = [m for m in opened if getattr(m, "parent", None) is None]
+                    for model in top_level:
+                        if _is_glb_like_model(model):
+                            return model
+                    for model in opened:
+                        if _is_glb_like_model(model):
+                            return model
+                except Exception:
+                    pass
+            try:
+                from chimerax.gltf.gltf import write_gltf
+
+                fd, temp_path = tempfile.mkstemp(prefix="cb_attach_glb_", suffix=".glb")
+                os.close(fd)
+                write_gltf(session, filename=temp_path, models=[src])
+                before = set(session.models.list())
+                _run(session, f'open "{temp_path}"')
+                opened = [m for m in session.models.list() if m not in before]
+                top_level = [m for m in opened if getattr(m, "parent", None) is None]
+                for model in top_level:
+                    if _is_glb_like_model(model):
+                        try:
+                            model._cb_temp_copy_path = temp_path
+                        except Exception:
+                            pass
+                        return model
+                for model in opened:
+                    if _is_glb_like_model(model):
+                        try:
+                            model._cb_temp_copy_path = temp_path
+                        except Exception:
+                            pass
+                        return model
+            except Exception:
+                pass
         try:
             return _copy_gltf_tree(session, src)
         except Exception:

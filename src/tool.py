@@ -1206,6 +1206,32 @@ class CiliaBuilder2Tool(ToolInstance):
                 except Exception:
                     pass
 
+    def _apply_source_color_state_to_attached_result(self, out_root, source_color_state):
+        if out_root is None:
+            return
+        source_root_name = ""
+        for entry in source_color_state or []:
+            if isinstance(entry, dict) and list(entry.get("path", []) or []) == []:
+                source_root_name = str(entry.get("name", "") or "").strip()
+                break
+        try:
+            children = list(out_root.child_models())
+        except Exception:
+            children = []
+        targets = children if children else [out_root]
+        for target in targets:
+            self._apply_model_color_state(target, source_color_state)
+            if source_root_name:
+                try:
+                    child_models = list(target.child_models())
+                except Exception:
+                    child_models = []
+                for child in child_models:
+                    child_name = str(getattr(child, "name", "") or "").strip()
+                    if child_name == source_root_name:
+                        self._apply_model_color_state(child, source_color_state)
+                        break
+
     def _candidate_model_paths(self, model):
         paths = []
         seen = set()
@@ -5126,6 +5152,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 map_model = self._find_model_by_name(item.get("map_name"), require_star=False)
             if map_model is None or not self._is_attach_source(map_model):
                 continue
+            source_color_state = self._capture_model_color_state(map_model)
             try:
                 self._zero_map_origin_index(map_model)
             except Exception:
@@ -5155,6 +5182,7 @@ class CiliaBuilder2Tool(ToolInstance):
             )
             if out_root is None:
                 continue
+            self._apply_source_color_state_to_attached_result(out_root, source_color_state)
             try:
                 out_root._cb_attachment_line_rotation = line_rotation
                 out_root._cb_attachment_y_rotation = y_rotation
@@ -5733,6 +5761,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if not self._is_attach_source(map_model):
             raise RuntimeError(f"Model #{map_id} is not a map/STL/GLB/PDB/CIF attach source")
 
+        source_color_state = self._capture_model_color_state(map_model)
         self._zero_map_origin_index(map_model)
 
         star_id = str(star_id)
@@ -5765,6 +5794,7 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_x_movement=float(self.attach_x_movement.value()),
             attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
         )
+        self._apply_source_color_state_to_attached_result(out_root, source_color_state)
         try:
             out_root._cb_attachment_line_rotation = float(self.attach_line_rotation.value())
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
