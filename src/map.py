@@ -65,6 +65,51 @@ def _iter_model_tree(model_obj):
         yield from _iter_model_tree(child)
 
 
+def _candidate_model_paths(model_obj):
+    paths = []
+    seen = set()
+
+    def add_path(value):
+        if not value:
+            return
+        try:
+            norm = os.path.abspath(os.path.expanduser(str(value)))
+        except Exception:
+            return
+        if not norm or norm in seen:
+            return
+        seen.add(norm)
+        paths.append(norm)
+
+    for node in _iter_model_tree(model_obj):
+        for attr in ("path", "filename"):
+            try:
+                add_path(getattr(node, attr, None))
+            except Exception:
+                pass
+        try:
+            data = getattr(node, "data", None)
+            add_path(getattr(data, "path", None))
+        except Exception:
+            pass
+        try:
+            grid = getattr(node, "grid_data", None)
+            add_path(getattr(grid, "path", None))
+        except Exception:
+            pass
+        try:
+            for extra in getattr(node, "_cb_saved_session_paths", []) or []:
+                add_path(extra)
+        except Exception:
+            pass
+    return paths
+
+
+def _model_source_path(model_obj):
+    paths = _candidate_model_paths(model_obj)
+    return paths[0] if paths else None
+
+
 def _is_glb_like_model(model_obj):
     if model_obj is None:
         return False
@@ -255,17 +300,7 @@ def _copy_source_instance(session, src):
     if _is_glb_like_model(src):
         cls_name = src.__class__.__name__.lower()
         if "gltf" in cls_name or "glb" in cls_name:
-            path = getattr(src, "path", None)
-            if not path:
-                try:
-                    path = src.data.path
-                except Exception:
-                    path = None
-            if not path:
-                try:
-                    path = src.filename
-                except Exception:
-                    path = None
+            path = _model_source_path(src)
             if path and os.path.exists(str(path)):
                 try:
                     before = set(session.models.list())
@@ -358,17 +393,7 @@ def _copy_source_instance(session, src):
                 pass
 
     # 3 reopen from path
-    path = getattr(src, "path", None)
-    if not path:
-        try:
-            path = src.data.path
-        except Exception:
-            path = None
-    if not path:
-        try:
-            path = src.filename
-        except Exception:
-            path = None
+    path = _model_source_path(src)
 
     if path:
         try:
