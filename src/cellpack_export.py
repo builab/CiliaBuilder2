@@ -549,17 +549,17 @@ class _CellPackExporter:
         except Exception:
             anchor = {
                 "star_model": None,
-                "center": [0.0, 0.0, 0.0],
+                "axis_center": [0.0, 0.0, 0.0],
                 "axis": [0.0, 0.0, 1.0],
                 "start_scalar": 0.0,
             }
 
         axis = self._safe_unit_vector(anchor.get("axis", (0.0, 0.0, 1.0)))
-        center = self._safe_xyz(anchor.get("center", (0.0, 0.0, 0.0)))
-        center_scalar = self._dot(center, axis)
+        axis_center = self._safe_xyz(anchor.get("axis_center", (0.0, 0.0, 0.0)))
+        center_scalar = self._dot(axis_center, axis)
         start_scalar = float(anchor.get("start_scalar", 0.0) or 0.0) + offset
         start_center = [
-            center[i] + (axis[i] * (start_scalar - center_scalar))
+            axis_center[i] + (axis[i] * (start_scalar - center_scalar))
             for i in range(3)
         ]
         membrane_center = [

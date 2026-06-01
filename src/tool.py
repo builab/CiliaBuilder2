@@ -420,13 +420,13 @@ class CiliaBuilder2Tool(ToolInstance):
         self.radius = TypedOnlyDoubleSpinBox(main)
         self.radius.setRange(0.0, 1e9)
         self.radius.setDecimals(2)
-        self.radius.setValue(700.0)
+        self.radius.setValue(960.0)
         outer_row_spin("Radius", self.radius)
 
         self.spacing = TypedOnlyDoubleSpinBox(main)
         self.spacing.setRange(0.0, 1e9)
         self.spacing.setDecimals(2)
-        self.spacing.setValue(960.0)
+        self.spacing.setValue(1000.0)
         outer_row_spin("Periodicity (spacing)", self.spacing)
 
         self.doublet_offset = TypedOnlyDoubleSpinBox(main)
@@ -460,7 +460,7 @@ class CiliaBuilder2Tool(ToolInstance):
         outer_btn_lay.addWidget(cont_outer_btn)
         outer_tab_layout.addWidget(outer_btn_row)
         outer_tab_layout.addStretch(1)
-        panels.addTab(outer_tab, "Filaments")
+        panels.addTab(outer_tab, "Microtubules")
 
         # Central pair panel
         cent_box = QGroupBox("Central pair", main)
@@ -477,13 +477,13 @@ class CiliaBuilder2Tool(ToolInstance):
         self.centriole_length = TypedOnlyDoubleSpinBox(main)
         self.centriole_length.setRange(0.0, 1e9)
         self.centriole_length.setDecimals(2)
-        self.centriole_length.setValue(2000.0)
+        self.centriole_length.setValue(9000.0)
         cent_row_spin("Length", self.centriole_length)
 
         self.centriole_spacing = TypedOnlyDoubleSpinBox(main)
         self.centriole_spacing.setRange(0.0, 1e9)
         self.centriole_spacing.setDecimals(2)
-        self.centriole_spacing.setValue(320.0)
+        self.centriole_spacing.setValue(333.0)
         cent_row_spin("Periodicity (spacing)", self.centriole_spacing)
 
         self.centriole_z_offset = TypedOnlyDoubleSpinBox(main)
@@ -545,13 +545,13 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_radius = TypedOnlyDoubleSpinBox(main)
         self.membrane_radius.setRange(0.0, 1e9)
         self.membrane_radius.setDecimals(2)
-        self.membrane_radius.setValue(800.0)
+        self.membrane_radius.setValue(1350.0)
         mem_row_spin("Radius", self.membrane_radius)
 
         self.membrane_thickness = TypedOnlyDoubleSpinBox(main)
         self.membrane_thickness.setRange(0.0, 1e9)
         self.membrane_thickness.setDecimals(2)
-        self.membrane_thickness.setValue(100.0)
+        self.membrane_thickness.setValue(40.0)
         mem_row_spin("Thickness", self.membrane_thickness)
 
         self.membrane_offset = TypedOnlyDoubleSpinBox(main)
@@ -563,7 +563,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
         self.membrane_distortion.setRange(0.0, 10.0)
         self.membrane_distortion.setDecimals(2)
-        self.membrane_distortion.setValue(1.0)
+        self.membrane_distortion.setValue(0.60)
         mem_row_spin("Distortion level", self.membrane_distortion)
 
         self.membrane_particle_receptors_pct = TypedOnlyDoubleSpinBox(main)
@@ -680,13 +680,13 @@ class CiliaBuilder2Tool(ToolInstance):
         self.ift_distance = TypedOnlyDoubleSpinBox(main)
         self.ift_distance.setRange(-1e9, 1e9)
         self.ift_distance.setDecimals(2)
-        self.ift_distance.setValue(900.0)
+        self.ift_distance.setValue(1250.0)
         ift_row_spin("Distance from STAR center", self.ift_distance)
 
         self.ift_anterograde_angle = TypedOnlyDoubleSpinBox(main)
         self.ift_anterograde_angle.setRange(-360.0, 360.0)
         self.ift_anterograde_angle.setDecimals(2)
-        self.ift_anterograde_angle.setValue(5.0)
+        self.ift_anterograde_angle.setValue(-5.0)
         self.ift_anterograde_angle_row = ift_row_spin("Anterograde angle (deg)", self.ift_anterograde_angle)
 
         self.ift_retrograde_angle = TypedOnlyDoubleSpinBox(main)
@@ -718,26 +718,31 @@ class CiliaBuilder2Tool(ToolInstance):
         self.ift_train_doublet = NumericLineEdit(train_page)
         self.ift_train_doublet.setPlaceholderText("required")
         self.ift_train_doublet.setValidator(QIntValidator(1, 10**9, self.ift_train_doublet))
-        train_row_widget("Filament number", self.ift_train_doublet)
+        self.ift_train_doublet.setText("3")
+        train_row_widget("Microtubule number", self.ift_train_doublet)
 
         self.ift_train_angle = NumericLineEdit(train_page)
         self.ift_train_angle.setPlaceholderText("required")
         self.ift_train_angle.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_angle))
+        self.ift_train_angle.setText("0")
         train_row_widget("Angle (deg)", self.ift_train_angle)
 
         self.ift_train_offset = NumericLineEdit(train_page)
         self.ift_train_offset.setPlaceholderText("required")
         self.ift_train_offset.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_offset))
+        self.ift_train_offset.setText("1500")
         train_row_widget("Offset", self.ift_train_offset)
 
         self.ift_train_periodicity = NumericLineEdit(train_page)
         self.ift_train_periodicity.setPlaceholderText("required")
         self.ift_train_periodicity.setValidator(QDoubleValidator(0.0, 1e9, 6, self.ift_train_periodicity))
+        self.ift_train_periodicity.setText("65")
         train_row_widget("Periodicity", self.ift_train_periodicity)
 
         self.ift_train_repeat = NumericLineEdit(train_page)
         self.ift_train_repeat.setPlaceholderText("required")
         self.ift_train_repeat.setValidator(QIntValidator(1, 10**9, self.ift_train_repeat))
+        self.ift_train_repeat.setText("10")
         train_row_widget("Repeating number", self.ift_train_repeat)
 
         train_btn_row = QWidget(train_page)
@@ -804,10 +809,12 @@ class CiliaBuilder2Tool(ToolInstance):
 
         load_cellpack_btn = QPushButton("Load cellPACK", btn_row)
         load_cellpack_btn.clicked.connect(self._load_cellpack_package)
+        load_cellpack_btn.hide()
         btn_lay.addWidget(load_cellpack_btn)
 
         export_cellpack_btn = QPushButton("Export cellPACK package", btn_row)
         export_cellpack_btn.clicked.connect(self._export_cellpack_package)
+        export_cellpack_btn.hide()
         btn_lay.addWidget(export_cellpack_btn)
 
         align_box = QGroupBox("Auto Z-align map/model", session_page)
@@ -876,6 +883,16 @@ class CiliaBuilder2Tool(ToolInstance):
         self.sel_map_model.currentIndexChanged.connect(self._on_attach_selector_changed)
         map_lay.addWidget(self.sel_map_model, 1)
         attach_select_lay.addWidget(map_row)
+
+        attach_auto_z_row = QWidget(main)
+        attach_auto_z_lay = QHBoxLayout(attach_auto_z_row)
+        attach_auto_z_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_auto_z_align = QCheckBox("Auto Z-align map/model before attach", attach_auto_z_row)
+        self.attach_auto_z_align.setChecked(False)
+        self.attach_auto_z_align.toggled.connect(self._reattach_with_current_settings)
+        attach_auto_z_lay.addWidget(self.attach_auto_z_align)
+        attach_auto_z_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_auto_z_row)
 
         attach_rot_row = QWidget(main)
         attach_rot_lay = QHBoxLayout(attach_rot_row)
@@ -1662,11 +1679,28 @@ class CiliaBuilder2Tool(ToolInstance):
         m = self._xy90_adjust_matrix()
         return m.T @ self._rot_y_matrix(deg) @ m
 
-    def _current_attach_adjust_matrix(self):
+    def _attach_auto_z_align_enabled(self):
+        return bool(self.attach_auto_z_align.isChecked()) if hasattr(self, "attach_auto_z_align") else False
+
+    def _attach_auto_z_align_matrix(self, source_model):
+        from .map import _rotation_align_vector_to_vector
+
+        axis = self._auto_z_alignment_axis_local(source_model)
+        target_axis = np.array([0.0, 0.0, 1.0], dtype=float)
+        return np.array(_rotation_align_vector_to_vector(axis, target_axis), dtype=float)
+
+    def _current_attach_adjust_matrix(self, source_model=None, y_deg=None, auto_z_align=None):
         adjust = np.eye(3, dtype=float)
-        y_deg = float(self.attach_y_rotation.value())
+        if auto_z_align is None:
+            auto_z_align = self._attach_auto_z_align_enabled()
+        if bool(auto_z_align):
+            if source_model is None:
+                raise RuntimeError("Auto Z-align before attach needs a valid source model")
+            adjust = self._attach_auto_z_align_matrix(source_model) @ adjust
+        if y_deg is None:
+            y_deg = float(self.attach_y_rotation.value())
         if abs(y_deg) > 1e-12:
-            adjust = adjust @ self._y_control_matrix(y_deg)
+            adjust = self._y_control_matrix(y_deg) @ adjust
         return adjust
 
     def _model_parent(self, model):
@@ -3762,7 +3796,7 @@ class CiliaBuilder2Tool(ToolInstance):
             if star_model is None or not hasattr(star_model, "_cb_star_rows"):
                 raise RuntimeError("Target STAR model for the IFT train is not available")
 
-            tube_id = self._required_int_edit(self.ift_train_doublet, "Filament number")
+            tube_id = self._required_int_edit(self.ift_train_doublet, "Microtubule number")
             base_angle_deg = self._required_float_edit(self.ift_train_angle, "Angle")
             offset_ang = self._required_float_edit(self.ift_train_offset, "Offset")
             periodicity_ang = self._required_float_edit(self.ift_train_periodicity, "Periodicity")
@@ -4141,7 +4175,6 @@ class CiliaBuilder2Tool(ToolInstance):
             return center, axis, 0.0, 0.0
 
         by_tube = {}
-        all_points = []
         direction_vectors = []
         for row in rows:
             try:
@@ -4149,7 +4182,6 @@ class CiliaBuilder2Tool(ToolInstance):
             except Exception:
                 tid = 0
             point = self._row_world_center(row)
-            all_points.append(point)
             by_tube.setdefault(tid, []).append(point)
 
         axis = np.array([0.0, 0.0, 1.0], dtype=float)
@@ -4166,20 +4198,30 @@ class CiliaBuilder2Tool(ToolInstance):
             norm = float(np.linalg.norm(axis))
             axis = (axis / norm) if norm > 1e-9 else np.array([0.0, 0.0, 1.0], dtype=float)
 
-        coords = np.array(all_points, dtype=float)
-        center = coords.mean(axis=0) if len(coords) else np.zeros(3, dtype=float)
-        scalars = [float(np.dot(np.array(p, dtype=float), axis)) for p in all_points]
-        if not scalars:
+        all_scalars = []
+        tube_centers = []
+        for points in by_tube.values():
+            if not points:
+                continue
+            pts = np.array(points, dtype=float)
+            tube_centers.append(pts.mean(axis=0))
+            all_scalars.extend(float(np.dot(p, axis)) for p in pts)
+
+        if tube_centers:
+            center = np.array(tube_centers, dtype=float).mean(axis=0)
+        else:
+            center = np.zeros(3, dtype=float)
+        if not all_scalars:
             return center, axis, 0.0, 0.0
-        return center, axis, float(min(scalars)), float(max(scalars))
+        return center, axis, float(min(all_scalars)), float(max(all_scalars))
 
     def _membrane_anchor_info(self):
         star_model = self._last_outer_star_model
-        center = np.zeros(3, dtype=float)
+        axis_center = np.zeros(3, dtype=float)
         axis = np.array([0.0, 0.0, 1.0], dtype=float)
         start_scalar = 0.0
         if star_model is not None and hasattr(star_model, "_cb_star_rows"):
-            center, axis, start_scalar, _end_scalar = self._star_axis_span_info(star_model)
+            axis_center, axis, start_scalar, _end_scalar = self._star_axis_span_info(star_model)
             clip_info = self._star_random_clip_info(star_model)
             if clip_info is not None:
                 axis = np.array(clip_info["axis"], dtype=float)
@@ -4188,7 +4230,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 start_scalar = float(clip_info["clip_start"])
         return {
             "star_model": star_model,
-            "center": center,
+            "axis_center": axis_center,
             "axis": axis,
             "start_scalar": float(start_scalar),
         }
@@ -4816,6 +4858,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
                         "x_movement": float(getattr(out_root, "_cb_attachment_x_movement", 0.0) or 0.0),
+                        "auto_z_align": bool(getattr(out_root, "_cb_attachment_auto_z_align", False)),
                         "display": bool(getattr(out_root, "display", True)),
                         "color_state": self._capture_model_color_state(out_root),
                     }
@@ -4867,6 +4910,7 @@ class CiliaBuilder2Tool(ToolInstance):
             "attach_line_rotation": float(self.attach_line_rotation.value()),
             "attach_y_rotation": float(self.attach_y_rotation.value()),
             "attach_x_movement": float(self.attach_x_movement.value()),
+            "attach_auto_z_align": bool(self.attach_auto_z_align.isChecked()) if hasattr(self, "attach_auto_z_align") else False,
             "pixel_size": float(self.pixel_size.value()),
             "align_z_model": self._combo_state(self.align_z_model) if hasattr(self, "align_z_model") else {"id": None, "text": ""},
             "align_z_save_path": self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
@@ -4953,6 +4997,8 @@ class CiliaBuilder2Tool(ToolInstance):
         self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
         self.attach_x_movement.setValue(float(state.get("attach_x_movement", self.attach_x_movement.value())))
+        if hasattr(self, "attach_auto_z_align"):
+            self.attach_auto_z_align.setChecked(bool(state.get("attach_auto_z_align", self.attach_auto_z_align.isChecked())))
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
         if hasattr(self, "align_z_save_path"):
             self.align_z_save_path.setText(str(state.get("align_z_save_path", self.align_z_save_path.text()) or ""))
@@ -5161,7 +5207,12 @@ class CiliaBuilder2Tool(ToolInstance):
             line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
             y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
             x_movement = float(item.get("x_movement", 0.0) or 0.0)
-            adjust_matrix = self._y_control_matrix(y_rotation).tolist() if abs(y_rotation) > 1e-12 else np.eye(3, dtype=float).tolist()
+            auto_z_align = bool(item.get("auto_z_align", False))
+            adjust_matrix = self._current_attach_adjust_matrix(
+                source_model=map_model,
+                y_deg=y_rotation,
+                auto_z_align=auto_z_align,
+            ).tolist()
 
             out_root = cbsubmap_impl(
                 session=self.session,
@@ -5187,6 +5238,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 out_root._cb_attachment_line_rotation = line_rotation
                 out_root._cb_attachment_y_rotation = y_rotation
                 out_root._cb_attachment_x_movement = x_movement
+                out_root._cb_attachment_auto_z_align = auto_z_align
                 out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
                 out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
@@ -5619,10 +5671,10 @@ class CiliaBuilder2Tool(ToolInstance):
             axis = np.array(anchor["axis"], dtype=float)
             axis_norm = float(np.linalg.norm(axis))
             axis = axis / axis_norm if axis_norm > 1e-9 else np.array([0.0, 0.0, 1.0], dtype=float)
-            center = np.array(anchor["center"], dtype=float)
-            center_scalar = float(np.dot(center, axis))
+            axis_center = np.array(anchor.get("axis_center", (0.0, 0.0, 0.0)), dtype=float)
+            center_scalar = float(np.dot(axis_center, axis))
             start_scalar = float(anchor["start_scalar"]) + offset
-            start_center = center + axis * (start_scalar - center_scalar)
+            start_center = axis_center + axis * (start_scalar - center_scalar)
             membrane_center = start_center + axis * (0.5 * length)
 
             model = cmd.buildmembrane_surface(
@@ -5642,6 +5694,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 state["distortion_level"] = float(distortion_level)
                 state["radius"] = float(radius)
                 state["source_star_name"] = str(getattr(anchor.get("star_model", None), "name", "") or "")
+                state["start_scalar"] = float(start_scalar)
                 model._cb_membrane_state = state
             except Exception:
                 pass
@@ -5763,6 +5816,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
         source_color_state = self._capture_model_color_state(map_model)
         self._zero_map_origin_index(map_model)
+        auto_z_align = self._attach_auto_z_align_enabled()
 
         star_id = str(star_id)
         map_id = str(map_id)
@@ -5792,13 +5846,17 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_axis_rot_y_deg=0.0,
             attach_axis_rot_z_deg=-90.0,
             attach_x_movement=float(self.attach_x_movement.value()),
-            attach_local_adjust_matrix=self._current_attach_adjust_matrix().tolist(),
+            attach_local_adjust_matrix=self._current_attach_adjust_matrix(
+                source_model=map_model,
+                auto_z_align=auto_z_align,
+            ).tolist(),
         )
         self._apply_source_color_state_to_attached_result(out_root, source_color_state)
         try:
             out_root._cb_attachment_line_rotation = float(self.attach_line_rotation.value())
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
             out_root._cb_attachment_x_movement = float(self.attach_x_movement.value())
+            out_root._cb_attachment_auto_z_align = auto_z_align
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)
