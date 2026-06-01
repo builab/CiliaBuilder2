@@ -1,0 +1,21 @@
+# Script to align EMD-15980 (IFT-A) so the longitudinal axis parallel to the Z axis
+# Reset the session
+close all
+
+# Fetch the map from EMDB
+open emdb:15980
+
+# Copy volume
+volume copy #1
+
+# Rotate around z
+roll z 183.4 1 models #2; wait;
+
+# Rotate around y
+roll y 90 1 models #2; wait;
+
+# Resample to keep the rotated volume
+volume resample #2 onGrid #1
+
+# Save rotated volume
+save ~/Desktop/emd_15980_zaligned.mrc models #3
