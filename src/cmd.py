@@ -369,6 +369,32 @@ def _annulus_cap_triangles(outer_ring, inner_ring, reverse=False):
     return tris
 
 
+def _ring_strip_triangles(lower_ring, upper_ring, reverse=False):
+    tris = []
+    nc = min(len(lower_ring), len(upper_ring))
+    for i in range(nc):
+        j = (i + 1) % nc
+        if reverse:
+            tris.append((lower_ring[i], upper_ring[j], lower_ring[j]))
+            tris.append((lower_ring[i], upper_ring[i], upper_ring[j]))
+        else:
+            tris.append((lower_ring[i], lower_ring[j], upper_ring[j]))
+            tris.append((lower_ring[i], upper_ring[j], upper_ring[i]))
+    return tris
+
+
+def _ring_pole_triangles(ring, pole_index, reverse=False):
+    tris = []
+    nc = len(ring)
+    for i in range(nc):
+        j = (i + 1) % nc
+        if reverse:
+            tris.append((ring[i], pole_index, ring[j]))
+        else:
+            tris.append((ring[i], ring[j], pole_index))
+    return tris
+
+
 def buildmembrane_surface(
     session,
     name,
@@ -379,6 +405,9 @@ def buildmembrane_surface(
     thickness,
     distortion_level=1.0,
     distortion_seed=None,
+    tip_dome_enabled=False,
+    tip_dome_outer_height=None,
+    tip_dome_inner_height=None,
     color=(180, 180, 190, 180),
 ):
     from chimerax.core.models import Surface
@@ -400,6 +429,19 @@ def buildmembrane_surface(
     inner_radius = max(1e-6, outer_radius - thickness)
     if inner_radius >= outer_radius:
         raise ValueError("Membrane thickness must be smaller than half the diameter")
+    tip_dome_enabled = bool(tip_dome_enabled)
+    outer_cap_height = (
+        max(float(outer_radius), float(tip_dome_outer_height))
+        if tip_dome_enabled and tip_dome_outer_height is not None
+        else float(outer_radius)
+    )
+    inner_cap_height = (
+        max(1e-6, float(tip_dome_inner_height))
+        if tip_dome_enabled and tip_dome_inner_height is not None
+        else max(1e-6, float(outer_cap_height) - float(thickness))
+    )
+    if inner_cap_height >= outer_cap_height:
+        inner_cap_height = max(1e-6, float(outer_cap_height) - max(1e-6, 0.5 * float(thickness)))
 
     nc = max(32, int(math.ceil((2.0 * math.pi * outer_radius) / 80.0)))
     nz = max(2, int(math.ceil(length / max(80.0, thickness))))
@@ -419,12 +461,72 @@ def buildmembrane_surface(
     inner_top = [inner_top_start + i for i in range(0, nc)]
 
     bottom_tris = _annulus_cap_triangles(outer_bottom, inner_bottom, reverse=True)
-    top_tris = _annulus_cap_triangles(outer_top, inner_top, reverse=False)
+    extra_vertices = []
+    outer_cap_extra_range = None
+    inner_cap_extra_range = None
+    top_tris = []
+    if tip_dome_enabled:
+        base_top_z = 0.5 * length
+
+        def append_ring(radius_value, z_value):
+            start = len(outer_v) + len(inner_v) + len(extra_vertices)
+            for ring_index in range(nc):
+                theta = (2.0 * math.pi * float(ring_index)) / float(nc)
+                extra_vertices.append(
+                    (
+                        float(radius_value) * math.cos(theta),
+                        float(radius_value) * math.sin(theta),
+                        float(z_value),
+                    )
+                )
+            return list(range(start, start + nc))
+
+        def append_pole(z_value):
+            pole_index = len(outer_v) + len(inner_v) + len(extra_vertices)
+            extra_vertices.append((0.0, 0.0, float(z_value)))
+            return pole_index
+
+        outer_cap_extra_start = len(extra_vertices)
+        outer_cap_steps = max(4, int(math.ceil(max(outer_radius, outer_cap_height) / 80.0)))
+        prev_outer_ring = outer_top
+        for step_index in range(1, outer_cap_steps):
+            frac = float(step_index) / float(outer_cap_steps)
+            phi = 0.5 * math.pi * (1.0 - frac)
+            ring_radius = outer_radius * math.sin(phi)
+            ring_z = base_top_z + outer_cap_height * math.cos(phi)
+            next_outer_ring = append_ring(ring_radius, ring_z)
+            top_tris.extend(_ring_strip_triangles(prev_outer_ring, next_outer_ring, reverse=False))
+            prev_outer_ring = next_outer_ring
+        outer_pole = append_pole(base_top_z + outer_cap_height)
+        top_tris.extend(_ring_pole_triangles(prev_outer_ring, outer_pole, reverse=False))
+        outer_cap_extra_range = (outer_cap_extra_start, len(extra_vertices))
+
+        inner_cap_extra_start = len(extra_vertices)
+        inner_cap_steps = max(4, int(math.ceil(max(inner_radius, inner_cap_height) / 80.0)))
+        prev_inner_ring = inner_top
+        for step_index in range(1, inner_cap_steps):
+            frac = float(step_index) / float(inner_cap_steps)
+            phi = 0.5 * math.pi * (1.0 - frac)
+            ring_radius = inner_radius * math.sin(phi)
+            ring_z = base_top_z + inner_cap_height * math.cos(phi)
+            next_inner_ring = append_ring(ring_radius, ring_z)
+            top_tris.extend(_ring_strip_triangles(prev_inner_ring, next_inner_ring, reverse=True))
+            prev_inner_ring = next_inner_ring
+        inner_pole = append_pole(base_top_z + inner_cap_height)
+        top_tris.extend(_ring_pole_triangles(prev_inner_ring, inner_pole, reverse=True))
+        inner_cap_extra_range = (inner_cap_extra_start, len(extra_vertices))
+    else:
+        top_tris = _annulus_cap_triangles(outer_top, inner_top, reverse=False)
 
     if distortion_seed is None:
         distortion_seed = int(np.random.default_rng().integers(0, 2**31 - 1))
 
     vertices = np.concatenate((outer_v, inner_v), axis=0).astype(np.float32)
+    if extra_vertices:
+        vertices = np.concatenate(
+            (vertices, np.array(extra_vertices, dtype=np.float32)),
+            axis=0,
+        )
     rng = np.random.default_rng(distortion_seed)
     radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
     axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
@@ -458,19 +560,38 @@ def buildmembrane_surface(
         axial_wave /= float(len(distortion_modes))
         return radial_wave.astype(np.float32), axial_wave.astype(np.float32)
 
-    def distort(verts):
+    def distort(verts, cap_height=None):
         radial_wave, axial_wave = field(verts)
         xy = verts[:, :2]
         radii = np.linalg.norm(xy, axis=1)
         radial_dir = np.zeros_like(xy)
         mask = radii > 1e-6
         radial_dir[mask] = xy[mask] / radii[mask, None]
-        verts[:, :2] += radial_dir * (radial_amp * radial_wave)[:, None]
-        verts[:, 2] += axial_amp * axial_wave
+        taper = np.ones(len(verts), dtype=np.float32)
+        if cap_height is not None and float(cap_height) > 1e-6:
+            cap_progress = np.clip((verts[:, 2] - (0.5 * length)) / float(cap_height), 0.0, 1.0)
+            taper = (1.0 - (cap_progress * cap_progress * (3.0 - 2.0 * cap_progress))).astype(np.float32)
+        verts[:, :2] += radial_dir * (radial_amp * radial_wave * taper)[:, None]
+        verts[:, 2] += axial_amp * axial_wave * taper
         return verts
 
-    vertices[:len(outer_v)] = distort(vertices[:len(outer_v)])
-    vertices[len(outer_v):] = distort(vertices[len(outer_v):])
+    outer_vertex_count = len(outer_v)
+    inner_vertex_count = len(inner_v)
+    body_end = outer_vertex_count + inner_vertex_count
+    vertices[:outer_vertex_count] = distort(vertices[:outer_vertex_count])
+    vertices[outer_vertex_count:body_end] = distort(vertices[outer_vertex_count:body_end])
+    if outer_cap_extra_range is not None:
+        start, end = outer_cap_extra_range
+        vertices[body_end + start:body_end + end] = distort(
+            vertices[body_end + start:body_end + end],
+            cap_height=outer_cap_height,
+        )
+    if inner_cap_extra_range is not None:
+        start, end = inner_cap_extra_range
+        vertices[body_end + start:body_end + end] = distort(
+            vertices[body_end + start:body_end + end],
+            cap_height=inner_cap_height,
+        )
     triangles = np.concatenate(
         (
             np.array(outer_t, dtype=np.int32),
@@ -505,6 +626,9 @@ def buildmembrane_surface(
         "thickness": float(thickness),
         "distortion_level": float(distortion_level),
         "distortion_seed": int(distortion_seed),
+        "tip_dome_enabled": bool(tip_dome_enabled),
+        "tip_dome_outer_height": float(outer_cap_height) if tip_dome_enabled else None,
+        "tip_dome_inner_height": float(inner_cap_height) if tip_dome_enabled else None,
     }
     _add_to_cb_membrane_group(session, surface)
     return surface

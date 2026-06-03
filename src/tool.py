@@ -566,6 +566,15 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_distortion.setValue(0.60)
         mem_row_spin("Distortion level", self.membrane_distortion)
 
+        membrane_tip_dome_row = QWidget(main)
+        membrane_tip_dome_lay = QHBoxLayout(membrane_tip_dome_row)
+        membrane_tip_dome_lay.setContentsMargins(0, 0, 0, 0)
+        self.membrane_tip_dome = QCheckBox("Tip dome cap", membrane_tip_dome_row)
+        self.membrane_tip_dome.setChecked(False)
+        membrane_tip_dome_lay.addWidget(self.membrane_tip_dome)
+        membrane_tip_dome_lay.addStretch(1)
+        mem_layout.addWidget(membrane_tip_dome_row)
+
         self.membrane_particle_receptors_pct = TypedOnlyDoubleSpinBox(main)
         self.membrane_particle_receptors_pct.setRange(0.0, 100.0)
         self.membrane_particle_receptors_pct.setDecimals(2)
@@ -807,6 +816,10 @@ class CiliaBuilder2Tool(ToolInstance):
         load_session_btn.clicked.connect(self._load_session_json)
         btn_lay.addWidget(load_session_btn)
 
+        load_star_btn = QPushButton("Load STAR file", btn_row)
+        load_star_btn.clicked.connect(self._load_star_file)
+        btn_lay.addWidget(load_star_btn)
+
         load_cellpack_btn = QPushButton("Load cellPACK", btn_row)
         load_cellpack_btn.clicked.connect(self._load_cellpack_package)
         load_cellpack_btn.hide()
@@ -884,16 +897,6 @@ class CiliaBuilder2Tool(ToolInstance):
         map_lay.addWidget(self.sel_map_model, 1)
         attach_select_lay.addWidget(map_row)
 
-        attach_auto_z_row = QWidget(main)
-        attach_auto_z_lay = QHBoxLayout(attach_auto_z_row)
-        attach_auto_z_lay.setContentsMargins(0, 0, 0, 0)
-        self.attach_auto_z_align = QCheckBox("Auto Z-align map/model before attach", attach_auto_z_row)
-        self.attach_auto_z_align.setChecked(False)
-        self.attach_auto_z_align.toggled.connect(self._reattach_with_current_settings)
-        attach_auto_z_lay.addWidget(self.attach_auto_z_align)
-        attach_auto_z_lay.addStretch(1)
-        attach_select_lay.addWidget(attach_auto_z_row)
-
         attach_rot_row = QWidget(main)
         attach_rot_lay = QHBoxLayout(attach_rot_row)
         attach_rot_lay.setContentsMargins(0, 0, 0, 0)
@@ -922,30 +925,44 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_y_lay.addStretch(1)
         attach_select_lay.addWidget(attach_y_row)
 
-        attach_x_move_row = QWidget(main)
-        attach_x_move_lay = QHBoxLayout(attach_x_move_row)
-        attach_x_move_lay.setContentsMargins(0, 0, 0, 0)
-        attach_x_move_lay.addWidget(QLabel("Attachment X movement", attach_x_move_row))
-        self.attach_x_movement = TypedOnlyDoubleSpinBox(attach_x_move_row)
-        self.attach_x_movement.setRange(-1e9, 1e9)
-        self.attach_x_movement.setDecimals(2)
-        self.attach_x_movement.setSingleStep(10.0)
-        self.attach_x_movement.setValue(0.0)
-        self.attach_x_movement.valueChanged.connect(self._reattach_with_current_settings)
-        attach_x_move_lay.addWidget(self.attach_x_movement)
-        attach_x_move_lay.addStretch(1)
-        attach_select_lay.addWidget(attach_x_move_row)
-
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
         self.attach_selected_btn = QPushButton("Attach selected STAR + map", sel_btn_row)
         self.attach_selected_btn.clicked.connect(self._attach_selected_models)
         sel_btn_lay.addWidget(self.attach_selected_btn)
+        self.undo_last_attachment_btn = QPushButton("Undo last attachment", sel_btn_row)
+        self.undo_last_attachment_btn.clicked.connect(self._undo_last_attachment)
+        self.undo_last_attachment_btn.setEnabled(False)
+        sel_btn_lay.addWidget(self.undo_last_attachment_btn)
         sel_btn_lay.addStretch(1)
         attach_select_lay.addWidget(sel_btn_row)
 
         attach_controls_layout.addWidget(attach_select)
+        attach_advanced = QGroupBox("Advanced options", attach_controls_page)
+        attach_advanced.setCheckable(True)
+        attach_advanced.setChecked(False)
+        attach_advanced_lay = QVBoxLayout(attach_advanced)
+
+        attach_advanced_content = QWidget(attach_advanced)
+        attach_advanced_content_lay = QVBoxLayout(attach_advanced_content)
+        attach_advanced_content_lay.setContentsMargins(0, 0, 0, 0)
+
+        attach_y90_row = QWidget(main)
+        attach_y90_lay = QHBoxLayout(attach_y90_row)
+        attach_y90_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_pre_rotate_y_90 = QCheckBox("Rotate model 90 deg clockwise around Y before attach", attach_y90_row)
+        self.attach_pre_rotate_y_90.setChecked(False)
+        self.attach_pre_rotate_y_90.toggled.connect(self._reattach_with_current_settings)
+        attach_y90_lay.addWidget(self.attach_pre_rotate_y_90)
+        attach_y90_lay.addStretch(1)
+        attach_advanced_content_lay.addWidget(attach_y90_row)
+
+        attach_advanced_lay.addWidget(attach_advanced_content)
+        attach_advanced.toggled.connect(attach_advanced_content.setVisible)
+        attach_advanced_content.setVisible(False)
+
+        attach_controls_layout.addWidget(attach_advanced)
         attach_controls_layout.addStretch(1)
 
         marker_page = QWidget(attach_page)
@@ -1030,12 +1047,21 @@ class CiliaBuilder2Tool(ToolInstance):
         draw_layout.addWidget(draw_btn_row)
 
         marker_apply_row = QWidget(marker_page)
-        marker_apply_lay = QHBoxLayout(marker_apply_row)
+        marker_apply_lay = QVBoxLayout(marker_apply_row)
         marker_apply_lay.setContentsMargins(0, 0, 0, 0)
-        self.marker_pattern_star_btn = QPushButton("Replicate marker path onto STAR", marker_apply_row)
-        self.marker_pattern_star_btn.clicked.connect(self._start_marker_pattern_star_pick_mode)
-        marker_apply_lay.addWidget(self.marker_pattern_star_btn)
-        marker_apply_lay.addStretch(1)
+        marker_apply_select_row = QWidget(marker_apply_row)
+        marker_apply_select_lay = QHBoxLayout(marker_apply_select_row)
+        marker_apply_select_lay.setContentsMargins(0, 0, 0, 0)
+        marker_apply_select_lay.addWidget(QLabel("Drawing model", marker_apply_select_row))
+        self.geometric_draw_model = RefreshingComboBox(self._refresh_model_selectors, marker_apply_select_row)
+        self.geometric_draw_model.setMinimumContentsLength(18)
+        self.geometric_draw_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.geometric_draw_model.currentIndexChanged.connect(self._update_marker_path_buttons)
+        marker_apply_select_lay.addWidget(self.geometric_draw_model, 1)
+        marker_apply_lay.addWidget(marker_apply_select_row)
+        self.geometric_draw_save_glb_btn = QPushButton("Save drawing as GLB", marker_apply_row)
+        self.geometric_draw_save_glb_btn.clicked.connect(self._save_selected_geometric_drawing_glb)
+        marker_apply_lay.addWidget(self.geometric_draw_save_glb_btn)
         draw_layout.addWidget(marker_apply_row)
 
         self.marker_path_status = QLabel("Press button, then click in ChimeraX to draw", draw_box)
@@ -1118,7 +1144,7 @@ class CiliaBuilder2Tool(ToolInstance):
             dw.setFloating(True)
             dw.setAttribute(Qt.WA_DeleteOnClose, False)
             dw.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            dw.resize(560, 450)
+            dw.resize(500, 450)
             dw.show()
         except Exception:
             pass
@@ -1337,6 +1363,7 @@ class CiliaBuilder2Tool(ToolInstance):
         source_id = str(item.get("session_source_id", "") or "").strip()
         if source_id:
             store[("source_id", source_id)] = model
+            self._remember_restored_session_layout_model("source", source_id, model)
 
         name = str(item.get("name", "") or "").strip()
         if name:
@@ -1385,6 +1412,7 @@ class CiliaBuilder2Tool(ToolInstance):
         star_id = str(item.get("session_star_id", "") or "").strip()
         if star_id:
             store[("star_id", star_id)] = model
+            self._remember_restored_session_layout_model("star", star_id, model)
 
         name = str(item.get("name", "") or "").strip()
         if name:
@@ -1405,6 +1433,326 @@ class CiliaBuilder2Tool(ToolInstance):
             if model is not None:
                 return model
         return None
+
+    def _remember_restored_session_layout_model(self, model_type, model_id, model):
+        model_key = str(model_id or "").strip()
+        if model is None or not model_key:
+            return
+        store = getattr(self, "_restored_session_layout_models", None)
+        if store is None:
+            store = {}
+            self._restored_session_layout_models = store
+        store[(str(model_type or "").strip().lower(), model_key)] = model
+
+    def _restored_session_layout_model(self, model_type, model_id):
+        store = getattr(self, "_restored_session_layout_models", None) or {}
+        model_key = str(model_id or "").strip()
+        if not model_key:
+            return None
+        return store.get((str(model_type or "").strip().lower(), model_key))
+
+    def _cb_root_model(self):
+        for model in self.session.models.list():
+            if getattr(model, "_cb_root", False):
+                return model
+        return None
+
+    def _cb_group_model(self, tag):
+        root = self._cb_root_model()
+        if root is None:
+            return None
+        try:
+            children = list(root.child_models())
+        except Exception:
+            children = []
+        for child in children:
+            if getattr(child, "_cb_group_tag", None) == tag:
+                return child
+        return None
+
+    def _saved_source_item_model(self, item):
+        source_id = str(item.get("session_source_id", "") or "").strip()
+        if source_id:
+            model = self._model_by_ref(source_id)
+            if model is not None:
+                return model
+        path = item.get("path", None)
+        if path:
+            model = self._find_model_by_path(path)
+            if model is not None:
+                return model
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            model = self._find_model_by_name(name, require_star=False)
+            if model is not None:
+                return model
+        return None
+
+    def _saved_star_item_model(self, item):
+        star_id = str(item.get("session_star_id", "") or "").strip()
+        if star_id:
+            model = self._model_by_ref(star_id)
+            if model is not None:
+                return model
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            model = self._find_model_by_name(name, require_star=True)
+            if model is not None:
+                return model
+        return None
+
+    def _saved_membrane_item_model(self, item):
+        membrane_id = str(item.get("session_membrane_id", "") or "").strip()
+        if membrane_id:
+            model = self._model_by_ref(membrane_id)
+            if model is not None:
+                return model
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            for model in self._all_session_models():
+                if getattr(model, "_cb_membrane_state", None) and str(getattr(model, "name", "") or "") == name:
+                    return model
+        return None
+
+    def _saved_marker_path_item_model(self, item):
+        marker_id = str(item.get("session_marker_path_id", "") or "").strip()
+        if marker_id:
+            model = self._model_by_ref(marker_id)
+            if model is not None:
+                return model
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            for model in self._all_session_models():
+                if getattr(model, "_cb_marker_path_state", None) and str(getattr(model, "name", "") or "") == name:
+                    return model
+        return None
+
+    def _saved_attachment_item_model(self, item):
+        attachment_id = str(item.get("session_attachment_id", "") or "").strip()
+        if attachment_id:
+            model = self._model_by_ref(attachment_id)
+            if model is not None:
+                return model
+        name = str(item.get("name", "") or "").strip()
+        if name:
+            for model in self._all_session_models():
+                if getattr(model, "_cb_generated_attached", False) and str(getattr(model, "name", "") or "") == name:
+                    return model
+        return None
+
+    def _saved_session_content_lookup(
+        self,
+        attach_sources,
+        generated_star_models,
+        generated_membranes,
+        generated_marker_paths,
+        attachments,
+    ):
+        lookup = {}
+        for item in attach_sources or []:
+            model = self._saved_source_item_model(item)
+            model_id = str(item.get("session_source_id", "") or "").strip()
+            if model is None or not model_id:
+                continue
+            lookup[id(model)] = {"model_type": "source", "model_id": model_id}
+        for item in generated_star_models or []:
+            model = self._saved_star_item_model(item)
+            model_id = str(item.get("session_star_id", "") or "").strip()
+            if model is None or not model_id:
+                continue
+            lookup[id(model)] = {"model_type": "star", "model_id": model_id}
+        for item in generated_membranes or []:
+            model = self._saved_membrane_item_model(item)
+            model_id = str(item.get("session_membrane_id", "") or "").strip()
+            if model is None or not model_id:
+                continue
+            lookup[id(model)] = {"model_type": "membrane", "model_id": model_id}
+        for item in generated_marker_paths or []:
+            model = self._saved_marker_path_item_model(item)
+            model_id = str(item.get("session_marker_path_id", "") or "").strip()
+            if model is None or not model_id:
+                continue
+            lookup[id(model)] = {"model_type": "marker_path", "model_id": model_id}
+        for item in attachments or []:
+            model = self._saved_attachment_item_model(item)
+            model_id = str(item.get("session_attachment_id", "") or "").strip()
+            if model is None or not model_id:
+                continue
+            lookup[id(model)] = {"model_type": "attachment", "model_id": model_id}
+        return lookup
+
+    def _session_model_structure_state(
+        self,
+        attach_sources,
+        generated_star_models,
+        generated_membranes,
+        generated_marker_paths,
+        attachments,
+    ):
+        root = self._cb_root_model()
+        if root is None:
+            return {"nodes": []}
+
+        content_lookup = self._saved_session_content_lookup(
+            attach_sources,
+            generated_star_models,
+            generated_membranes,
+            generated_marker_paths,
+            attachments,
+        )
+        wrapper_ids = {}
+        nodes = []
+        wrapper_counter = 0
+
+        def wrapper_id_for(model):
+            nonlocal wrapper_counter
+            wid = wrapper_ids.get(id(model), None)
+            if wid is None:
+                wrapper_counter += 1
+                wid = f"wrapper_{wrapper_counter}"
+                wrapper_ids[id(model)] = wid
+            return wid
+
+        def parent_ref_for(model):
+            if model is None:
+                return {"kind": "root"}
+            if getattr(model, "_cb_root", False):
+                return {"kind": "root"}
+            tag = getattr(model, "_cb_group_tag", None)
+            if tag in ("star_models", "maps", "membrane"):
+                return {"kind": "group", "tag": str(tag)}
+            wid = wrapper_ids.get(id(model), None)
+            if wid is not None:
+                return {"kind": "wrapper", "id": wid}
+            return None
+
+        def walk(parent):
+            try:
+                children = list(parent.child_models())
+            except Exception:
+                children = []
+            for order, child in enumerate(children):
+                tag = getattr(child, "_cb_group_tag", None)
+                if tag in ("star_models", "maps", "membrane"):
+                    walk(child)
+                    continue
+                pref = parent_ref_for(parent)
+                if pref is None:
+                    continue
+                content_info = content_lookup.get(id(child), None)
+                if content_info is not None:
+                    nodes.append(
+                        {
+                            "node_kind": "model",
+                            "model_type": str(content_info["model_type"]),
+                            "model_id": str(content_info["model_id"]),
+                            "parent": pref,
+                            "order": int(order),
+                        }
+                    )
+                    continue
+                wrapper_id = wrapper_id_for(child)
+                nodes.append(
+                    {
+                        "node_kind": "wrapper",
+                        "wrapper_id": wrapper_id,
+                        "name": str(getattr(child, "name", "Group") or "Group"),
+                        "display": bool(getattr(child, "display", True)),
+                        "parent": pref,
+                        "order": int(order),
+                    }
+                )
+                walk(child)
+
+        walk(root)
+        return {"nodes": nodes}
+
+    def _restore_session_model_structure(self, structure_state):
+        from chimerax.core.models import Model
+
+        if not isinstance(structure_state, dict):
+            return
+        nodes = structure_state.get("nodes", None) or []
+        if not nodes:
+            return
+        root = self._cb_root_model()
+        if root is None:
+            return
+
+        def ref_key(ref):
+            if not isinstance(ref, dict):
+                return ("root", "")
+            kind = str(ref.get("kind", "root") or "root").strip().lower()
+            if kind == "group":
+                return ("group", str(ref.get("tag", "") or ""))
+            if kind == "wrapper":
+                return ("wrapper", str(ref.get("id", "") or ""))
+            return ("root", "")
+
+        children_by_parent = {}
+        for entry in nodes:
+            children_by_parent.setdefault(ref_key(entry.get("parent", {"kind": "root"})), []).append(entry)
+
+        wrapper_models = {}
+
+        def resolve_parent(ref):
+            if not isinstance(ref, dict):
+                return root
+            kind = str(ref.get("kind", "root") or "root").strip().lower()
+            if kind == "group":
+                return self._cb_group_model(ref.get("tag", None))
+            if kind == "wrapper":
+                return wrapper_models.get(str(ref.get("id", "") or ""), None)
+            return root
+
+        def materialize_entry(entry):
+            node_kind = str(entry.get("node_kind", "model") or "model").strip().lower()
+            if node_kind == "wrapper":
+                wrapper_id = str(entry.get("wrapper_id", "") or "").strip()
+                if not wrapper_id:
+                    return None
+                model = wrapper_models.get(wrapper_id, None)
+                if model is None:
+                    model = Model(str(entry.get("name", "Group") or "Group"), self.session)
+                    model._cb_attach_source = False
+                    model._cb_saved_structure_wrapper = True
+                    wrapper_models[wrapper_id] = model
+                try:
+                    model.display = bool(entry.get("display", True))
+                except Exception:
+                    pass
+                return model
+            return self._restored_session_layout_model(entry.get("model_type", None), entry.get("model_id", None))
+
+        def apply_children(parent_ref):
+            parent_model = resolve_parent(parent_ref)
+            if parent_model is None:
+                return
+            entries = list(children_by_parent.get(ref_key(parent_ref), []))
+            entries.sort(
+                key=lambda entry: (
+                    int(entry.get("order", 0) or 0),
+                    str(entry.get("name", "") or ""),
+                    str(entry.get("model_id", "") or ""),
+                )
+            )
+            for entry in entries:
+                child_model = materialize_entry(entry)
+                if child_model is None or child_model is parent_model:
+                    continue
+                try:
+                    parent_model.add([child_model])
+                except Exception:
+                    try:
+                        self.session.models.add([child_model], parent=parent_model)
+                    except Exception:
+                        pass
+                if str(entry.get("node_kind", "model") or "model").strip().lower() == "wrapper":
+                    apply_children({"kind": "wrapper", "id": entry.get("wrapper_id", "")})
+
+        apply_children({"kind": "root"})
+        for tag in ("star_models", "maps", "membrane"):
+            apply_children({"kind": "group", "tag": tag})
 
     def _session_copy_name(self, model, session_stem, ext):
         import re
@@ -1661,6 +2009,17 @@ class CiliaBuilder2Tool(ToolInstance):
             dtype=float,
         )
 
+    def _rot_x_matrix(self, deg):
+        a = math.radians(float(deg))
+        c = math.cos(a)
+        s = math.sin(a)
+        return np.array(
+            [[1.0, 0.0, 0.0],
+             [0.0, c, -s],
+             [0.0, s,  c]],
+            dtype=float,
+        )
+
     def _rot_z_matrix(self, deg):
         a = math.radians(float(deg))
         c = math.cos(a)
@@ -1679,24 +2038,18 @@ class CiliaBuilder2Tool(ToolInstance):
         m = self._xy90_adjust_matrix()
         return m.T @ self._rot_y_matrix(deg) @ m
 
-    def _attach_auto_z_align_enabled(self):
-        return bool(self.attach_auto_z_align.isChecked()) if hasattr(self, "attach_auto_z_align") else False
+    def _attach_pre_rotate_y_90_enabled(self):
+        return bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False
 
-    def _attach_auto_z_align_matrix(self, source_model):
-        from .map import _rotation_align_vector_to_vector
+    def _attach_pre_rotate_y_90_matrix(self):
+        return self._rot_y_matrix(-90.0)
 
-        axis = self._auto_z_alignment_axis_local(source_model)
-        target_axis = np.array([0.0, 0.0, 1.0], dtype=float)
-        return np.array(_rotation_align_vector_to_vector(axis, target_axis), dtype=float)
-
-    def _current_attach_adjust_matrix(self, source_model=None, y_deg=None, auto_z_align=None):
+    def _current_attach_adjust_matrix(self, y_deg=None, pre_rotate_y_90=None):
         adjust = np.eye(3, dtype=float)
-        if auto_z_align is None:
-            auto_z_align = self._attach_auto_z_align_enabled()
-        if bool(auto_z_align):
-            if source_model is None:
-                raise RuntimeError("Auto Z-align before attach needs a valid source model")
-            adjust = self._attach_auto_z_align_matrix(source_model) @ adjust
+        if pre_rotate_y_90 is None:
+            pre_rotate_y_90 = self._attach_pre_rotate_y_90_enabled()
+        if bool(pre_rotate_y_90):
+            adjust = self._attach_pre_rotate_y_90_matrix() @ adjust
         if y_deg is None:
             y_deg = float(self.attach_y_rotation.value())
         if abs(y_deg) > 1e-12:
@@ -1797,6 +2150,23 @@ class CiliaBuilder2Tool(ToolInstance):
     def _attach_key(self, star_model, map_model):
         return (id(star_model), id(map_model))
 
+    def _latest_attached_result(self):
+        live_items = []
+        latest = None
+        for attach_key, out_root in list(getattr(self, "_attached_results", {}).items()):
+            if out_root is None or self._model_ref(out_root) is None:
+                continue
+            live_items.append((attach_key, out_root))
+            latest = out_root
+        if len(live_items) != len(getattr(self, "_attached_results", {})):
+            self._attached_results = dict(live_items)
+        return latest
+
+    def _update_attachment_undo_button(self):
+        if not hasattr(self, "undo_last_attachment_btn"):
+            return
+        self.undo_last_attachment_btn.setEnabled(self._latest_attached_result() is not None)
+
     def _register_star_model(self, model):
         if model is None:
             return
@@ -1891,6 +2261,7 @@ class CiliaBuilder2Tool(ToolInstance):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         marker_target_current = self.marker_target_model.currentData() if hasattr(self, "marker_target_model") else None
+        geometric_draw_current = self.geometric_draw_model.currentData() if hasattr(self, "geometric_draw_model") else None
         align_z_current = self.align_z_model.currentData() if hasattr(self, "align_z_model") else None
         star_has_models = False
         map_has_models = False
@@ -1993,6 +2364,29 @@ class CiliaBuilder2Tool(ToolInstance):
             self.marker_target_model.setEnabled(True)
             self.marker_target_model.blockSignals(False)
 
+        if hasattr(self, "geometric_draw_model"):
+            self.geometric_draw_model.blockSignals(True)
+            self.geometric_draw_model.clear()
+            self.geometric_draw_model.addItem("None", None)
+            draw_has_models = False
+            for m in self._generated_geometric_drawing_models():
+                ref = self._model_ref(m)
+                if ref is None:
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.geometric_draw_model.addItem(label, str(ref))
+                draw_has_models = True
+            if geometric_draw_current is not None:
+                idx = self.geometric_draw_model.findData(str(geometric_draw_current))
+                if idx >= 0:
+                    self.geometric_draw_model.setCurrentIndex(idx)
+                else:
+                    self.geometric_draw_model.setCurrentIndex(1 if self.geometric_draw_model.count() > 1 else 0)
+            else:
+                self.geometric_draw_model.setCurrentIndex(1 if self.geometric_draw_model.count() > 1 else 0)
+            self.geometric_draw_model.setEnabled(draw_has_models)
+            self.geometric_draw_model.blockSignals(False)
+
         if hasattr(self, "tweak_open_model"):
             tweak_current = self.tweak_open_model.currentData()
             self.tweak_open_model.blockSignals(True)
@@ -2046,7 +2440,9 @@ class CiliaBuilder2Tool(ToolInstance):
 
         if hasattr(self, "attach_selected_btn"):
             self.attach_selected_btn.setEnabled(star_has_models and map_has_models)
+        self._update_attachment_undo_button()
         self._on_attach_selector_changed()
+        self._update_marker_path_buttons()
 
     def _marker_placeable_models(self):
         seen = set()
@@ -2073,8 +2469,39 @@ class CiliaBuilder2Tool(ToolInstance):
                 continue
             if self._is_generated_marker_path_model(child):
                 continue
+            if bool(getattr(child, "_cb_saved_structure_wrapper", False)):
+                continue
             seen.add(id(child))
             yield child
+
+    def _generated_geometric_drawing_models(self):
+        candidates = []
+        for model in self._all_session_models():
+            try:
+                state = getattr(model, "_cb_marker_path_state", None) or {}
+                if not state:
+                    continue
+                if bool(getattr(model, "_cb_generated_marker_path_temp", False)):
+                    continue
+                control_points = state.get("control_points", None) or []
+                if not control_points:
+                    continue
+                try:
+                    creation_index = int(state.get("creation_index", 0) or 0)
+                except Exception:
+                    creation_index = 0
+                candidates.append(
+                    (
+                        creation_index,
+                        str(getattr(model, "name", "") or ""),
+                        model,
+                    )
+                )
+            except Exception:
+                continue
+        candidates.sort(key=lambda item: (int(item[0]), item[1]))
+        for _creation_index, _name, model in candidates:
+            yield model
 
     def _select_star_model(self, model):
         self._refresh_model_selectors()
@@ -2084,6 +2511,40 @@ class CiliaBuilder2Tool(ToolInstance):
         idx = self.sel_star_model.findData(str(ref))
         if idx >= 0:
             self.sel_star_model.setCurrentIndex(idx)
+
+    def _next_loaded_star_name(self, base_name):
+        base = str(base_name or "").strip() or "Loaded STAR"
+        used = {
+            str(getattr(model, "name", "") or "")
+            for model in self._all_session_models()
+            if hasattr(model, "_cb_star_rows")
+        }
+        if base not in used:
+            return base
+        index = 2
+        while True:
+            candidate = f"{base} {index}"
+            if candidate not in used:
+                return candidate
+            index += 1
+
+    def _remember_loaded_star_role(self, model):
+        rows = getattr(model, "_cb_star_rows", None) or []
+        if not rows:
+            return
+        tube_ids = set()
+        for row in rows:
+            try:
+                tube_ids.add(int(float(row.get("rlnHelicalTubeID", 0) or 0)))
+            except Exception:
+                continue
+        positive_ids = sorted(tid for tid in tube_ids if tid > 0)
+        model_name = str(getattr(model, "name", "") or "").strip().lower()
+        if "central pair" in model_name or (positive_ids and all(tid >= 100 for tid in positive_ids)):
+            self._last_cent_star_model = model
+            return
+        if "microtubule" in model_name:
+            self._last_outer_star_model = model
 
     def _update_ift_type_visibility(self):
         if not hasattr(self, "ift_type"):
@@ -2951,9 +3412,12 @@ class CiliaBuilder2Tool(ToolInstance):
             same_mode_active = bool(self._marker_path_pick_pending and active_mode == current_mode)
             self.geometric_draw_pick_btn.setText("Cancel drawing" if same_mode_active else self._geometric_draw_button_text(current_mode))
             self.geometric_draw_pick_btn.setEnabled((not self._marker_path_pick_pending) or same_mode_active)
-        if hasattr(self, "marker_pattern_star_btn"):
-            self.marker_pattern_star_btn.setText("Replicate marker path onto STAR")
-            self.marker_pattern_star_btn.setEnabled(not self._marker_path_pick_pending)
+        if hasattr(self, "geometric_draw_save_glb_btn"):
+            has_model = bool(
+                hasattr(self, "geometric_draw_model")
+                and self.geometric_draw_model.currentData() is not None
+            )
+            self.geometric_draw_save_glb_btn.setEnabled((not self._marker_path_pick_pending) and has_model)
         self._update_geometric_draw_controls()
 
     def _ensure_marker_path_pick_handler(self):
@@ -3113,6 +3577,62 @@ class CiliaBuilder2Tool(ToolInstance):
                 f"({len(getattr(created, '_cb_star_rows', None) or [])} STAR points, {len(auto_paths)} auto paths). "
                 "Use the normal map attachment section to attach your model."
             )
+            self._refresh_model_selectors()
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
+
+    def _selected_geometric_drawing_model(self):
+        model_id = self.geometric_draw_model.currentData() if hasattr(self, "geometric_draw_model") else None
+        if model_id is None:
+            raise RuntimeError("Select a geometric drawing model first")
+        model = self._model_by_ref(model_id)
+        if model is None or not getattr(model, "_cb_marker_path_state", None):
+            raise RuntimeError("Select a geometric drawing model first")
+        return model
+
+    def _save_selected_geometric_drawing_glb(self):
+        from Qt.QtWidgets import QFileDialog, QMessageBox
+
+        try:
+            if self._marker_path_pick_pending:
+                raise RuntimeError("Finish or cancel drawing first")
+            drawing_model = self._selected_geometric_drawing_model()
+            default_name = self._session_copy_name(drawing_model, "drawing", ".glb")
+            path, _ = QFileDialog.getSaveFileName(
+                self.tool_window.ui_area,
+                "Save geometric drawing as GLB",
+                default_name,
+                "GLB files (*.glb);;All files (*)",
+            )
+            if not path:
+                return
+            if not str(path).lower().endswith(".glb"):
+                path = f"{path}.glb"
+            out_path = os.path.abspath(os.path.expanduser(str(path)))
+            out_dir = os.path.dirname(out_path)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
+            self._export_live_model_copy_for_session(drawing_model, out_path, ".glb")
+            self._store_model_saved_path(drawing_model, out_path)
+
+            before = set(self.session.models.list())
+            _run(self.session, f'open "{out_path}"')
+            opened = [m for m in self.session.models.list() if m not in before]
+            opened_model = self._choose_opened_source_model(opened)
+            if opened_model is not None:
+                self._store_model_saved_path(opened_model, out_path)
+                self._select_map_model(opened_model)
+            self._set_marker_path_status(f"Saved GLB: {os.path.basename(out_path)}")
+            if opened_model is not None:
+                self.session.logger.info(
+                    f"Saved geometric drawing {drawing_model.name} as GLB: {out_path}. "
+                    f"Opened attachable model {opened_model.name}."
+                )
+            else:
+                self.session.logger.info(f"Saved geometric drawing {drawing_model.name} as GLB: {out_path}.")
             self._refresh_model_selectors()
         except Exception as e:
             self.session.logger.error(str(e))
@@ -4235,6 +4755,67 @@ class CiliaBuilder2Tool(ToolInstance):
             "start_scalar": float(start_scalar),
         }
 
+    def _model_bounds_scalar_range(self, model, axis):
+        if model is None:
+            return None
+        try:
+            bounds = model.bounds()
+        except Exception:
+            bounds = None
+        if bounds is None:
+            return None
+        try:
+            mn = np.array([float(v) for v in bounds.xyz_min], dtype=float)
+            mx = np.array([float(v) for v in bounds.xyz_max], dtype=float)
+        except Exception:
+            return None
+        corners = np.array(
+            [
+                [mn[0], mn[1], mn[2]],
+                [mn[0], mn[1], mx[2]],
+                [mn[0], mx[1], mn[2]],
+                [mn[0], mx[1], mx[2]],
+                [mx[0], mn[1], mn[2]],
+                [mx[0], mn[1], mx[2]],
+                [mx[0], mx[1], mn[2]],
+                [mx[0], mx[1], mx[2]],
+            ],
+            dtype=float,
+        )
+        scalars = corners @ np.array(axis, dtype=float)
+        return float(np.min(scalars)), float(np.max(scalars))
+
+    def _membrane_tip_dome_heights(self, star_model, axis, tip_scalar, radius, thickness):
+        outer_height = max(float(radius), float(thickness))
+        dome_margin = max(5.0, 0.5 * float(thickness))
+        target_star_ref = self._model_ref(star_model) if star_model is not None else None
+        if target_star_ref is None:
+            inner_height = max(0.25 * float(thickness), float(outer_height) - float(thickness))
+            return float(outer_height), float(inner_height)
+
+        seen = set()
+        tip_max_scalar = None
+        for out_root in getattr(self, "_attached_results", {}).values():
+            if out_root is None or id(out_root) in seen:
+                continue
+            seen.add(id(out_root))
+            star_ref = getattr(out_root, "_cb_attachment_star_ref", None)
+            if star_ref is None:
+                star_ref = getattr(out_root, "_cb_attached_star_ref", None)
+            if target_star_ref is not None and str(star_ref) != str(target_star_ref):
+                continue
+            scalar_range = self._model_bounds_scalar_range(out_root, axis)
+            if scalar_range is None:
+                continue
+            _min_scalar, max_scalar = scalar_range
+            if tip_max_scalar is None or max_scalar > tip_max_scalar:
+                tip_max_scalar = max_scalar
+
+        if tip_max_scalar is not None:
+            outer_height = max(outer_height, float(tip_max_scalar) - float(tip_scalar) + dome_margin)
+        inner_height = max(0.25 * float(thickness), float(outer_height) - float(thickness))
+        return float(outer_height), float(inner_height)
+
     def _star_random_clip_info(self, star_model):
         stored = getattr(star_model, "_cb_random_clip_info", None)
         if isinstance(stored, dict):
@@ -4754,6 +5335,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     continue
                 out.append(
                     {
+                        "session_membrane_id": self._model_ref(model) or f"membrane_{len(out)+1}",
                         "name": str(getattr(model, "name", "Membrane") or "Membrane"),
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
@@ -4773,6 +5355,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     continue
                 out.append(
                     {
+                        "session_marker_path_id": self._model_ref(model) or f"marker_path_{len(out)+1}",
                         "name": str(getattr(model, "name", "Marker path") or "Marker path"),
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
@@ -4847,6 +5430,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         fetch_spec = {"fetch_type": fetch_type, "fetch_id": fetch_id}
                 items.append(
                     {
+                        "session_attachment_id": self._model_ref(out_root) or f"attachment_{len(items)+1}",
                         "name": str(getattr(out_root, "name", "") or ""),
                         "star_session_id": getattr(out_root, "_cb_attachment_star_session_id", None) or getattr(out_root, "_cb_attachment_star_ref", None),
                         "source_session_id": getattr(out_root, "_cb_attachment_source_session_id", None) or source_ref,
@@ -4857,8 +5441,17 @@ class CiliaBuilder2Tool(ToolInstance):
                         "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
-                        "x_movement": float(getattr(out_root, "_cb_attachment_x_movement", 0.0) or 0.0),
-                        "auto_z_align": bool(getattr(out_root, "_cb_attachment_auto_z_align", False)),
+                        "pre_rotate_y_90": bool(
+                            getattr(
+                                out_root,
+                                "_cb_attachment_pre_rotate_y_90",
+                                getattr(
+                                    out_root,
+                                    "_cb_attachment_pre_rotate_x_90",
+                                    getattr(out_root, "_cb_attachment_auto_z_align", False),
+                                ),
+                            )
+                        ),
                         "display": bool(getattr(out_root, "display", True)),
                         "color_state": self._capture_model_color_state(out_root),
                     }
@@ -4886,6 +5479,7 @@ class CiliaBuilder2Tool(ToolInstance):
             "membrane_thickness": float(self.membrane_thickness.value()),
             "membrane_offset": float(self.membrane_offset.value()),
             "membrane_distortion": float(self.membrane_distortion.value()),
+            "membrane_tip_dome": bool(self.membrane_tip_dome.isChecked()),
             "membrane_particle_receptors_pct": float(self.membrane_particle_receptors_pct.value()),
             "membrane_particle_channels_pct": float(self.membrane_particle_channels_pct.value()),
             "membrane_particle_signaling_pct": float(self.membrane_particle_signaling_pct.value()),
@@ -4909,8 +5503,8 @@ class CiliaBuilder2Tool(ToolInstance):
             "ift_train_repeat": self.ift_train_repeat.text().strip(),
             "attach_line_rotation": float(self.attach_line_rotation.value()),
             "attach_y_rotation": float(self.attach_y_rotation.value()),
-            "attach_x_movement": float(self.attach_x_movement.value()),
-            "attach_auto_z_align": bool(self.attach_auto_z_align.isChecked()) if hasattr(self, "attach_auto_z_align") else False,
+            "attach_x_movement": 0.0,
+            "attach_pre_rotate_y_90": bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False,
             "pixel_size": float(self.pixel_size.value()),
             "align_z_model": self._combo_state(self.align_z_model) if hasattr(self, "align_z_model") else {"id": None, "text": ""},
             "align_z_save_path": self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
@@ -4946,6 +5540,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_thickness.setValue(float(state.get("membrane_thickness", self.membrane_thickness.value())))
         self.membrane_offset.setValue(float(state.get("membrane_offset", self.membrane_offset.value())))
         self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
+        self.membrane_tip_dome.setChecked(bool(state.get("membrane_tip_dome", self.membrane_tip_dome.isChecked())))
         self.membrane_particle_receptors_pct.setValue(
             float(state.get("membrane_particle_receptors_pct", self.membrane_particle_receptors_pct.value()))
         )
@@ -4996,9 +5591,18 @@ class CiliaBuilder2Tool(ToolInstance):
             self.ift_train_repeat.setText(str(state.get("ift_train_repeat", "") or ""))
         self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
-        self.attach_x_movement.setValue(float(state.get("attach_x_movement", self.attach_x_movement.value())))
-        if hasattr(self, "attach_auto_z_align"):
-            self.attach_auto_z_align.setChecked(bool(state.get("attach_auto_z_align", self.attach_auto_z_align.isChecked())))
+        if hasattr(self, "attach_pre_rotate_y_90"):
+            self.attach_pre_rotate_y_90.setChecked(
+                bool(
+                    state.get(
+                        "attach_pre_rotate_y_90",
+                        state.get(
+                            "attach_pre_rotate_x_90",
+                            state.get("attach_auto_z_align", self.attach_pre_rotate_y_90.isChecked()),
+                        ),
+                    )
+                )
+            )
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
         if hasattr(self, "align_z_save_path"):
             self.align_z_save_path.setText(str(state.get("align_z_save_path", self.align_z_save_path.text()) or ""))
@@ -5050,11 +5654,13 @@ class CiliaBuilder2Tool(ToolInstance):
         for item in models_state or []:
             state = item.get("state", None) or {}
             name = str(item.get("name", "") or "").strip() or "Membrane"
+            session_membrane_id = str(item.get("session_membrane_id", "") or "").strip()
             if not state:
                 continue
             exists = False
             for model in self.session.models.list():
                 if getattr(model, "_cb_generated_membrane", False) and str(getattr(model, "name", "") or "") == name:
+                    self._remember_restored_session_layout_model("membrane", session_membrane_id, model)
                     exists = True
                     break
             if exists:
@@ -5070,6 +5676,9 @@ class CiliaBuilder2Tool(ToolInstance):
                     thickness=float(state.get("thickness", 1.0)),
                     distortion_level=float(state.get("distortion_level", 1.0) or 0.0),
                     distortion_seed=state.get("distortion_seed", None),
+                    tip_dome_enabled=bool(state.get("tip_dome_enabled", False)),
+                    tip_dome_outer_height=state.get("tip_dome_outer_height", None),
+                    tip_dome_inner_height=state.get("tip_dome_inner_height", None),
                 )
                 try:
                     created_state = getattr(created, "_cb_membrane_state", None) or {}
@@ -5077,6 +5686,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     created._cb_membrane_state = created_state
                 except Exception:
                     pass
+                self._remember_restored_session_layout_model("membrane", session_membrane_id, created)
                 self._apply_model_color_state(created, item.get("color_state", []))
                 created.display = bool(item.get("display", True))
             except Exception:
@@ -5088,6 +5698,7 @@ class CiliaBuilder2Tool(ToolInstance):
         for item in models_state or []:
             state = item.get("state", None) or {}
             name = str(item.get("name", "") or "").strip() or "Marker path"
+            session_marker_path_id = str(item.get("session_marker_path_id", "") or "").strip()
             control_points = state.get("control_points", None) or []
             path_mode = str(state.get("path_mode", "curve") or "curve")
             display_mode = str(state.get("display_mode", "") or "").strip().lower()
@@ -5097,6 +5708,7 @@ class CiliaBuilder2Tool(ToolInstance):
             exists = False
             for model in self._all_session_models():
                 if getattr(model, "_cb_marker_path_state", None) and str(getattr(model, "name", "") or "") == name:
+                    self._remember_restored_session_layout_model("marker_path", session_marker_path_id, model)
                     exists = True
                     break
             if exists:
@@ -5124,6 +5736,7 @@ class CiliaBuilder2Tool(ToolInstance):
                     created._cb_marker_path_state = created_state
                 except Exception:
                     pass
+                self._remember_restored_session_layout_model("marker_path", session_marker_path_id, created)
                 self._apply_model_color_state(created, item.get("color_state", []))
                 created.display = bool(item.get("display", True))
             except Exception:
@@ -5206,12 +5819,15 @@ class CiliaBuilder2Tool(ToolInstance):
 
             line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
             y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
-            x_movement = float(item.get("x_movement", 0.0) or 0.0)
-            auto_z_align = bool(item.get("auto_z_align", False))
+            pre_rotate_y_90 = bool(
+                item.get(
+                    "pre_rotate_y_90",
+                    item.get("pre_rotate_x_90", item.get("auto_z_align", False)),
+                )
+            )
             adjust_matrix = self._current_attach_adjust_matrix(
-                source_model=map_model,
                 y_deg=y_rotation,
-                auto_z_align=auto_z_align,
+                pre_rotate_y_90=pre_rotate_y_90,
             ).tolist()
 
             out_root = cbsubmap_impl(
@@ -5228,7 +5844,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 attach_updown_flip=False,
                 attach_axis_rot_y_deg=0.0,
                 attach_axis_rot_z_deg=-90.0,
-                attach_x_movement=x_movement,
+                attach_x_movement=0.0,
                 attach_local_adjust_matrix=adjust_matrix,
             )
             if out_root is None:
@@ -5237,8 +5853,8 @@ class CiliaBuilder2Tool(ToolInstance):
             try:
                 out_root._cb_attachment_line_rotation = line_rotation
                 out_root._cb_attachment_y_rotation = y_rotation
-                out_root._cb_attachment_x_movement = x_movement
-                out_root._cb_attachment_auto_z_align = auto_z_align
+                out_root._cb_attachment_x_movement = 0.0
+                out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
                 out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
                 out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
@@ -5251,6 +5867,11 @@ class CiliaBuilder2Tool(ToolInstance):
                 out_root.display = bool(item.get("display", True))
             except Exception:
                 pass
+            self._remember_restored_session_layout_model(
+                "attachment",
+                str(item.get("session_attachment_id", "") or ""),
+                out_root,
+            )
             self._apply_model_color_state(out_root, item.get("color_state", []))
             attach_key = self._attach_key(star_model, map_model)
             self._attached_results[attach_key] = out_root
@@ -5297,9 +5918,16 @@ class CiliaBuilder2Tool(ToolInstance):
             generated_membranes = self._generated_membrane_models()
             generated_marker_paths = self._generated_marker_path_models()
             attachments = self._attachment_models_state(save_dir, session_stem, export_cache)
+            model_structure = self._session_model_structure_state(
+                attach_sources,
+                generated_star_models,
+                generated_membranes,
+                generated_marker_paths,
+                attachments,
+            )
             payload = {
                 "format": "ciliabuilder2_session",
-                "version": 4,
+                "version": 5,
                 "ui": ui_state,
                 "selected": selected_state,
                 "attach_sources": attach_sources,
@@ -5307,6 +5935,7 @@ class CiliaBuilder2Tool(ToolInstance):
                 "generated_membranes": generated_membranes,
                 "generated_marker_paths": generated_marker_paths,
                 "attachments": attachments,
+                "model_structure": model_structure,
             }
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
@@ -5336,6 +5965,7 @@ class CiliaBuilder2Tool(ToolInstance):
             base_dir = os.path.dirname(os.path.abspath(path))
             self._restored_session_sources = {}
             self._restored_session_stars = {}
+            self._restored_session_layout_models = {}
             source_items = []
             for item in payload.get("attach_sources", []) or []:
                 source_items.append(dict(item))
@@ -5375,6 +6005,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self._restore_generated_membranes(payload.get("generated_membranes", []))
             self._restore_generated_marker_paths(payload.get("generated_marker_paths", []))
             self._restore_attachments(payload.get("attachments", []))
+            self._restore_session_model_structure(payload.get("model_structure", {}))
             self._refresh_model_selectors()
 
             selected = payload.get("selected", {})
@@ -5449,6 +6080,54 @@ class CiliaBuilder2Tool(ToolInstance):
             model, info = open_local_cellpack_package(self.session, path)
             cmd._add_to_cb_map_group(self.session, model)
             cmd._log_local_cellpack_load(self.session, info)
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._refresh_model_selectors()
+            self._keep_tool_visible()
+
+    def _load_star_file(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+        from . import cmd
+        from .star import read_star_file, ciliabuilder_rows_from_text
+
+        try:
+            path, _selected_filter = QFileDialog.getOpenFileName(
+                self.tool_window.ui_area,
+                "Choose STAR file",
+                os.path.expanduser("~/"),
+                "STAR files (*.star);;All files (*)",
+            )
+            if not path:
+                return
+            star_text = read_star_file(path)
+            rows = ciliabuilder_rows_from_text(
+                star_text,
+                default_pixel_size=float(self.pixel_size.value()),
+            )
+            if not rows:
+                raise RuntimeError("STAR file contains no particle rows")
+
+            base_name = os.path.splitext(os.path.basename(str(path)))[0]
+            created = Model(self._next_loaded_star_name(base_name), self.session)
+            cmd._add_to_cb_star_group(self.session, created)
+            created._cb_star_rows = rows
+            created._cb_star_text = star_text
+            created._cb_star_path = os.path.abspath(os.path.expanduser(str(path)))
+            cmd._render_star_model(self.session, created, rows, True)
+            self._store_model_saved_path(created, created._cb_star_path)
+            self._remember_loaded_star_role(created)
+            self._select_star_model(created)
+            try:
+                created.display = True
+                created.set_selected(True)
+            except Exception:
+                pass
+            self.session.logger.info(
+                f"Loaded STAR file {created._cb_star_path} as {created.name} "
+                f"({len(rows)} STAR points)."
+            )
         except Exception as e:
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
@@ -5656,6 +6335,7 @@ class CiliaBuilder2Tool(ToolInstance):
             thickness = float(self.membrane_thickness.value())
             offset = float(self.membrane_offset.value())
             distortion_level = float(self.membrane_distortion.value())
+            tip_dome_enabled = bool(self.membrane_tip_dome.isChecked())
             diameter = 2.0 * radius
 
             if length <= 0.0:
@@ -5676,6 +6356,17 @@ class CiliaBuilder2Tool(ToolInstance):
             start_scalar = float(anchor["start_scalar"]) + offset
             start_center = axis_center + axis * (start_scalar - center_scalar)
             membrane_center = start_center + axis * (0.5 * length)
+            tip_scalar = float(start_scalar + length)
+            tip_dome_outer_height = None
+            tip_dome_inner_height = None
+            if tip_dome_enabled:
+                tip_dome_outer_height, tip_dome_inner_height = self._membrane_tip_dome_heights(
+                    anchor.get("star_model", None),
+                    axis,
+                    tip_scalar,
+                    radius,
+                    thickness,
+                )
 
             model = cmd.buildmembrane_surface(
                 self.session,
@@ -5686,6 +6377,9 @@ class CiliaBuilder2Tool(ToolInstance):
                 diameter=diameter,
                 thickness=thickness,
                 distortion_level=distortion_level,
+                tip_dome_enabled=tip_dome_enabled,
+                tip_dome_outer_height=tip_dome_outer_height,
+                tip_dome_inner_height=tip_dome_inner_height,
             )
             self._membrane_counter = getattr(self, "_membrane_counter", 0) + 1
             try:
@@ -5693,6 +6387,13 @@ class CiliaBuilder2Tool(ToolInstance):
                 state["offset"] = float(offset)
                 state["distortion_level"] = float(distortion_level)
                 state["radius"] = float(radius)
+                state["tip_dome_enabled"] = bool(tip_dome_enabled)
+                state["tip_dome_outer_height"] = (
+                    None if tip_dome_outer_height is None else float(tip_dome_outer_height)
+                )
+                state["tip_dome_inner_height"] = (
+                    None if tip_dome_inner_height is None else float(tip_dome_inner_height)
+                )
                 state["source_star_name"] = str(getattr(anchor.get("star_model", None), "name", "") or "")
                 state["start_scalar"] = float(start_scalar)
                 model._cb_membrane_state = state
@@ -5790,6 +6491,46 @@ class CiliaBuilder2Tool(ToolInstance):
         finally:
             self._keep_tool_visible()
 
+    def _undo_last_attachment(self):
+        from Qt.QtWidgets import QMessageBox
+
+        try:
+            out_root = self._latest_attached_result()
+            if out_root is None:
+                raise RuntimeError("No attached result to undo")
+            removed_name = str(getattr(out_root, "name", "") or "attached result")
+            star_ref = str(getattr(out_root, "_cb_attachment_star_ref", "") or "").strip()
+            star_name = str(getattr(out_root, "_cb_attachment_star_name", "") or "").strip()
+            star_model = self._model_by_ref(star_ref) if star_ref else None
+            if star_model is None and star_name:
+                star_model = self._find_model_by_name(star_name, require_star=True)
+            for attach_key, candidate in list(self._attached_results.items()):
+                if candidate is out_root:
+                    self._attached_results.pop(attach_key, None)
+            try:
+                self.session.models.close([out_root])
+            except Exception:
+                pass
+            if star_model is not None:
+                try:
+                    star_model.display = True
+                except Exception:
+                    pass
+            self._last_attached_result = self._latest_attached_result()
+            self._last_attach_star_id = None
+            self._last_attach_map_id = None
+            try:
+                _run(self.session, "select clear", log=False)
+            except Exception:
+                pass
+            self.session.logger.info(f"Removed most recent attachment {removed_name}.")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._refresh_model_selectors()
+            self._keep_tool_visible()
+
     def _perform_attachment(self, star_id=None, map_id=None, remember_selection=False):
         from .map import cbsubmap_impl
 
@@ -5816,7 +6557,7 @@ class CiliaBuilder2Tool(ToolInstance):
 
         source_color_state = self._capture_model_color_state(map_model)
         self._zero_map_origin_index(map_model)
-        auto_z_align = self._attach_auto_z_align_enabled()
+        pre_rotate_y_90 = self._attach_pre_rotate_y_90_enabled()
 
         star_id = str(star_id)
         map_id = str(map_id)
@@ -5845,18 +6586,17 @@ class CiliaBuilder2Tool(ToolInstance):
             attach_updown_flip=False,
             attach_axis_rot_y_deg=0.0,
             attach_axis_rot_z_deg=-90.0,
-            attach_x_movement=float(self.attach_x_movement.value()),
+            attach_x_movement=0.0,
             attach_local_adjust_matrix=self._current_attach_adjust_matrix(
-                source_model=map_model,
-                auto_z_align=auto_z_align,
+                pre_rotate_y_90=pre_rotate_y_90,
             ).tolist(),
         )
         self._apply_source_color_state_to_attached_result(out_root, source_color_state)
         try:
             out_root._cb_attachment_line_rotation = float(self.attach_line_rotation.value())
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
-            out_root._cb_attachment_x_movement = float(self.attach_x_movement.value())
-            out_root._cb_attachment_auto_z_align = auto_z_align
+            out_root._cb_attachment_x_movement = 0.0
+            out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)
