@@ -1,40 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <BundleInfo
     name="ChimeraX-CiliaBuilder2"
-    version="0.1.2"
+    version="0.1.3"
     package="ciliabuilder2"
     minSessionVersion="1"
     maxSessionVersion="999">
 
-  <Synopsis>CiliaBuilder2 command line skeleton</Synopsis>
+  <Author>Bui lab@McGill</Author>
+  <Email>huy.bui@mcgill.ca</Email>
+  <URL>https://github.com/builab/CiliaBuilder</URL>
+
+  <Synopsis>Cilia Model Builder</Synopsis>
 
   <Description>
-    Minimal working skeleton for command registration and testing.
+    Implements CiliaBuilder workflows in ChimeraX for STAR-guided cilia model
+    building, membrane generation, geometric drawing, attachment, and session
+    restore.
   </Description>
-
-  <Author>a</Author>
-  <Email>e</Email>
-  <URL>u</URL>
 
   <Categories>
     <Category name="Higher-Order Structure"/>
   </Categories>
 
-  <Tools>
-    <Tool name="CiliaBuilder2" category="General" />
-  </Tools>
-
-  <Commands>
-    <Command name="cbstraight" synopsis="Build outer cilia STAR and optionally add center centriole line"/>
-    <Command name="buildcentriole" synopsis="Build a center centriole STAR line"/>
-    <Command name="cbui" synopsis="Open CiliaBuilder2 UI"/>
-  </Commands>
-
   <Classifiers>
-    <ChimeraXClassifier>ChimeraX :: Command :: cbstraight :: General :: Build a straight test cylinder</ChimeraXClassifier>
-    <ChimeraXClassifier>ChimeraX :: Command :: buildcentriole :: General :: Substitution of starfile by a map</ChimeraXClassifier>
-    <ChimeraXClassifier>ChimeraX :: Command :: cbui :: General :: Open CiliaBuilder2 UI</ChimeraXClassifier>
-    <ChimeraXClassifier>ChimeraX :: Tool :: CiliaBuilder2 :: Higher-Order Structure :: CiliaBuilder2 UI</ChimeraXClassifier>
+    <PythonClassifier>Development Status :: 3 - Alpha</PythonClassifier>
+    <PythonClassifier>License :: Freeware</PythonClassifier>
+    <ChimeraXClassifier>ChimeraX :: Tool :: CiliaBuilder2 :: Higher-Order Structure :: Cilia Model Builder</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: cbstraight :: General :: Build microtubule STAR models</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: buildcentriole :: General :: Build central-pair STAR models</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: cbui :: General :: Open the CiliaBuilder2 tool</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: cbopenapr :: General :: Open a local cellPACK/APR package</ChimeraXClassifier>
   </Classifiers>
 
 </BundleInfo>
