@@ -14,6 +14,7 @@ def build_cilia_lines_star_rows(
     tube_id_offset=0,
     angle_set_deg=0.0,
     doublet_offset_deg=0.0,
+    twist_per_layer_deg=0.0,
     z_offset_ang=0.0,
     class_number=1,
     random_spacing=False,
@@ -38,6 +39,7 @@ def build_cilia_lines_star_rows(
 
     angle_set_deg = float(angle_set_deg)
     doublet_offset_deg = float(doublet_offset_deg)
+    twist_per_layer_deg = float(twist_per_layer_deg)
     z_offset_ang = float(z_offset_ang)
 
     class_number = int(class_number)
@@ -60,17 +62,12 @@ def build_cilia_lines_star_rows(
     rows = []
 
     for k in range(n):
-        # perfect circle placement
         phi_deg = angle_set_deg + k * step_deg
         phi = math.radians(phi_deg)
 
         x_ang = outer_radius_ang * math.cos(phi)
         y_ang = outer_radius_ang * math.sin(phi)
         tube_id = int(tube_id_offset) + (k + 1)
-
-        # Interpret 180 degrees in the UI as neutral, then rotate each line
-        # an additional 90 degrees clockwise.
-        rot_deg = -(phi_deg + (doublet_offset_deg - 180.0) + 90.0)
 
         line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
         current_z = float(z_offset_ang)
@@ -80,7 +77,11 @@ def build_cilia_lines_star_rows(
             z_list.append(current_z + line_offset)
             current_z += bead_spacing_ang
 
-        for z_ang in z_list:
+        for layer_index, z_ang in enumerate(z_list):
+            # Interpret 180 degrees in the UI as neutral, then rotate each line
+            # an additional 90 degrees clockwise. Twist is applied in place
+            # per axial layer, without changing the ring coordinates.
+            rot_deg = -(phi_deg + (doublet_offset_deg - 180.0) + 90.0 + layer_index * twist_per_layer_deg)
             rows.append(
                 {
                     "rlnTomoName": str(tomo_name),
@@ -101,7 +102,7 @@ def build_cilia_lines_star_rows(
     return rows
 
 
-def buildcentriole_star_rows(
+def build_central_pair_star_rows(
     length_ang,
     bead_spacing_ang,
     tomo_name,
@@ -170,6 +171,11 @@ def buildcentriole_star_rows(
         )
 
     return rows
+
+
+def buildcentriole_star_rows(*args, **kwargs):
+    # Legacy compatibility alias.
+    return build_central_pair_star_rows(*args, **kwargs)
 
 
 def build_ift_star_rows(

@@ -293,6 +293,13 @@ class CiliaBuilder2Tool(ToolInstance):
         self._ift_pick_handlers = []
         self._ift_pick_hidden_models = []
         self._ift_prev_left_mouse_mode_name = None
+        self._filament_sub_dialog = None
+        self._filament_sub_pick_pending = False
+        self._filament_sub_pick_handlers = []
+        self._filament_sub_prev_left_mouse_mode_name = None
+        self._filament_sub_hidden_models = []
+        self._filament_sub_target = None
+        self._filament_sub_edit_pending = False
         self._marker_path_counter = 0
         self._marker_path_pick_pending = False
         self._marker_path_pick_handlers = []
@@ -448,8 +455,14 @@ class CiliaBuilder2Tool(ToolInstance):
         self.spacing.setValue(1000.0)
         outer_row_spin("Periodicity (spacing)", self.spacing)
 
+        self.outer_twist_per_layer = TypedOnlyDoubleSpinBox(main)
+        self.outer_twist_per_layer.setRange(-360.0, 360.0)
+        self.outer_twist_per_layer.setDecimals(2)
+        self.outer_twist_per_layer.setValue(0.0)
+        outer_row_spin("Twist per layer (deg)", self.outer_twist_per_layer)
+
         self.doublet_offset = TypedOnlyDoubleSpinBox(main)
-        self.doublet_offset.setRange(-360.0, 360.0)
+        self.doublet_offset.setRange(-1e9, 1e9)
         self.doublet_offset.setDecimals(2)
         self.doublet_offset.setValue(0.0)
         outer_row_spin("Z offset", self.doublet_offset)
@@ -486,6 +499,9 @@ class CiliaBuilder2Tool(ToolInstance):
         cont_outer_btn = QPushButton("Continue microtubules", outer_btn_row)
         cont_outer_btn.clicked.connect(lambda: self._build_outer(continue_mode=True))
         outer_btn_lay.addWidget(cont_outer_btn)
+        substitute_outer_btn = QPushButton("Substitute filament", outer_btn_row)
+        substitute_outer_btn.clicked.connect(self._open_filament_substitution_dialog)
+        outer_btn_lay.addWidget(substitute_outer_btn)
         outer_tab_layout.addWidget(outer_btn_row)
         outer_tab_layout.addStretch(1)
         panels.addTab(outer_tab, "Microtubules")
@@ -502,39 +518,39 @@ class CiliaBuilder2Tool(ToolInstance):
             lay.addWidget(spin)
             cent_layout.addWidget(w)
 
-        self.centriole_length = TypedOnlyDoubleSpinBox(main)
-        self.centriole_length.setRange(0.0, 1e9)
-        self.centriole_length.setDecimals(2)
-        self.centriole_length.setValue(9000.0)
-        cent_row_spin("Length", self.centriole_length)
+        self.central_pair_length = TypedOnlyDoubleSpinBox(main)
+        self.central_pair_length.setRange(0.0, 1e9)
+        self.central_pair_length.setDecimals(2)
+        self.central_pair_length.setValue(9000.0)
+        cent_row_spin("Length", self.central_pair_length)
 
-        self.centriole_spacing = TypedOnlyDoubleSpinBox(main)
-        self.centriole_spacing.setRange(0.0, 1e9)
-        self.centriole_spacing.setDecimals(2)
-        self.centriole_spacing.setValue(333.0)
-        cent_row_spin("Periodicity (spacing)", self.centriole_spacing)
+        self.central_pair_spacing = TypedOnlyDoubleSpinBox(main)
+        self.central_pair_spacing.setRange(0.0, 1e9)
+        self.central_pair_spacing.setDecimals(2)
+        self.central_pair_spacing.setValue(333.0)
+        cent_row_spin("Periodicity (spacing)", self.central_pair_spacing)
 
-        self.centriole_z_offset = TypedOnlyDoubleSpinBox(main)
-        self.centriole_z_offset.setRange(-1e9, 1e9)
-        self.centriole_z_offset.setDecimals(2)
-        self.centriole_z_offset.setValue(0.0)
-        cent_row_spin("Z offset", self.centriole_z_offset)
+        self.central_pair_z_offset = TypedOnlyDoubleSpinBox(main)
+        self.central_pair_z_offset.setRange(-1e9, 1e9)
+        self.central_pair_z_offset.setDecimals(2)
+        self.central_pair_z_offset.setValue(0.0)
+        cent_row_spin("Z offset", self.central_pair_z_offset)
 
         cent_mode_row = QWidget(main)
         cent_mode_lay = QHBoxLayout(cent_mode_row)
         cent_mode_lay.setContentsMargins(0, 0, 0, 0)
         cent_mode_lay.addWidget(QLabel("Central pair mode", cent_mode_row))
-        self.centriole_mode = QComboBox(cent_mode_row)
-        self.centriole_mode.addItem("Singlet line", "singlet")
-        self.centriole_mode.addItem("C1 + C2 lines", "doublet")
-        cent_mode_lay.addWidget(self.centriole_mode, 1)
+        self.central_pair_mode = QComboBox(cent_mode_row)
+        self.central_pair_mode.addItem("Singlet line", "singlet")
+        self.central_pair_mode.addItem("C1 + C2 lines", "doublet")
+        cent_mode_lay.addWidget(self.central_pair_mode, 1)
         cent_layout.addWidget(cent_mode_row)
 
-        self.centriole_c1c2_distance = TypedOnlyDoubleSpinBox(main)
-        self.centriole_c1c2_distance.setRange(0.0, 1e9)
-        self.centriole_c1c2_distance.setDecimals(2)
-        self.centriole_c1c2_distance.setValue(100.0)
-        cent_row_spin("C1/C2 distance", self.centriole_c1c2_distance)
+        self.central_pair_c1c2_distance = TypedOnlyDoubleSpinBox(main)
+        self.central_pair_c1c2_distance.setRange(0.0, 1e9)
+        self.central_pair_c1c2_distance.setDecimals(2)
+        self.central_pair_c1c2_distance.setValue(100.0)
+        cent_row_spin("C1/C2 distance", self.central_pair_c1c2_distance)
 
         cent_tab = QWidget(main)
         cent_tab_layout = QVBoxLayout(cent_tab)
@@ -545,7 +561,7 @@ class CiliaBuilder2Tool(ToolInstance):
         cent_btn_lay = QVBoxLayout(cent_btn_row)
         cent_btn_lay.setContentsMargins(0, 0, 0, 0)
         build_cent_btn = QPushButton("Build central pair", cent_btn_row)
-        build_cent_btn.clicked.connect(self._build_centriole)
+        build_cent_btn.clicked.connect(self._build_central_pair)
         cent_btn_lay.addWidget(build_cent_btn)
         cent_tab_layout.addWidget(cent_btn_row)
         cent_tab_layout.addStretch(1)
@@ -848,6 +864,21 @@ class CiliaBuilder2Tool(ToolInstance):
         load_star_btn.clicked.connect(self._load_star_file)
         btn_lay.addWidget(load_star_btn)
 
+        export_star_row = QWidget(btn_row)
+        export_star_lay = QHBoxLayout(export_star_row)
+        export_star_lay.setContentsMargins(0, 0, 0, 0)
+        export_star_lay.addWidget(QLabel("Export STAR model", export_star_row))
+        self.export_star_model = RefreshingComboBox(self._refresh_model_selectors, export_star_row)
+        self.export_star_model.addItem("None", None)
+        self.export_star_model.setMinimumContentsLength(18)
+        self.export_star_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        export_star_lay.addWidget(self.export_star_model, 1)
+        btn_lay.addWidget(export_star_row)
+
+        export_star_btn = QPushButton("Export STAR file", btn_row)
+        export_star_btn.clicked.connect(self._export_star_file)
+        btn_lay.addWidget(export_star_btn)
+
         load_cellpack_btn = QPushButton("Load cellPACK", btn_row)
         load_cellpack_btn.clicked.connect(self._load_cellpack_package)
         load_cellpack_btn.hide()
@@ -857,29 +888,6 @@ class CiliaBuilder2Tool(ToolInstance):
         export_cellpack_btn.clicked.connect(self._export_cellpack_package)
         export_cellpack_btn.hide()
         btn_lay.addWidget(export_cellpack_btn)
-
-        align_box = QGroupBox("Auto Z-align map/model", session_page)
-        align_layout = QVBoxLayout(align_box)
-
-        align_model_row = QWidget(session_page)
-        align_model_lay = QHBoxLayout(align_model_row)
-        align_model_lay.setContentsMargins(0, 0, 0, 0)
-        align_model_lay.addWidget(QLabel("Model", align_model_row))
-        self.align_z_model = RefreshingComboBox(self._refresh_model_selectors, align_model_row)
-        self.align_z_model.setMinimumContentsLength(24)
-        self.align_z_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-        align_model_lay.addWidget(self.align_z_model, 1)
-        align_layout.addWidget(align_model_row)
-
-        align_run_row = QWidget(session_page)
-        align_run_lay = QHBoxLayout(align_run_row)
-        align_run_lay.setContentsMargins(0, 0, 0, 0)
-        auto_align_btn = QPushButton("Auto Z-align", align_run_row)
-        auto_align_btn.clicked.connect(self._auto_z_align_selected_model)
-        align_run_lay.addWidget(auto_align_btn)
-        align_run_lay.addStretch(1)
-        align_layout.addWidget(align_run_row)
-        btn_lay.addWidget(align_box)
 
         btn_lay.addStretch(1)
 
@@ -907,7 +915,7 @@ class CiliaBuilder2Tool(ToolInstance):
         star_lay = QHBoxLayout(star_row)
         star_lay.setContentsMargins(0, 0, 0, 0)
         star_lay.addWidget(QLabel("STAR model", star_row))
-        self.sel_star_model = RefreshingComboBox(self._refresh_model_selectors, star_row)
+        self.sel_star_model = RefreshingComboBox(self._refresh_model_selectors, attach_select)
         self.sel_star_model.setMinimumContentsLength(24)
         self.sel_star_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.sel_star_model.currentIndexChanged.connect(self._on_attach_selector_changed)
@@ -918,7 +926,7 @@ class CiliaBuilder2Tool(ToolInstance):
         map_lay = QHBoxLayout(map_row)
         map_lay.setContentsMargins(0, 0, 0, 0)
         map_lay.addWidget(QLabel("Map model", map_row))
-        self.sel_map_model = RefreshingComboBox(self._refresh_model_selectors, map_row)
+        self.sel_map_model = RefreshingComboBox(self._refresh_model_selectors, attach_select)
         self.sel_map_model.setMinimumContentsLength(24)
         self.sel_map_model.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.sel_map_model.currentIndexChanged.connect(self._on_attach_selector_changed)
@@ -929,7 +937,7 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_rot_lay = QHBoxLayout(attach_rot_row)
         attach_rot_lay.setContentsMargins(0, 0, 0, 0)
         attach_rot_lay.addWidget(QLabel("Attachment Z offset (deg)", attach_rot_row))
-        self.attach_line_rotation = TypedOnlyDoubleSpinBox(attach_rot_row)
+        self.attach_line_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_line_rotation.setRange(-360.0, 360.0)
         self.attach_line_rotation.setDecimals(2)
         self.attach_line_rotation.setSingleStep(1.0)
@@ -943,7 +951,7 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_y_lay = QHBoxLayout(attach_y_row)
         attach_y_lay.setContentsMargins(0, 0, 0, 0)
         attach_y_lay.addWidget(QLabel("Attachment Y rotation (deg)", attach_y_row))
-        self.attach_y_rotation = TypedOnlyDoubleSpinBox(attach_y_row)
+        self.attach_y_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_y_rotation.setRange(-360.0, 360.0)
         self.attach_y_rotation.setDecimals(2)
         self.attach_y_rotation.setSingleStep(1.0)
@@ -997,11 +1005,11 @@ class CiliaBuilder2Tool(ToolInstance):
         draw_box = QGroupBox("Geometric drawing", marker_page)
         draw_layout = QVBoxLayout(draw_box)
 
+        self._geometric_draw_mode_order = ["point", "sphere", "cylinder", "curve", "line"]
         draw_mode_row = QWidget(marker_page)
         draw_mode_lay = QHBoxLayout(draw_mode_row)
         draw_mode_lay.setContentsMargins(0, 0, 0, 0)
         draw_mode_lay.addWidget(QLabel("Draw type", draw_mode_row))
-        self._geometric_draw_mode_order = ["point", "sphere", "cylinder", "curve", "line"]
         self.geometric_draw_mode_bar = QTabBar(draw_mode_row)
         self.geometric_draw_mode_bar.setExpanding(False)
         for label in ("Point", "Sphere", "Cylinder", "Curve", "Line"):
@@ -1167,8 +1175,8 @@ class CiliaBuilder2Tool(ToolInstance):
             dw = self.tool_window._dock_widget
             dw.setFloating(True)
             dw.setAttribute(Qt.WA_DeleteOnClose, False)
-            dw.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            dw.resize(500, 450)
+            dw.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+            dw.resize(600, 450)
             dw.show()
         except Exception:
             pass
@@ -2268,6 +2276,25 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             pass
         try:
+            self._cancel_filament_sub_pick_mode(log_message=False)
+        except Exception:
+            pass
+        self._filament_sub_target = None
+        self._filament_sub_edit_pending = False
+        dialog = getattr(self, "_filament_sub_dialog", None)
+        if dialog is not None:
+            try:
+                dialog._filament_sub_selected_label.setText("None")
+                dialog._filament_sub_status_label.setText(
+                    "Press 'Pick filament from STAR point', then click one displayed STAR marker in ChimeraX."
+                )
+            except Exception:
+                pass
+            try:
+                self._update_filament_sub_buttons()
+            except Exception:
+                pass
+        try:
             self._ift_pick_pending = False
             self._restore_ift_pick_hidden_models()
             self._restore_ift_mouse_mode()
@@ -2676,6 +2703,7 @@ class CiliaBuilder2Tool(ToolInstance):
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         continue_outer_current = self.continue_outer_star_model.currentData() if hasattr(self, "continue_outer_star_model") else None
+        export_star_current = self.export_star_model.currentData() if hasattr(self, "export_star_model") else None
         marker_target_current = self.marker_target_model.currentData() if hasattr(self, "marker_target_model") else None
         geometric_draw_current = self.geometric_draw_model.currentData() if hasattr(self, "geometric_draw_model") else None
         align_z_current = self.align_z_model.currentData() if hasattr(self, "align_z_model") else None
@@ -2703,6 +2731,33 @@ class CiliaBuilder2Tool(ToolInstance):
                 self.sel_star_model.setCurrentIndex(1 if self.sel_star_model.count() > 1 else 0)
             self.sel_star_model.setEnabled(True)
             self.sel_star_model.blockSignals(False)
+
+        if hasattr(self, "export_star_model"):
+            self.export_star_model.blockSignals(True)
+            self.export_star_model.clear()
+            self.export_star_model.addItem("None", None)
+            export_star_has_models = False
+            for m in self._all_session_models():
+                ref = self._model_ref(m)
+                if ref is None or not hasattr(m, "_cb_star_rows"):
+                    continue
+                label = f"{m.name} (#{ref})"
+                self.export_star_model.addItem(label, str(ref))
+                export_star_has_models = True
+            if export_star_current is not None:
+                idx = self.export_star_model.findData(str(export_star_current))
+                if idx >= 0:
+                    self.export_star_model.setCurrentIndex(idx)
+                else:
+                    preferred = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+                    idx = self.export_star_model.findData(str(preferred)) if preferred is not None else -1
+                    self.export_star_model.setCurrentIndex(idx if idx >= 0 else (1 if self.export_star_model.count() > 1 else 0))
+            else:
+                preferred = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+                idx = self.export_star_model.findData(str(preferred)) if preferred is not None else -1
+                self.export_star_model.setCurrentIndex(idx if idx >= 0 else (1 if self.export_star_model.count() > 1 else 0))
+            self.export_star_model.setEnabled(export_star_has_models)
+            self.export_star_model.blockSignals(False)
 
         if hasattr(self, "continue_outer_star_model"):
             self.continue_outer_star_model.blockSignals(True)
@@ -2955,6 +3010,15 @@ class CiliaBuilder2Tool(ToolInstance):
         if idx >= 0:
             self.sel_star_model.setCurrentIndex(idx)
 
+    def _select_continue_outer_star_model(self, model):
+        self._refresh_model_selectors()
+        ref = self._model_ref(model)
+        if ref is None or not hasattr(self, "continue_outer_star_model"):
+            return
+        idx = self.continue_outer_star_model.findData(str(ref))
+        if idx >= 0:
+            self.continue_outer_star_model.setCurrentIndex(idx)
+
     def _next_loaded_star_name(self, base_name):
         base = str(base_name or "").strip() or "Loaded STAR"
         used = {
@@ -3013,11 +3077,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self.tool_window.shown = True
             dw = getattr(self.tool_window, "_dock_widget", None)
             if dw is not None:
-                from Qt.QtCore import Qt
-                dw.setWindowFlag(Qt.WindowStaysOnTopHint, True)
                 dw.show()
-                dw.raise_()
-                dw.activateWindow()
         except Exception:
             pass
 
@@ -3708,6 +3768,765 @@ class CiliaBuilder2Tool(ToolInstance):
         finally:
             self._restore_ift_pick_hidden_models()
             self._restore_ift_mouse_mode()
+            self._commit_history_action(history_before)
+            self._keep_tool_visible()
+
+    def _set_filament_sub_status(self, text):
+        dialog = self._filament_sub_dialog
+        if dialog is None:
+            return
+        label = getattr(dialog, "_filament_sub_status_label", None)
+        if label is not None:
+            label.setText(str(text or ""))
+
+    def _update_filament_sub_buttons(self):
+        dialog = self._filament_sub_dialog
+        if dialog is None:
+            return
+        pick_btn = getattr(dialog, "_filament_sub_pick_btn", None)
+        apply_btn = getattr(dialog, "_filament_sub_apply_btn", None)
+        target = self._filament_sub_target or {}
+        has_target = bool(target.get("star_ref", None) is not None and target.get("tube_id", None) is not None)
+        if pick_btn is not None:
+            pick_btn.setText("Cancel filament pick" if self._filament_sub_pick_pending else "Pick filament from STAR point")
+        if apply_btn is not None:
+            apply_btn.setEnabled(
+                has_target
+                and not self._filament_sub_pick_pending
+                and not bool(getattr(self, "_filament_sub_edit_pending", False))
+            )
+
+    def _mark_filament_sub_edit_pending(self):
+        if bool(getattr(self, "_filament_sub_edit_pending", False)):
+            return
+        self._filament_sub_edit_pending = True
+        self._set_filament_sub_status(
+            "Confirm the edited substitution value first (press Enter or click outside the field), then apply."
+        )
+        self._update_filament_sub_buttons()
+
+    def _confirm_filament_sub_editing(self):
+        if not bool(getattr(self, "_filament_sub_edit_pending", False)):
+            return
+        self._filament_sub_edit_pending = False
+        target = self._filament_sub_target or {}
+        star_ref = target.get("star_ref", None)
+        tube_id = target.get("tube_id", None)
+        if star_ref is not None and tube_id is not None:
+            star_model = self._model_by_ref(star_ref)
+            star_name = getattr(star_model, "name", "Selected STAR") if star_model is not None else "Selected STAR"
+            self._set_filament_sub_status(
+                f"Confirmed edited values for filament {tube_id} from {star_name}. Apply substitution when ready."
+            )
+        self._update_filament_sub_buttons()
+
+    def _clear_filament_sub_target(self):
+        self._filament_sub_target = None
+        self._filament_sub_edit_pending = False
+        dialog = self._filament_sub_dialog
+        if dialog is not None:
+            try:
+                dialog._filament_sub_selected_label.setText("None")
+            except Exception:
+                pass
+        self._update_filament_sub_buttons()
+
+    def _set_filament_sub_hidden_models(self, hidden):
+        self._filament_sub_hidden_models = []
+        for model in hidden:
+            try:
+                was_display = bool(getattr(model, "display", True))
+            except Exception:
+                was_display = True
+            self._filament_sub_hidden_models.append((model, was_display))
+            try:
+                model.display = False
+            except Exception:
+                pass
+
+    def _restore_filament_sub_hidden_models(self):
+        for model, was_display in self._filament_sub_hidden_models:
+            try:
+                model.display = bool(was_display)
+            except Exception:
+                pass
+        self._filament_sub_hidden_models = []
+
+    def _enable_filament_sub_select_mouse_mode(self):
+        try:
+            mm = self.session.ui.mouse_modes
+            prev = mm.mode('left', [])
+            self._filament_sub_prev_left_mouse_mode_name = getattr(prev, "name", None)
+            select_mode = mm.named_mode('select')
+            if select_mode is not None:
+                mm.bind_mouse_mode(mouse_button='left', mouse_modifiers=[], mode=select_mode)
+                return
+        except Exception:
+            pass
+        self._filament_sub_prev_left_mouse_mode_name = None
+        try:
+            _run(self.session, "ui mousemode left select", log=False)
+        except Exception:
+            pass
+
+    def _restore_filament_sub_mouse_mode(self):
+        name = self._filament_sub_prev_left_mouse_mode_name
+        self._filament_sub_prev_left_mouse_mode_name = None
+        if not name:
+            return
+        try:
+            mm = self.session.ui.mouse_modes
+            mode = mm.named_mode(name)
+            if mode is not None:
+                mm.bind_mouse_mode(mouse_button='left', mouse_modifiers=[], mode=mode)
+                return
+        except Exception:
+            pass
+        try:
+            _run(self.session, f"ui mousemode left '{name}'", log=False)
+        except Exception:
+            pass
+
+    def _ensure_filament_sub_pick_handler(self):
+        if self._filament_sub_pick_handlers:
+            return
+        from chimerax.core.selection import SELECTION_CHANGED
+        from chimerax.core.models import MODEL_SELECTION_CHANGED
+
+        self._filament_sub_pick_handlers = [
+            self.session.triggers.add_handler(SELECTION_CHANGED, self._on_filament_sub_selection_changed),
+            self.session.triggers.add_handler(MODEL_SELECTION_CHANGED, self._on_filament_sub_selection_changed),
+        ]
+
+    def _tube_id_from_row(self, row):
+        try:
+            return int(float(row.get("rlnHelicalTubeID", 0) or 0))
+        except Exception:
+            return 0
+
+    def _normalize_angle_delta_deg(self, value):
+        value = float(value)
+        while value <= -180.0:
+            value += 360.0
+        while value > 180.0:
+            value -= 360.0
+        return value
+
+    def _safe_unit_array(self, vec, fallback=(0.0, 0.0, 1.0)):
+        arr = np.array(vec, dtype=float)
+        norm = float(np.linalg.norm(arr))
+        if norm <= 1e-9:
+            arr = np.array(fallback, dtype=float)
+            norm = float(np.linalg.norm(arr))
+        if norm <= 1e-9:
+            return np.array([0.0, 0.0, 1.0], dtype=float)
+        return arr / norm
+
+    def _orthogonal_basis_about_axis(self, axis_dir, seed):
+        axis_dir = self._safe_unit_array(axis_dir, (0.0, 0.0, 1.0))
+        seed = np.array(seed, dtype=float)
+        ex = seed - axis_dir * float(np.dot(seed, axis_dir))
+        ex_norm = float(np.linalg.norm(ex))
+        if ex_norm <= 1e-9:
+            fallback = np.array([1.0, 0.0, 0.0], dtype=float)
+            if abs(float(np.dot(fallback, axis_dir))) > 0.95:
+                fallback = np.array([0.0, 1.0, 0.0], dtype=float)
+            ex = fallback - axis_dir * float(np.dot(fallback, axis_dir))
+            ex_norm = float(np.linalg.norm(ex))
+        ex = (ex / ex_norm) if ex_norm > 1e-9 else np.array([1.0, 0.0, 0.0], dtype=float)
+        ey = self._safe_unit_array(np.cross(axis_dir, ex), (0.0, 1.0, 0.0))
+        ex = self._safe_unit_array(np.cross(ey, axis_dir), ex)
+        return ex, ey, axis_dir
+
+    def _filament_geometry_for_tube(self, star_model, tube_id):
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        tube_rows = [row for row in rows if self._tube_id_from_row(row) == int(tube_id)]
+        if not tube_rows:
+            raise RuntimeError(f"Target STAR model has no rows for filament {tube_id}")
+
+        centers = [self._row_world_center(row) for row in tube_rows]
+        last_ex, last_ey, last_ez = self._resolved_axes_from_row(tube_rows[-1])
+        axis_seed = np.array(last_ez, dtype=float)
+        if len(centers) >= 2:
+            raw_axis = np.array(centers[-1], dtype=float) - np.array(centers[0], dtype=float)
+        else:
+            raw_axis = np.array(axis_seed, dtype=float)
+        if float(np.dot(raw_axis, axis_seed)) < 0.0:
+            raw_axis = -raw_axis
+        axis_dir = self._safe_unit_array(raw_axis, axis_seed)
+
+        ordered = sorted(
+            zip(tube_rows, centers),
+            key=lambda item: float(np.dot(np.array(item[1], dtype=float), axis_dir)),
+        )
+        ordered_rows = [item[0] for item in ordered]
+        ordered_centers = [np.array(item[1], dtype=float) for item in ordered]
+        first_center = np.array(ordered_centers[0], dtype=float)
+        scalars = [float(np.dot(center - first_center, axis_dir)) for center in ordered_centers]
+        length_ang = max(0.0, max(scalars) - min(scalars))
+
+        diffs = []
+        for idx in range(1, len(scalars)):
+            delta = float(scalars[idx] - scalars[idx - 1])
+            if delta > 1e-6:
+                diffs.append(delta)
+        spacing_ang = float(np.median(diffs)) if diffs else float(self.spacing.value())
+
+        seed_ex, seed_ey, _seed_ez = self._resolved_axes_from_row(ordered_rows[0])
+        base_ex, base_ey, base_ez = self._orthogonal_basis_about_axis(axis_dir, seed_ex)
+
+        local_angles = []
+        for row in ordered_rows:
+            row_ex, _row_ey, _row_ez = self._resolved_axes_from_row(row)
+            ex_proj, _ey_proj, _ez_proj = self._orthogonal_basis_about_axis(axis_dir, row_ex)
+            local_angles.append(
+                math.degrees(
+                    math.atan2(
+                        float(np.dot(ex_proj, base_ey)),
+                        float(np.dot(ex_proj, base_ex)),
+                    )
+                )
+            )
+        twist_deltas = [
+            self._normalize_angle_delta_deg(local_angles[idx] - local_angles[idx - 1])
+            for idx in range(1, len(local_angles))
+        ]
+        default_twist = float(np.median(twist_deltas)) if twist_deltas else float(self.outer_twist_per_layer.value())
+
+        try:
+            pixel_size = float(ordered_rows[0].get("rlnImagePixelSize", 1.0) or 1.0)
+        except Exception:
+            pixel_size = 1.0
+        if pixel_size <= 0.0:
+            pixel_size = 1.0
+
+        return {
+            "tube_id": int(tube_id),
+            "rows": ordered_rows,
+            "first_center": first_center,
+            "axis_dir": axis_dir,
+            "base_axes": (base_ex, base_ey, base_ez),
+            "length_ang": float(length_ang),
+            "spacing_ang": float(spacing_ang),
+            "twist_per_layer_deg": float(default_twist),
+            "pixel_size": float(pixel_size),
+            "base_row": ordered_rows[0],
+        }
+
+    def _relion_angles_from_axes(self, ex, ey, ez):
+        basis = np.column_stack(
+            [
+                self._safe_unit_array(ex, (1.0, 0.0, 0.0)),
+                self._safe_unit_array(ey, (0.0, 1.0, 0.0)),
+                self._safe_unit_array(ez, (0.0, 0.0, 1.0)),
+            ]
+        )
+        rotation = basis.T
+        c_theta = max(-1.0, min(1.0, float(rotation[2, 2])))
+        theta = math.acos(c_theta)
+        s_theta = math.sin(theta)
+        if abs(s_theta) > 1e-8:
+            rot = math.degrees(math.atan2(float(rotation[2, 1]), float(rotation[2, 0])))
+            psi = math.degrees(math.atan2(float(rotation[1, 2]), float(-rotation[0, 2])))
+            tilt = math.degrees(theta)
+            return rot, tilt, psi
+        if c_theta >= 0.0:
+            rot = math.degrees(math.atan2(float(rotation[0, 1]), float(rotation[0, 0])))
+            return rot, 0.0, 0.0
+        rot = math.degrees(math.atan2(float(rotation[0, 1]), float(-rotation[0, 0])))
+        return rot, 180.0, 0.0
+
+    def _update_filament_sub_target_from_pick(self, pick):
+        dialog = self._filament_sub_dialog
+        if dialog is None:
+            return
+        star_model = pick["star_model"]
+        row = pick["row"]
+        tube_id = self._tube_id_from_row(row)
+        if tube_id <= 0:
+            raise RuntimeError("Selected STAR point does not belong to a valid filament")
+
+        geom = self._filament_geometry_for_tube(star_model, tube_id)
+        self._filament_sub_target = {
+            "star_ref": self._model_ref(star_model),
+            "tube_id": int(tube_id),
+            "row_index": int(pick["row_index"]),
+        }
+
+        selected_label = getattr(dialog, "_filament_sub_selected_label", None)
+        if selected_label is not None:
+            selected_label.setText(f"{star_model.name} - filament {tube_id}")
+        length_spin = getattr(dialog, "_filament_sub_length", None)
+        spacing_spin = getattr(dialog, "_filament_sub_spacing", None)
+        z_offset_spin = getattr(dialog, "_filament_sub_z_offset", None)
+        twist_spin = getattr(dialog, "_filament_sub_twist", None)
+        if length_spin is not None:
+            length_spin.setValue(float(geom["length_ang"]))
+        if spacing_spin is not None:
+            spacing_spin.setValue(float(geom["spacing_ang"]))
+        if z_offset_spin is not None:
+            z_offset_spin.setValue(0.0)
+        if twist_spin is not None:
+            twist_spin.setValue(float(geom["twist_per_layer_deg"]))
+        self._filament_sub_edit_pending = False
+        self._set_filament_sub_status(
+            f"Picked filament {tube_id} from {star_model.name}. Adjust settings, then apply substitution."
+        )
+        self._update_filament_sub_buttons()
+
+    def _cancel_filament_sub_pick_mode(self, log_message=False):
+        was_pending = bool(self._filament_sub_pick_pending)
+        self._filament_sub_pick_pending = False
+        self._restore_filament_sub_hidden_models()
+        self._restore_filament_sub_mouse_mode()
+        self._update_filament_sub_buttons()
+        if log_message and was_pending:
+            self.session.logger.info("Cancelled filament substitution pick mode.")
+
+    def _start_filament_sub_pick_mode(self):
+        from Qt.QtWidgets import QMessageBox
+
+        if self._filament_sub_pick_pending:
+            self._cancel_filament_sub_pick_mode(log_message=True)
+            self._keep_tool_visible()
+            return
+        try:
+            self._ensure_filament_sub_pick_handler()
+            self._filament_sub_pick_pending = True
+            self._enable_filament_sub_select_mouse_mode()
+            self._set_filament_sub_hidden_models(self._visible_attached_models())
+            try:
+                _run(self.session, "select clear", log=False)
+            except Exception:
+                pass
+            self._set_filament_sub_status("Click one STAR marker point in ChimeraX to choose the filament to replace.")
+            self._update_filament_sub_buttons()
+            self.session.logger.info("Filament substitution pick mode enabled. Click one displayed STAR point.")
+        except Exception as e:
+            self._cancel_filament_sub_pick_mode(log_message=False)
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._keep_tool_visible()
+
+    def _on_filament_sub_selection_changed(self, *_args):
+        if not self._filament_sub_pick_pending:
+            return
+        try:
+            pick = self._selected_star_marker_target()
+        except Exception:
+            return
+        try:
+            self._filament_sub_pick_pending = False
+            self._update_filament_sub_target_from_pick(pick)
+        except Exception as e:
+            from Qt.QtWidgets import QMessageBox
+
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._restore_filament_sub_hidden_models()
+            self._restore_filament_sub_mouse_mode()
+            self._update_filament_sub_buttons()
+            self._keep_tool_visible()
+
+    def _open_filament_substitution_dialog(self):
+        from Qt.QtCore import Qt
+        from Qt.QtWidgets import (
+            QAbstractSpinBox,
+            QDialog,
+            QDoubleSpinBox,
+            QFormLayout,
+            QHBoxLayout,
+            QLabel,
+            QPushButton,
+            QVBoxLayout,
+            QWidget,
+        )
+
+        dialog = self._filament_sub_dialog
+        if dialog is not None:
+            try:
+                dialog.show()
+                dialog.raise_()
+                dialog.activateWindow()
+                self._keep_tool_visible()
+                return
+            except Exception:
+                self._filament_sub_dialog = None
+
+        def _typed_spin(parent, minimum, maximum, value):
+            spin = QDoubleSpinBox(parent)
+            spin.setRange(minimum, maximum)
+            spin.setDecimals(2)
+            spin.setValue(float(value))
+            spin.setButtonSymbols(QAbstractSpinBox.NoButtons)
+            spin.setKeyboardTracking(False)
+            return spin
+
+        dialog = QDialog(self.tool_window.ui_area)
+        dialog.setWindowTitle("Substitute filament")
+        dialog.setModal(False)
+        dialog.setWindowFlag(Qt.Tool, True)
+        dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        dialog.resize(360, 0)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        intro = QLabel(
+            "Pick one displayed STAR point to choose the filament, then rebuild that filament in the same STAR model.",
+            dialog,
+        )
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        form = QFormLayout()
+        selected_label = QLabel("None", dialog)
+        form.addRow("Selected filament", selected_label)
+
+        length_spin = _typed_spin(dialog, 0.0, 1e9, float(self.length.value()))
+        form.addRow("Length", length_spin)
+
+        spacing_spin = _typed_spin(dialog, 0.01, 1e9, float(self.spacing.value()))
+        form.addRow("Periodicity (spacing)", spacing_spin)
+
+        z_offset_spin = _typed_spin(dialog, -1e9, 1e9, 0.0)
+        form.addRow("Z offset", z_offset_spin)
+
+        twist_spin = _typed_spin(
+            dialog,
+            -360.0,
+            360.0,
+            float(self.outer_twist_per_layer.value()) if hasattr(self, "outer_twist_per_layer") else 0.0,
+        )
+        form.addRow("Twist per layer (deg)", twist_spin)
+        layout.addLayout(form)
+
+        for spin in (length_spin, spacing_spin, z_offset_spin, twist_spin):
+            try:
+                spin.editingFinished.connect(self._confirm_filament_sub_editing)
+            except Exception:
+                pass
+            try:
+                line_edit = spin.lineEdit()
+            except Exception:
+                line_edit = None
+            if line_edit is not None:
+                try:
+                    line_edit.textEdited.connect(lambda *_args, self=self: self._mark_filament_sub_edit_pending())
+                except Exception:
+                    pass
+            try:
+                spin.valueChanged.connect(
+                    lambda *_args, spin=spin, self=self: self._mark_filament_sub_edit_pending() if spin.hasFocus() else None
+                )
+            except Exception:
+                pass
+
+        status_label = QLabel("Press 'Pick filament from STAR point', then click one displayed STAR marker in ChimeraX.", dialog)
+        status_label.setWordWrap(True)
+        layout.addWidget(status_label)
+
+        button_row = QWidget(dialog)
+        button_lay = QHBoxLayout(button_row)
+        button_lay.setContentsMargins(0, 0, 0, 0)
+        pick_btn = QPushButton("Pick filament from STAR point", button_row)
+        pick_btn.clicked.connect(self._start_filament_sub_pick_mode)
+        button_lay.addWidget(pick_btn)
+        apply_btn = QPushButton("Apply substitution", button_row)
+        apply_btn.clicked.connect(self._apply_filament_substitution)
+        apply_btn.setEnabled(False)
+        button_lay.addWidget(apply_btn)
+        close_btn = QPushButton("Close", button_row)
+        close_btn.clicked.connect(dialog.close)
+        button_lay.addWidget(close_btn)
+        layout.addWidget(button_row)
+
+        dialog._filament_sub_selected_label = selected_label
+        dialog._filament_sub_length = length_spin
+        dialog._filament_sub_spacing = spacing_spin
+        dialog._filament_sub_z_offset = z_offset_spin
+        dialog._filament_sub_twist = twist_spin
+        dialog._filament_sub_status_label = status_label
+        dialog._filament_sub_pick_btn = pick_btn
+        dialog._filament_sub_apply_btn = apply_btn
+        dialog.finished.connect(self._on_filament_sub_dialog_closed)
+
+        self._filament_sub_dialog = dialog
+        self._clear_filament_sub_target()
+        self._update_filament_sub_buttons()
+        dialog.show()
+        try:
+            dialog.raise_()
+            dialog.activateWindow()
+        except Exception:
+            pass
+        self._keep_tool_visible()
+
+    def _on_filament_sub_dialog_closed(self, *_args):
+        self._cancel_filament_sub_pick_mode(log_message=False)
+        self._clear_filament_sub_target()
+        self._filament_sub_dialog = None
+
+    def _replacement_rows_with_substituted_tube(self, source_rows, tube_id, replacement_rows):
+        combined_rows = []
+        inserted = False
+        want_tube = int(tube_id)
+        for row in source_rows:
+            if self._tube_id_from_row(row) == want_tube:
+                if not inserted:
+                    combined_rows.extend(replacement_rows)
+                    inserted = True
+                continue
+            combined_rows.append(row)
+        if not inserted:
+            combined_rows.extend(replacement_rows)
+        return combined_rows
+
+    def _rows_for_tube(self, source_rows, tube_id):
+        want_tube = int(tube_id)
+        return [copy.deepcopy(row) for row in source_rows if self._tube_id_from_row(row) == want_tube]
+
+    def _rows_without_tube(self, source_rows, tube_id):
+        want_tube = int(tube_id)
+        return [copy.deepcopy(row) for row in source_rows if self._tube_id_from_row(row) != want_tube]
+
+    def _update_star_model_rows_in_place(self, star_model, rows):
+        from . import cmd
+        from .io import rows_to_star_text
+
+        display_state = True
+        try:
+            display_state = bool(getattr(star_model, "display", True))
+        except Exception:
+            pass
+        color_state = self._capture_model_color_state(star_model)
+        star_text = rows_to_star_text(rows)
+        star_model._cb_star_rows = rows
+        star_model._cb_star_text = star_text
+        cmd._render_star_model(self.session, star_model, rows, True)
+        self._apply_model_color_state(star_model, color_state)
+        try:
+            star_model.display = bool(display_state)
+        except Exception:
+            pass
+
+    def _refresh_outer_continue_state_for_star(self, star_model, spacing_ang):
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        tube_ids = sorted({self._tube_id_from_row(row) for row in rows if self._tube_id_from_row(row) > 0})
+        if not tube_ids:
+            return
+        max_length = 0.0
+        for tube_id in tube_ids:
+            try:
+                geom = self._filament_geometry_for_tube(star_model, tube_id)
+            except Exception:
+                continue
+            max_length = max(max_length, float(geom["length_ang"]))
+        try:
+            star_model._cb_outer_spacing_ang = float(spacing_ang)
+            star_model._cb_outer_continue_offset_ang = float(max_length) + float(spacing_ang)
+        except Exception:
+            pass
+
+    def _build_substitution_filament_rows(self, star_model, tube_id, length_ang, spacing_ang, z_offset_ang, twist_per_layer_deg):
+        from .map import _rotation_about_axis
+
+        if float(spacing_ang) <= 0.0:
+            raise RuntimeError("Periodicity (spacing) must be > 0")
+        if float(length_ang) < 0.0:
+            raise RuntimeError("Length must be >= 0")
+
+        geom = self._filament_geometry_for_tube(star_model, tube_id)
+        first_center = np.array(geom["first_center"], dtype=float)
+        axis_dir = self._safe_unit_array(geom["axis_dir"], (0.0, 0.0, 1.0))
+        base_ex, base_ey, base_ez = geom["base_axes"]
+        base_row = geom["base_row"]
+        pixel_size = float(geom["pixel_size"])
+        tube_id = int(geom["tube_id"])
+        class_number = int(base_row.get("rlnClassNumber", 1) or 1)
+        tomo_name = str(base_row.get("rlnTomoName", "TS_001"))
+
+        rows = []
+        current_offset = float(z_offset_ang)
+        stop_offset = float(z_offset_ang) + float(length_ang)
+        layer_index = 0
+        while current_offset <= stop_offset + 1e-6:
+            world = first_center + axis_dir * current_offset
+            twist_rot = _rotation_about_axis(axis_dir, float(layer_index) * float(twist_per_layer_deg))
+            ex = self._safe_unit_array(twist_rot @ np.array(base_ex, dtype=float), base_ex)
+            ey = self._safe_unit_array(twist_rot @ np.array(base_ey, dtype=float), base_ey)
+            ez = self._safe_unit_array(np.array(base_ez, dtype=float), axis_dir)
+            rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(ex, ey, ez)
+            rows.append(
+                {
+                    "rlnTomoName": tomo_name,
+                    "rlnCoordinateX": float(world[0]) / pixel_size,
+                    "rlnCoordinateY": float(world[1]) / pixel_size,
+                    "rlnCoordinateZ": float(world[2]) / pixel_size,
+                    "rlnAngleRot": float(rot_deg),
+                    "rlnAngleTilt": float(tilt_deg),
+                    "rlnAnglePsi": float(psi_deg),
+                    "rlnImagePixelSize": float(pixel_size),
+                    "rlnHelicalTubeID": int(tube_id),
+                    "rlnClassNumber": int(class_number),
+                    "_cbWorldCoordinateX": float(world[0]),
+                    "_cbWorldCoordinateY": float(world[1]),
+                    "_cbWorldCoordinateZ": float(world[2]),
+                    "_cbAxisX": [float(v) for v in ex],
+                    "_cbAxisY": [float(v) for v in ey],
+                    "_cbAxisZ": [float(v) for v in ez],
+                }
+            )
+            current_offset += float(spacing_ang)
+            layer_index += 1
+        return rows
+
+    def _apply_filament_substitution(self):
+        from Qt.QtWidgets import QMessageBox
+        from . import cmd
+
+        dialog = self._filament_sub_dialog
+        if dialog is None:
+            return
+
+        history_before = self._begin_history_action()
+        try:
+            target = copy.deepcopy(self._filament_sub_target or {})
+            self._cancel_filament_sub_pick_mode(log_message=False)
+            star_ref = target.get("star_ref", None)
+            tube_id = target.get("tube_id", None)
+            if star_ref is None or tube_id is None:
+                self._clear_filament_sub_target()
+                self._set_filament_sub_status("Pick a filament first.")
+                return
+            if bool(getattr(self, "_filament_sub_edit_pending", False)):
+                self._set_filament_sub_status(
+                    "Confirm the edited substitution value first (press Enter or click outside the field), then apply."
+                )
+                self._update_filament_sub_buttons()
+                return
+            star_model = self._model_by_ref(star_ref)
+            if star_model is None or not hasattr(star_model, "_cb_star_rows"):
+                self._clear_filament_sub_target()
+                self._set_filament_sub_status("Selected STAR model is no longer available. Pick a filament again.")
+                return
+
+            length_ang = float(dialog._filament_sub_length.value())
+            spacing_ang = float(dialog._filament_sub_spacing.value())
+            z_offset_ang = float(dialog._filament_sub_z_offset.value())
+            twist_per_layer_deg = float(dialog._filament_sub_twist.value())
+
+            source_rows = list(getattr(star_model, "_cb_star_rows", None) or [])
+            if not source_rows:
+                self._clear_filament_sub_target()
+                self._set_filament_sub_status("Selected STAR model has no STAR rows. Pick a filament again.")
+                return
+            if not any(self._tube_id_from_row(row) == int(tube_id) for row in source_rows):
+                self._clear_filament_sub_target()
+                self._set_filament_sub_status(
+                    f"Filament {tube_id} is no longer present in {star_model.name}. Pick a fresh filament."
+                )
+                return
+
+            replacement_rows = self._build_substitution_filament_rows(
+                star_model,
+                int(tube_id),
+                length_ang,
+                spacing_ang,
+                z_offset_ang,
+                twist_per_layer_deg,
+            )
+            combined_rows = self._replacement_rows_with_substituted_tube(source_rows, int(tube_id), replacement_rows)
+            self._update_star_model_rows_in_place(star_model, combined_rows)
+            self._refresh_outer_continue_state_for_star(star_model, spacing_ang)
+            self._remember_loaded_star_role(star_model)
+            try:
+                star_model.display = True
+                star_model.set_selected(True)
+            except Exception:
+                pass
+            try:
+                _run(self.session, "select clear", log=False)
+            except Exception:
+                pass
+            self._last_outer_star_model = star_model
+            self._select_star_model(star_model)
+            self._select_continue_outer_star_model(star_model)
+            self._set_filament_sub_status(
+                f"Applied substitution in {star_model.name}. Separating the changed filament..."
+            )
+
+            updated_rows = list(getattr(star_model, "_cb_star_rows", None) or [])
+            changed_rows = self._rows_for_tube(updated_rows, int(tube_id))
+            if not changed_rows:
+                raise RuntimeError("Could not read back the substituted filament from the updated STAR model")
+            remaining_rows = self._rows_without_tube(updated_rows, int(tube_id))
+
+            try:
+                color_state = self._capture_model_color_state(star_model)
+                substituted_name = self._next_loaded_star_name(
+                    f"{getattr(star_model, 'name', 'Microtubules STAR')} substituted t{int(tube_id)}"
+                )
+                from .io import rows_to_star_text
+
+                created = cmd._create_star_model(
+                    self.session,
+                    substituted_name,
+                    changed_rows,
+                    rows_to_star_text(changed_rows),
+                    open_star=True,
+                    star_format="relion",
+                    show_arrows=True,
+                    view_orient=False,
+                )
+                self._apply_model_color_state(created, color_state)
+                self._inherit_clip_info(created, star_model)
+                source_path = str(getattr(star_model, "_cb_star_path", "") or "").strip()
+                if source_path:
+                    self._store_model_saved_path(created, source_path)
+                self._refresh_outer_continue_state_for_star(created, spacing_ang)
+                self._remember_loaded_star_role(created)
+
+                self._update_star_model_rows_in_place(star_model, remaining_rows)
+                self._refresh_outer_continue_state_for_star(star_model, spacing_ang)
+                self._remember_loaded_star_role(star_model)
+
+                self._last_outer_star_model = created
+                self._select_star_model(created)
+                self._select_continue_outer_star_model(created)
+                try:
+                    star_model.display = True
+                    created.display = True
+                    created.set_selected(True)
+                except Exception:
+                    pass
+                self._set_filament_sub_status(
+                    f"Updated {star_model.name} without filament {tube_id} and created {created.name} from the changed filament."
+                )
+                self.session.logger.info(
+                    f"Substituted filament {tube_id} in {star_model.name}, then separated the changed filament into "
+                    f"{created.name} ({len(changed_rows)} STAR points)."
+                )
+                self._clear_filament_sub_target()
+            except Exception as sep_error:
+                self._last_outer_star_model = star_model
+                self._select_star_model(star_model)
+                self._select_continue_outer_star_model(star_model)
+                self._set_filament_sub_status(
+                    f"Applied substitution in {star_model.name}. Separating the changed filament failed; kept the changed STAR model."
+                )
+                self.session.logger.warning(
+                    f"Substitution applied in {star_model.name}, but separating filament {tube_id} failed: {sep_error}"
+                )
+                self._clear_filament_sub_target()
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._refresh_model_selectors()
+            self._update_filament_sub_buttons()
             self._commit_history_action(history_before)
             self._keep_tool_visible()
 
@@ -5767,6 +6586,8 @@ class CiliaBuilder2Tool(ToolInstance):
                         "name": str(model.name),
                         "rows": rows,
                         "star_text": getattr(model, "_cb_star_text", None),
+                        "outer_continue_offset_ang": getattr(model, "_cb_outer_continue_offset_ang", None),
+                        "outer_spacing_ang": getattr(model, "_cb_outer_spacing_ang", None),
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
                         "clip_info": getattr(model, "_cb_random_clip_info", None),
@@ -6003,13 +6824,15 @@ class CiliaBuilder2Tool(ToolInstance):
             "n_doublet": int(self.n_doublet.value()),
             "radius": float(self.radius.value()),
             "spacing": float(self.spacing.value()),
-            "doublet_offset": float(self.doublet_offset.value()),
+            "doublet_offset": 0.0,
+            "outer_z_offset": float(self.doublet_offset.value()),
+            "outer_twist_per_layer": float(self.outer_twist_per_layer.value()) if hasattr(self, "outer_twist_per_layer") else 0.0,
             "random_enable": bool(self.random_enable.isChecked()),
-            "centriole_length": float(self.centriole_length.value()),
-            "centriole_spacing": float(self.centriole_spacing.value()),
-            "centriole_z_offset": float(self.centriole_z_offset.value()),
-            "centriole_mode": str(self.centriole_mode.currentData() or "singlet"),
-            "centriole_c1c2_distance": float(self.centriole_c1c2_distance.value()),
+            "central_pair_length": float(self.central_pair_length.value()),
+            "central_pair_spacing": float(self.central_pair_spacing.value()),
+            "central_pair_z_offset": float(self.central_pair_z_offset.value()),
+            "central_pair_mode": str(self.central_pair_mode.currentData() or "singlet"),
+            "central_pair_c1c2_distance": float(self.central_pair_c1c2_distance.value()),
             "membrane_length": float(self.membrane_length.value()),
             "membrane_radius": float(self.membrane_radius.value()),
             "membrane_thickness": float(self.membrane_thickness.value()),
@@ -6055,18 +6878,20 @@ class CiliaBuilder2Tool(ToolInstance):
         self.n_doublet.setValue(int(state.get("n_doublet", self.n_doublet.value())))
         self.radius.setValue(float(state.get("radius", self.radius.value())))
         self.spacing.setValue(float(state.get("spacing", self.spacing.value())))
-        self.doublet_offset.setValue(float(state.get("doublet_offset", self.doublet_offset.value())))
+        self.doublet_offset.setValue(float(state.get("outer_z_offset", 0.0)))
+        if hasattr(self, "outer_twist_per_layer"):
+            self.outer_twist_per_layer.setValue(float(state.get("outer_twist_per_layer", 0.0)))
         self.random_enable.setChecked(bool(state.get("random_enable", self.random_enable.isChecked())))
-        self.centriole_length.setValue(float(state.get("centriole_length", self.centriole_length.value())))
-        self.centriole_spacing.setValue(float(state.get("centriole_spacing", self.centriole_spacing.value())))
-        self.centriole_z_offset.setValue(float(state.get("centriole_z_offset", self.centriole_z_offset.value())))
-        self.centriole_c1c2_distance.setValue(
-            float(state.get("centriole_c1c2_distance", self.centriole_c1c2_distance.value()))
+        self.central_pair_length.setValue(float(state.get("central_pair_length", state.get("centriole_length", self.central_pair_length.value()))))
+        self.central_pair_spacing.setValue(float(state.get("central_pair_spacing", state.get("centriole_spacing", self.central_pair_spacing.value()))))
+        self.central_pair_z_offset.setValue(float(state.get("central_pair_z_offset", state.get("centriole_z_offset", self.central_pair_z_offset.value()))))
+        self.central_pair_c1c2_distance.setValue(
+            float(state.get("central_pair_c1c2_distance", state.get("centriole_c1c2_distance", self.central_pair_c1c2_distance.value())))
         )
-        if hasattr(self, "centriole_mode"):
-            idx = self.centriole_mode.findData(str(state.get("centriole_mode", self.centriole_mode.currentData())))
+        if hasattr(self, "central_pair_mode"):
+            idx = self.central_pair_mode.findData(str(state.get("central_pair_mode", state.get("centriole_mode", self.central_pair_mode.currentData()))))
             if idx >= 0:
-                self.centriole_mode.setCurrentIndex(idx)
+                self.central_pair_mode.setCurrentIndex(idx)
         self.membrane_length.setValue(float(state.get("membrane_length", self.membrane_length.value())))
         membrane_radius = state.get("membrane_radius", None)
         if membrane_radius is None:
@@ -6168,6 +6993,8 @@ class CiliaBuilder2Tool(ToolInstance):
             created._cb_star_rows = rows
             created._cb_star_text = item.get("star_text", None)
             created._cb_random_clip_info = item.get("clip_info", None)
+            created._cb_outer_continue_offset_ang = item.get("outer_continue_offset_ang", None)
+            created._cb_outer_spacing_ang = item.get("outer_spacing_ang", None)
             cmd._render_star_model(self.session, created, rows, True)
             self._remember_restored_session_star(created, item)
             self._apply_model_color_state(created, item.get("color_state", []))
@@ -6618,7 +7445,8 @@ class CiliaBuilder2Tool(ToolInstance):
             star_text = read_star_file(path)
             rows = ciliabuilder_rows_from_text(
                 star_text,
-                default_pixel_size=float(self.pixel_size.value()),
+                default_pixel_size=1.0,
+                normalize_pixel_size_to_one=True,
             )
             if not rows:
                 raise RuntimeError("STAR file contains no particle rows")
@@ -6648,6 +7476,61 @@ class CiliaBuilder2Tool(ToolInstance):
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
         finally:
             self._refresh_model_selectors()
+            self._keep_tool_visible()
+
+    def _selected_export_star_model(self):
+        star_ref = self.export_star_model.currentData() if hasattr(self, "export_star_model") else None
+        if star_ref is None and hasattr(self, "sel_star_model"):
+            star_ref = self.sel_star_model.currentData()
+        if star_ref is None:
+            return None
+        return self._model_by_ref(star_ref)
+
+    def _export_star_file(self):
+        from Qt.QtWidgets import QMessageBox, QFileDialog
+        from .io import rows_to_star_text
+
+        try:
+            model = self._selected_export_star_model()
+            if model is None or not hasattr(model, "_cb_star_rows"):
+                raise RuntimeError("Select a STAR model to export first")
+
+            rows = getattr(model, "_cb_star_rows", None) or []
+            if not rows:
+                raise RuntimeError("Selected STAR model has no STAR rows")
+
+            star_text = rows_to_star_text(rows)
+            suggested_name = str(getattr(model, "name", "") or "exported_star").strip() or "exported_star"
+            suggested_name = suggested_name.replace("/", "_")
+            current_path = str(getattr(model, "_cb_star_path", "") or "").strip()
+            if current_path:
+                initial_path = os.path.abspath(os.path.expanduser(current_path))
+            else:
+                initial_path = os.path.join(os.path.expanduser("~/"), f"{suggested_name}.star")
+
+            path, _selected_filter = QFileDialog.getSaveFileName(
+                self.tool_window.ui_area,
+                "Export STAR file",
+                initial_path,
+                "STAR files (*.star);;All files (*)",
+            )
+            if not path:
+                return
+            if not str(path).lower().endswith(".star"):
+                path = f"{path}.star"
+
+            out_path = os.path.abspath(os.path.expanduser(str(path)))
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(star_text)
+
+            model._cb_star_text = star_text
+            model._cb_star_path = out_path
+            self._store_model_saved_path(model, out_path)
+            self.session.logger.info(f"Exported STAR model {model.name} to {out_path}.")
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
             self._keep_tool_visible()
 
     def _is_surface_like(self, model):
@@ -6762,8 +7645,17 @@ class CiliaBuilder2Tool(ToolInstance):
             ex = _safe_unit(np.cross(ey, axis_dir), ex)
             return ex, ey, axis_dir
 
+        stored_continue_offset = getattr(star_model, "_cb_outer_continue_offset_ang", None)
+        try:
+            stored_continue_offset = float(stored_continue_offset)
+        except Exception:
+            stored_continue_offset = None
+        if stored_continue_offset is not None and stored_continue_offset < 0.0:
+            stored_continue_offset = None
+
         combined_rows = []
         any_added = False
+        used_continue_offset = None
         for tube_id in tube_order:
             tube_rows = list(rows_by_tube.get(tube_id, []))
             if not tube_rows:
@@ -6784,6 +7676,7 @@ class CiliaBuilder2Tool(ToolInstance):
             ordered_rows = [item[0] for item in ordered]
             ordered_centers = [np.array(item[1], dtype=float) for item in ordered]
             last_row = ordered_rows[-1]
+            first_center = ordered_centers[0]
             last_center = ordered_centers[-1]
             ex, ey, ez = _orthonormal_axes(last_row, axis_dir)
             try:
@@ -6794,9 +7687,18 @@ class CiliaBuilder2Tool(ToolInstance):
                 pixel_size = 1.0
             combined_rows.extend(ordered_rows)
 
-            step = float(spacing_ang)
-            while step <= float(extra_length_ang) + 1e-6:
-                world = last_center + axis_dir * step
+            if stored_continue_offset is None:
+                projected_length = float(np.dot(last_center - first_center, axis_dir))
+                continue_offset = max(0.0, projected_length) + float(spacing_ang)
+            else:
+                continue_offset = float(stored_continue_offset)
+            if used_continue_offset is None:
+                used_continue_offset = float(continue_offset)
+
+            current_offset = float(continue_offset)
+            offset_limit = float(continue_offset) + float(extra_length_ang)
+            while current_offset <= offset_limit + 1e-6:
+                world = first_center + axis_dir * current_offset
                 combined_rows.append(
                     {
                         "rlnTomoName": str(last_row.get("rlnTomoName", "TS_001")),
@@ -6818,16 +7720,19 @@ class CiliaBuilder2Tool(ToolInstance):
                     }
                 )
                 any_added = True
-                step += float(spacing_ang)
+                current_offset += float(spacing_ang)
 
         if not any_added:
             raise RuntimeError("Continuation length is too short for the chosen spacing")
-        return combined_rows
+        if used_continue_offset is None:
+            raise RuntimeError("Selected STAR model has no valid tubes to continue")
+        next_continue_offset = float(used_continue_offset) + float(extra_length_ang) + float(spacing_ang)
+        return combined_rows, next_continue_offset
 
     def _build_outer(self, continue_mode=False):
         from Qt.QtWidgets import QMessageBox
         from . import cmd
-        from .io import rows_to_star_text, write_star_tempfile
+        from .io import rows_to_star_text
 
         history_before = self._begin_history_action()
         try:
@@ -6836,24 +7741,38 @@ class CiliaBuilder2Tool(ToolInstance):
             n_doublet = int(self.n_doublet.value())
             radius = float(self.radius.value())
             spacing = float(self.spacing.value())
-            doublet_offset = float(self.doublet_offset.value())
+            z_offset = float(self.doublet_offset.value())
+            twist_per_layer = float(self.outer_twist_per_layer.value()) if hasattr(self, "outer_twist_per_layer") else 0.0
 
             random_spacing = bool(self.random_enable.isChecked())
             random_max_diff = max(0.0, 0.49 * spacing)
 
             if continue_mode:
-                model = self._selected_continue_outer_star_model()
-                if model is None:
+                source_model = self._selected_continue_outer_star_model()
+                if source_model is None:
                     raise RuntimeError("Select a STAR model in Continue from STAR first")
-                combined_rows = self._continue_outer_star_rows(model, length, spacing)
+                combined_rows, next_continue_offset = self._continue_outer_star_rows(source_model, length, spacing)
                 star_text = rows_to_star_text(combined_rows)
-                model._cb_star_rows = combined_rows
-                model._cb_star_text = star_text
+                continued_name = self._next_loaded_star_name(f"{getattr(source_model, 'name', 'Microtubules STAR')} continued")
+                model = cmd._create_star_model(
+                    self.session,
+                    continued_name,
+                    combined_rows,
+                    star_text,
+                    open_star=True,
+                    star_format="relion",
+                    show_arrows=True,
+                    view_orient=False,
+                )
+                model._cb_outer_continue_offset_ang = float(next_continue_offset)
+                model._cb_outer_spacing_ang = float(spacing)
                 try:
-                    model._cb_star_path = write_star_tempfile(star_text, suffix=".star")
+                    source_path = str(getattr(source_model, "_cb_star_path", "") or "").strip()
+                    if source_path:
+                        self._store_model_saved_path(model, source_path)
+                    self._inherit_clip_info(model, source_model)
                 except Exception:
                     pass
-                cmd._render_star_model(self.session, model, combined_rows, True)
                 try:
                     model.display = True
                     model.set_selected(True)
@@ -6868,8 +7787,9 @@ class CiliaBuilder2Tool(ToolInstance):
                     n_doublet=n_doublet,
                     radius=radius,
                     spacing=spacing,
-                    z_offset=0.0,
-                    doublet_offset=doublet_offset,
+                    z_offset=z_offset,
+                    doublet_offset=0.0,
+                    twist_per_layer=twist_per_layer,
                     pixel_size=pixel_size,
                     random_spacing=random_spacing,
                     random_max_diff=random_max_diff,
@@ -6885,9 +7805,13 @@ class CiliaBuilder2Tool(ToolInstance):
                         model._cb_random_clip_info = None
                 except Exception:
                     pass
+                model._cb_outer_continue_offset_ang = float(length) + float(spacing)
+                model._cb_outer_spacing_ang = float(spacing)
 
             self._last_outer_star_model = model
             self._select_star_model(model)
+            if continue_mode:
+                self._select_continue_outer_star_model(model)
 
             # Update last outer end z
             try:
@@ -6910,24 +7834,24 @@ class CiliaBuilder2Tool(ToolInstance):
             self._commit_history_action(history_before)
             self._keep_tool_visible()
 
-    def _build_centriole(self):
+    def _build_central_pair(self):
         from Qt.QtWidgets import QMessageBox
         from . import cmd
 
         history_before = self._begin_history_action()
         try:
-            length = float(self.centriole_length.value())
-            spacing = float(self.centriole_spacing.value())
-            z_offset = float(self.centriole_z_offset.value())
-            mode = str(self.centriole_mode.currentData() or "singlet")
-            c1c2_distance = float(self.centriole_c1c2_distance.value())
+            length = float(self.central_pair_length.value())
+            spacing = float(self.central_pair_spacing.value())
+            z_offset = float(self.central_pair_z_offset.value())
+            mode = str(self.central_pair_mode.currentData() or "singlet")
+            c1c2_distance = float(self.central_pair_c1c2_distance.value())
 
             pixel_size = float(self.pixel_size.value())
             built_models = []
             cp_half_sep = 0.5 * float(c1c2_distance)
 
             def build_one(name_prefix, tube_id, x_offset):
-                model = cmd.buildcentriole(
+                model = cmd.buildcentralpair(
                     self.session,
                     length=length,
                     spacing=spacing,
@@ -6978,6 +7902,9 @@ class CiliaBuilder2Tool(ToolInstance):
             self._refresh_model_selectors()
             self._commit_history_action(history_before)
             self._keep_tool_visible()
+
+    def _build_centriole(self):
+        return self._build_central_pair()
 
     def _build_membrane(self):
         from Qt.QtWidgets import QMessageBox

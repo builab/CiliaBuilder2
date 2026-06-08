@@ -8,7 +8,7 @@ from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
 
 from .io import rows_to_star_text, write_star_tempfile
-from .draw import build_cilia_lines_star_rows, buildcentriole_star_rows, build_ift_star_rows
+from .draw import build_cilia_lines_star_rows, build_central_pair_star_rows, build_ift_star_rows
 
 
 _CB_CLASS_COUNTER = 0
@@ -138,6 +138,25 @@ def _rotation_align_vector_to_vector(v_from, v_to):
         dtype=float,
     )
     return np.eye(3, dtype=float) + K + (K @ K) * ((1.0 - c) / (n * n))
+
+
+def _append_transformed_geometry(bucket, vertices, normals, triangles, direction, origin, z_shift=0.0):
+    va = np.array(vertices, dtype=np.float32, copy=True)
+    na = np.array(normals, dtype=np.float32, copy=True)
+    ta = np.array(triangles, dtype=np.int32, copy=True)
+    if abs(float(z_shift)) > 1e-12:
+        va[:, 2] += float(z_shift)
+    rot = _rotation_align_vector_to_vector((0.0, 0.0, 1.0), direction)
+    va = va @ rot.T
+    na = na @ rot.T
+    va[:, 0] += float(origin[0])
+    va[:, 1] += float(origin[1])
+    va[:, 2] += float(origin[2])
+    ta += int(bucket["offset"])
+    bucket["vertices"].append(va)
+    bucket["normals"].append(na)
+    bucket["triangles"].append(ta)
+    bucket["offset"] += len(va)
 
 
 def _find_child_group(parent, tag):
@@ -636,7 +655,9 @@ def buildmembrane_surface(
 
 def _render_star_model(session, parent_model, rows, show_arrows):
     try:
-        from chimerax.markers.markers import MarkerSet, create_link
+        from chimerax.markers.markers import MarkerSet
+        from chimerax.core.models import Surface
+        from chimerax.surface.shapes import cylinder_geometry, cone_geometry
     except Exception:
         return None
 
@@ -650,6 +671,32 @@ def _render_star_model(session, parent_model, rows, show_arrows):
     marker_set = MarkerSet(session, name="Particles")
     marker_set._cb_rendered_particles = True
     parent_model.add([marker_set])
+    axis_buckets = {
+        "x": {
+            "name": "X axis arrows",
+            "color": (255, 0, 0, 255),
+            "vertices": [],
+            "normals": [],
+            "triangles": [],
+            "offset": 0,
+        },
+        "y": {
+            "name": "Y axis arrows",
+            "color": (255, 255, 0, 255),
+            "vertices": [],
+            "normals": [],
+            "triangles": [],
+            "offset": 0,
+        },
+        "z": {
+            "name": "Z axis arrows",
+            "color": (0, 0, 255, 255),
+            "vertices": [],
+            "normals": [],
+            "triangles": [],
+            "offset": 0,
+        },
+    }
 
     for row_index, row in enumerate(rows):
         px = float(row.get("rlnImagePixelSize", 1.0) or 1.0)
@@ -658,7 +705,6 @@ def _render_star_model(session, parent_model, rows, show_arrows):
         glyph_scale = max(0.25, min(4.0, 10.0 / max(px, 1e-6)))
         center_radius = 8.0 * glyph_scale
         axis_len = 24.0 * glyph_scale
-        link_radius = 2.4 * glyph_scale
         base = marker_set.create_marker(center, (50, 80, 255, 255), center_radius)
         for atom in (base,):
             try:
@@ -669,47 +715,39 @@ def _render_star_model(session, parent_model, rows, show_arrows):
             continue
         ex, ey, ez = _particle_axes_from_row(row)
         axes = (
-            ((255, 0, 0, 255), ex),
-            ((255, 255, 0, 255), ey),
-            ((0, 0, 255, 255), ez),
+            (axis_buckets["x"], ex),
+            (axis_buckets["y"], ey),
+            (axis_buckets["z"], ez),
         )
-        for color, vec in axes:
-            tip_xyz = (
-                center[0] + axis_len * vec[0],
-                center[1] + axis_len * vec[1],
-                center[2] + axis_len * vec[2],
+        shaft_len = 0.72 * axis_len
+        head_len = axis_len - shaft_len
+        shaft_radius = max(0.8, 1.7 * glyph_scale)
+        head_radius = max(1.4, 3.0 * glyph_scale)
+        shaft_v, shaft_n, shaft_t = cylinder_geometry(radius=shaft_radius, height=shaft_len, nz=2, nc=18, caps=True)
+        cone_v, cone_n, cone_t = cone_geometry(radius=head_radius, height=head_len, nc=18, caps=True, points_up=True)
+        for bucket, vec in axes:
+            _append_transformed_geometry(bucket, shaft_v, shaft_n, shaft_t, vec, center, z_shift=0.5 * shaft_len)
+            _append_transformed_geometry(bucket, cone_v, cone_n, cone_t, vec, center, z_shift=shaft_len + 0.5 * head_len)
+    if bool(show_arrows):
+        for bucket in axis_buckets.values():
+            if not bucket["vertices"]:
+                continue
+            surface = Surface(bucket["name"], session)
+            surface.set_geometry(
+                np.concatenate(bucket["vertices"]).astype(np.float32, copy=False),
+                np.concatenate(bucket["normals"]).astype(np.float32, copy=False),
+                np.concatenate(bucket["triangles"]).astype(np.int32, copy=False),
             )
-            shaft_len = 0.78 * axis_len
-            shaft_xyz = (
-                center[0] + shaft_len * vec[0],
-                center[1] + shaft_len * vec[1],
-                center[2] + shaft_len * vec[2],
-            )
-            shaft = marker_set.create_marker(shaft_xyz, color, max(0.6, 1.4 * glyph_scale))
-            tip = marker_set.create_marker(tip_xyz, color, max(0.2, 0.5 * glyph_scale))
-            for atom in (shaft, tip):
-                try:
-                    atom._cb_star_row_index = int(row_index)
-                except Exception:
-                    pass
-            create_link(base, shaft, rgba=color, radius=link_radius)
-            create_link(shaft, tip, rgba=color, radius=max(0.8, 1.4 * glyph_scale))
-
-            side = _arrow_head_basis(vec)
-            head_back = 0.18 * axis_len
-            head_side = 0.10 * axis_len
-            for sign in (-1.0, 1.0):
-                head_xyz = (
-                    tip_xyz[0] - head_back * vec[0] + sign * head_side * side[0],
-                    tip_xyz[1] - head_back * vec[1] + sign * head_side * side[1],
-                    tip_xyz[2] - head_back * vec[2] + sign * head_side * side[2],
-                )
-                head = marker_set.create_marker(head_xyz, color, max(0.2, 0.4 * glyph_scale))
-                try:
-                    head._cb_star_row_index = int(row_index)
-                except Exception:
-                    pass
-                create_link(tip, head, rgba=color, radius=max(0.7, 1.1 * glyph_scale))
+            surface._cb_rendered_particles = True
+            try:
+                surface.color = bucket["color"]
+            except Exception:
+                pass
+            try:
+                surface.pickable = False
+            except Exception:
+                pass
+            parent_model.add([surface])
     return marker_set
 
 
@@ -815,6 +853,7 @@ def cbstraight(
     spacing=960.0,
     z_offset=0.0,
     doublet_offset=0.0,
+    twist_per_layer=0.0,
     random_spacing=False,
     random_max_diff=0.0,
     show_arrows=False,
@@ -836,6 +875,7 @@ def cbstraight(
         tube_id_offset=0,
         angle_set_deg=float(angle_set),
         doublet_offset_deg=float(doublet_offset),
+        twist_per_layer_deg=float(twist_per_layer),
         z_offset_ang=float(z_offset),
         random_spacing=bool(random_spacing),
         random_max_diff=float(random_max_diff),
@@ -870,6 +910,7 @@ cbstraight_desc = CmdDesc(
         ("spacing", FloatArg),
         ("z_offset", FloatArg),
         ("doublet_offset", FloatArg),
+        ("twist_per_layer", FloatArg),
         ("random_spacing", BoolArg),
         ("random_max_diff", FloatArg),
         ("show_arrows", BoolArg),
@@ -883,7 +924,7 @@ cbstraight_desc = CmdDesc(
 )
 
 
-def buildcentriole(
+def buildcentralpair(
     session,
     length=2000.0,
     spacing=320.0,
@@ -902,7 +943,7 @@ def buildcentriole(
 ):
     class_num = _next_class_number()
 
-    rows = buildcentriole_star_rows(
+    rows = build_central_pair_star_rows(
         length_ang=float(length),
         bead_spacing_ang=float(spacing),
         tomo_name=str(tomo_name),
@@ -931,10 +972,10 @@ def buildcentriole(
         open_star,
         star_format,
         show_arrows,
-    )
+)
 
 
-buildcentriole_desc = CmdDesc(
+buildcentralpair_desc = CmdDesc(
     keyword=[
         ("length", FloatArg),
         ("spacing", FloatArg),
@@ -953,6 +994,14 @@ buildcentriole_desc = CmdDesc(
     ],
     synopsis="Build central pair STAR only (single center line).",
 )
+
+
+def buildcentriole(*args, **kwargs):
+    # Legacy compatibility alias for older command wiring / callers.
+    return buildcentralpair(*args, **kwargs)
+
+
+buildcentriole_desc = buildcentralpair_desc
 
 
 def buildift(
