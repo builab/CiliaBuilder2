@@ -142,7 +142,7 @@ def _resolve_attach_source_model(model_obj):
 def _parse_star_rows_from_model(model_obj):
     rows = getattr(model_obj, "_cb_star_rows", None)
     if rows is None:
-        raise RuntimeError("Need a star model created by cbstraight or buildcentriole")
+        raise RuntimeError("Need a star model created by cbstraight or buildcentralpair")
     if not isinstance(rows, (list, tuple)) or len(rows) == 0:
         raise RuntimeError("Star model has no STAR rows")
     return rows

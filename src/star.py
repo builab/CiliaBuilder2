@@ -135,6 +135,7 @@ def ciliabuilder_rows_from_text(
     default_tomo_name: str = "TS_001",
     default_tube_id: int = 1,
     default_class_number: int = 1,
+    normalize_pixel_size_to_one: bool = False,
 ) -> List[Dict[str, object]]:
     headers, rows = parse_star_text(star_text)
     col = {h: i for i, h in enumerate(headers)}
@@ -184,21 +185,34 @@ def ciliabuilder_rows_from_text(
         except Exception:
             class_number = int(default_class_number)
 
+        world_x = float(x) * float(px)
+        world_y = float(y) * float(px)
+        world_z = float(z) * float(px)
+        stored_px = float(px)
+        stored_x = float(x)
+        stored_y = float(y)
+        stored_z = float(z)
+        if bool(normalize_pixel_size_to_one):
+            stored_px = 1.0
+            stored_x = float(world_x)
+            stored_y = float(world_y)
+            stored_z = float(world_z)
+
         out.append(
             {
                 "rlnTomoName": tomo_name,
-                "rlnCoordinateX": float(x),
-                "rlnCoordinateY": float(y),
-                "rlnCoordinateZ": float(z),
+                "rlnCoordinateX": float(stored_x),
+                "rlnCoordinateY": float(stored_y),
+                "rlnCoordinateZ": float(stored_z),
                 "rlnAngleRot": float(rot),
                 "rlnAngleTilt": float(tilt),
                 "rlnAnglePsi": float(psi),
-                "rlnImagePixelSize": float(px),
+                "rlnImagePixelSize": float(stored_px),
                 "rlnHelicalTubeID": int(tube_id),
                 "rlnClassNumber": int(class_number),
-                "_cbWorldCoordinateX": float(x) * float(px),
-                "_cbWorldCoordinateY": float(y) * float(px),
-                "_cbWorldCoordinateZ": float(z) * float(px),
+                "_cbWorldCoordinateX": float(world_x),
+                "_cbWorldCoordinateY": float(world_y),
+                "_cbWorldCoordinateZ": float(world_z),
             }
         )
 

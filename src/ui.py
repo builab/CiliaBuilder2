@@ -38,7 +38,7 @@ class CiliaBuilder2Panel(ToolInstance):
         root.setLayout(main)
 
         left = self._make_outer_panel()
-        right = self._make_centriole_panel()
+        right = self._make_central_pair_panel()
 
         main.addWidget(left, 1)
         main.addWidget(right, 1)
@@ -142,7 +142,7 @@ class CiliaBuilder2Panel(ToolInstance):
 
         return box
 
-    def _make_centriole_panel(self):
+    def _make_central_pair_panel(self):
         box = QGroupBox("Central pair")
         form = QFormLayout()
         box.setLayout(form)
@@ -171,6 +171,9 @@ class CiliaBuilder2Panel(ToolInstance):
         form.addRow("Z offset", self.cen_z_offset)
 
         return box
+
+    def _make_centriole_panel(self):
+        return self._make_central_pair_panel()
 
     def _on_open_map(self):
         path, _ = QFileDialog.getOpenFileName(self.tool_window.ui_area, "Open map", "", "Map files (*.mrc *.map *.ccp4 *.mrcs);;All files (*)")
