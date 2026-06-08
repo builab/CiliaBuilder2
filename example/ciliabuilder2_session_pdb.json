@@ -1,0 +1,730 @@
+{
+  "format": "ciliabuilder2_session",
+  "version": 5,
+  "ui": {
+    "angle_set": 0.0,
+    "length": 1200.0,
+    "n_doublet": 9,
+    "radius": 960.0,
+    "spacing": 1000.0,
+    "doublet_offset": 0.0,
+    "random_enable": false,
+    "centriole_length": 1200.0,
+    "centriole_spacing": 333.0,
+    "centriole_z_offset": 0.0,
+    "centriole_mode": "singlet",
+    "centriole_c1c2_distance": 100.0,
+    "membrane_length": 1400.0,
+    "membrane_radius": 1500.0,
+    "membrane_thickness": 40.0,
+    "membrane_offset": -500.0,
+    "membrane_distortion": 0.6,
+    "membrane_tip_dome": true,
+    "membrane_particle_receptors_pct": 8.0,
+    "membrane_particle_channels_pct": 7.0,
+    "membrane_particle_signaling_pct": 7.0,
+    "membrane_particle_scaffold_pct": 8.0,
+    "membrane_particle_lipids_pct": 70.0,
+    "marker_path_count": 4,
+    "geometric_draw_mode": "curve",
+    "marker_path_mode": "curve",
+    "marker_path_radius": 20.0,
+    "draw_marker_radius": 12.0,
+    "ift_distance": 1250.0,
+    "ift_mode": "train",
+    "ift_type": "anterograde",
+    "ift_anterograde_angle": -5.0,
+    "ift_retrograde_angle": 12.0,
+    "ift_train_star_model": {
+      "id": "2.1.1",
+      "text": "Microtubules STAR 2 (#2.1.1)"
+    },
+    "ift_train_doublet": "3",
+    "ift_train_angle": "0",
+    "ift_train_offset": "1500",
+    "ift_train_periodicity": "65",
+    "ift_train_repeat": "10",
+    "attach_line_rotation": 0.0,
+    "attach_y_rotation": 0.0,
+    "attach_x_movement": 0.0,
+    "attach_pre_rotate_y_90": false,
+    "pixel_size": 1.0,
+    "align_z_model": {
+      "id": null,
+      "text": ""
+    },
+    "align_z_save_path": "",
+    "tweak_source_path": "",
+    "tweak_template_path": "/Users/qs/Downloads/triplet.mrc",
+    "tweak_save_path": ""
+  },
+  "selected": {
+    "star_model": {
+      "id": "2.1.2",
+      "text": "Central pair STAR 3 (#2.1.2)"
+    },
+    "map_model": {
+      "id": "2.2.4",
+      "text": "9ijj (#2.2.4)"
+    },
+    "ift_train_star_model": {
+      "id": "2.1.1",
+      "text": "Microtubules STAR 2 (#2.1.1)"
+    },
+    "continue_outer_star_model": {
+      "id": "2.1.1",
+      "text": "Microtubules STAR 2 (#2.1.1)"
+    }
+  },
+  "attach_sources": [
+    {
+      "session_source_id": "2.2.2",
+      "name": "8glv",
+      "path": "/Users/kbui2/Downloads/ChimeraX/PDB/8glv.cif",
+      "fetch_type": "pdb",
+      "fetch_id": "8glv",
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "8glv",
+          "rgba": [
+            210,
+            180,
+            140,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "metal coordination bonds",
+          "rgba": [
+            147,
+            112,
+            219,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "missing structure",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    },
+    {
+      "session_source_id": "2.2.4",
+      "name": "9ijj",
+      "path": "/Users/kbui2/Downloads/ChimeraX/PDB/9ijj.cif",
+      "fetch_type": "pdb",
+      "fetch_id": "9ijj",
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "9ijj",
+          "rgba": [
+            210,
+            180,
+            140,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "missing structure",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    }
+  ],
+  "generated_star_models": [
+    {
+      "session_star_id": "2.1.1",
+      "name": "Microtubules STAR 2",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 2
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 960.000000 0.000000 0.000000 90.000000 0.000000 0.000000 1.000000 1 2\nTS_001 960.000000 0.000000 1000.000000 90.000000 0.000000 0.000000 1.000000 1 2\nTS_001 735.402665 617.076105 0.000000 50.000000 0.000000 0.000000 1.000000 2 2\nTS_001 735.402665 617.076105 1000.000000 50.000000 0.000000 0.000000 1.000000 2 2\nTS_001 166.702251 945.415443 0.000000 10.000000 0.000000 0.000000 1.000000 3 2\nTS_001 166.702251 945.415443 1000.000000 10.000000 0.000000 0.000000 1.000000 3 2\nTS_001 -480.000000 831.384388 0.000000 -30.000000 0.000000 0.000000 1.000000 4 2\nTS_001 -480.000000 831.384388 1000.000000 -30.000000 0.000000 0.000000 1.000000 4 2\nTS_001 -902.104916 328.339338 0.000000 -70.000000 0.000000 0.000000 1.000000 5 2\nTS_001 -902.104916 328.339338 1000.000000 -70.000000 0.000000 0.000000 1.000000 5 2\nTS_001 -902.104916 -328.339338 0.000000 -110.000000 0.000000 0.000000 1.000000 6 2\nTS_001 -902.104916 -328.339338 1000.000000 -110.000000 0.000000 0.000000 1.000000 6 2\nTS_001 -480.000000 -831.384388 0.000000 -150.000000 0.000000 0.000000 1.000000 7 2\nTS_001 -480.000000 -831.384388 1000.000000 -150.000000 0.000000 0.000000 1.000000 7 2\nTS_001 166.702251 -945.415443 0.000000 -190.000000 0.000000 0.000000 1.000000 8 2\nTS_001 166.702251 -945.415443 1000.000000 -190.000000 0.000000 0.000000 1.000000 8 2\nTS_001 735.402665 -617.076105 0.000000 -230.000000 0.000000 0.000000 1.000000 9 2\nTS_001 735.402665 -617.076105 1000.000000 -230.000000 0.000000 0.000000 1.000000 9 2\n",
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Microtubules STAR 2",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "2.1.2",
+      "name": "Central pair STAR 3",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 333.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 666.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 999.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 3
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 100 3\nTS_001 0.000000 0.000000 333.000000 0.000000 0.000000 0.000000 1.000000 100 3\nTS_001 0.000000 0.000000 666.000000 0.000000 0.000000 0.000000 1.000000 100 3\nTS_001 0.000000 0.000000 999.000000 0.000000 0.000000 0.000000 1.000000 100 3\n",
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Central pair STAR 3",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    }
+  ],
+  "generated_membranes": [
+    {
+      "session_membrane_id": "2.3.1",
+      "name": "Membrane 4",
+      "state": {
+        "center": [
+          -1.0105496686365869e-13,
+          -1.2631870857957336e-14,
+          200.0
+        ],
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "length": 1400.0,
+        "diameter": 3000.0,
+        "thickness": 40.0,
+        "distortion_level": 0.6,
+        "distortion_seed": 1175693827,
+        "tip_dome_enabled": true,
+        "tip_dome_outer_height": 1500.0,
+        "tip_dome_inner_height": 1460.0,
+        "offset": -500.0,
+        "radius": 1500.0,
+        "source_star_name": "Microtubules STAR 2",
+        "start_scalar": -500.0
+      },
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Membrane 4",
+          "rgba": [
+            180,
+            180,
+            190,
+            180
+          ]
+        }
+      ]
+    }
+  ],
+  "generated_marker_paths": [],
+  "attachments": [
+    {
+      "session_attachment_id": "2.2.1",
+      "name": "Microtubules STAR 2 <- 8glv",
+      "star_session_id": "2.1.1",
+      "source_session_id": "2.2.2",
+      "star_name": "Microtubules STAR 2",
+      "map_name": "8glv",
+      "map_path": "/Users/kbui2/Downloads/ChimeraX/PDB/8glv.cif",
+      "fetch_type": "pdb",
+      "fetch_id": "8glv",
+      "line_rotation": 0.0,
+      "y_rotation": 0.0,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Microtubules STAR 2 <- 8glv",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "8glv placed on Microtubules STAR 2",
+          "rgba": [
+            210,
+            180,
+            140,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "metal coordination bonds",
+          "rgba": [
+            147,
+            112,
+            219,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            1
+          ],
+          "name": "missing structure",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "2.2.3",
+      "name": "Central pair STAR 3 <- 9ijj",
+      "star_session_id": "2.1.2",
+      "source_session_id": "2.2.4",
+      "star_name": "Central pair STAR 3",
+      "map_name": "9ijj",
+      "map_path": "/Users/kbui2/Downloads/ChimeraX/PDB/9ijj.cif",
+      "fetch_type": "pdb",
+      "fetch_id": "9ijj",
+      "line_rotation": 0.0,
+      "y_rotation": 0.0,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Central pair STAR 3 <- 9ijj",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "9ijj placed on Central pair STAR 3",
+          "rgba": [
+            210,
+            180,
+            140,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "missing structure",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        }
+      ]
+    }
+  ],
+  "model_structure": {
+    "nodes": [
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "2.1.1",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 0
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "2.1.2",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 1
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "2.2.1",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 0
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "2.2.2",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 1
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "2.2.3",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 2
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "2.2.4",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 3
+      },
+      {
+        "node_kind": "model",
+        "model_type": "membrane",
+        "model_id": "2.3.1",
+        "parent": {
+          "kind": "group",
+          "tag": "membrane"
+        },
+        "order": 0
+      }
+    ]
+  }
+}

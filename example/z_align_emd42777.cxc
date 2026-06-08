@@ -1,0 +1,24 @@
+# Script to align EMD-19515 (Retrograde) so the longitudinal axis parallel to the Y axis
+# Reset the session
+close all
+
+# Fetch the map from EMDB
+open emdb:42777
+
+# Copy volume
+volume copy #1
+
+# Rotate around z
+roll y -3 1 models #2; wait;
+
+# Rotate around x
+roll x -2 1 models #2; wait;
+
+# Rotate around z
+roll z 138 1 models #2; wait;
+
+# Resample to keep the rotated volume
+volume resample #2 onGrid #1
+
+# Save rotated volume
+save ~/Desktop/emd_42777_zaligned.mrc models #3
