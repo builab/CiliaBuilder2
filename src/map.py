@@ -779,8 +779,9 @@ def _zero_volume_origin(session, vol):
 
 def _shared_map_anchor_local(session, src_map):
     """
-    Use the map's own offset if it has one; otherwise use ChimeraX's built-in
-    density center-of-mass for the selected map. Compute once and reuse.
+    Use the volume's geometric center in local coordinates for attachment.
+    This keeps file-backed map placement consistent and avoids density-dependent
+    anchor drift.
     """
     probe = _copy_source_instance(session, src_map)
     if probe is None:
@@ -791,17 +792,7 @@ def _shared_map_anchor_local(session, src_map):
         except Exception:
             pass
 
-        origin = _map_data_origin_local(probe)
-        if origin is not None and float(np.linalg.norm(origin)) > 1e-12:
-            return origin
-
-        try:
-            from chimerax.map.measure import volume_center_of_mass
-
-            center = volume_center_of_mass(probe)
-            return np.array([float(center[0]), float(center[1]), float(center[2])], dtype=float)
-        except Exception:
-            return _bounds_center_local(probe)
+        return _bounds_center_local(probe)
     finally:
         try:
             session.models.close([probe])

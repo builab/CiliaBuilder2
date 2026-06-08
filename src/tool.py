@@ -1228,8 +1228,13 @@ class CiliaBuilder2Tool(ToolInstance):
             return []
 
         entries = []
+        seen = set()
 
         def walk(node, path):
+            node_id = id(node)
+            if node_id in seen:
+                return
+            seen.add(node_id)
             color = self._model_direct_color(node)
             if color is not None:
                 entries.append(
@@ -1635,6 +1640,7 @@ class CiliaBuilder2Tool(ToolInstance):
         wrapper_ids = {}
         nodes = []
         wrapper_counter = 0
+        seen = set()
 
         def wrapper_id_for(model):
             nonlocal wrapper_counter
@@ -1659,6 +1665,10 @@ class CiliaBuilder2Tool(ToolInstance):
             return None
 
         def walk(parent):
+            parent_id = id(parent)
+            if parent_id in seen:
+                return
+            seen.add(parent_id)
             try:
                 children = list(parent.child_models())
             except Exception:
@@ -1726,6 +1736,7 @@ class CiliaBuilder2Tool(ToolInstance):
             children_by_parent.setdefault(ref_key(entry.get("parent", {"kind": "root"})), []).append(entry)
 
         wrapper_models = {}
+        active_parent_refs = set()
 
         def resolve_parent(ref):
             if not isinstance(ref, dict):
@@ -1756,31 +1767,57 @@ class CiliaBuilder2Tool(ToolInstance):
                 return model
             return self._restored_session_layout_model(entry.get("model_type", None), entry.get("model_id", None))
 
+        def would_create_cycle(parent_model, child_model):
+            if parent_model is None or child_model is None:
+                return False
+            cur = parent_model
+            seen_models = set()
+            while cur is not None and id(cur) not in seen_models:
+                if cur is child_model:
+                    return True
+                seen_models.add(id(cur))
+                cur = self._model_parent(cur)
+            return False
+
         def apply_children(parent_ref):
-            parent_model = resolve_parent(parent_ref)
-            if parent_model is None:
+            parent_key = ref_key(parent_ref)
+            if parent_key in active_parent_refs:
                 return
-            entries = list(children_by_parent.get(ref_key(parent_ref), []))
-            entries.sort(
-                key=lambda entry: (
-                    int(entry.get("order", 0) or 0),
-                    str(entry.get("name", "") or ""),
-                    str(entry.get("model_id", "") or ""),
+            active_parent_refs.add(parent_key)
+            try:
+                parent_model = resolve_parent(parent_ref)
+                if parent_model is None:
+                    return
+                entries = list(children_by_parent.get(parent_key, []))
+                entries.sort(
+                    key=lambda entry: (
+                        int(entry.get("order", 0) or 0),
+                        str(entry.get("name", "") or ""),
+                        str(entry.get("model_id", "") or ""),
+                    )
                 )
-            )
-            for entry in entries:
-                child_model = materialize_entry(entry)
-                if child_model is None or child_model is parent_model:
-                    continue
-                try:
-                    parent_model.add([child_model])
-                except Exception:
-                    try:
-                        self.session.models.add([child_model], parent=parent_model)
-                    except Exception:
-                        pass
-                if str(entry.get("node_kind", "model") or "model").strip().lower() == "wrapper":
-                    apply_children({"kind": "wrapper", "id": entry.get("wrapper_id", "")})
+                for entry in entries:
+                    child_model = materialize_entry(entry)
+                    if child_model is None or child_model is parent_model:
+                        continue
+                    if would_create_cycle(parent_model, child_model):
+                        self.session.logger.warning(
+                            f"Skipped restoring model structure edge that would create a cycle: "
+                            f"{getattr(parent_model, 'name', '(parent)')} <- {getattr(child_model, 'name', '(child)')}"
+                        )
+                        continue
+                    if self._model_parent(child_model) is not parent_model:
+                        try:
+                            parent_model.add([child_model])
+                        except Exception:
+                            try:
+                                self.session.models.add([child_model], parent=parent_model)
+                            except Exception:
+                                pass
+                    if str(entry.get("node_kind", "model") or "model").strip().lower() == "wrapper":
+                        apply_children({"kind": "wrapper", "id": entry.get("wrapper_id", "")})
+            finally:
+                active_parent_refs.discard(parent_key)
 
         apply_children({"kind": "root"})
         for tag in ("star_models", "maps", "membrane"):
@@ -2200,6 +2237,64 @@ class CiliaBuilder2Tool(ToolInstance):
         if hasattr(self, "redo_action_btn"):
             self.redo_action_btn.setEnabled(bool(getattr(self, "_history_redo_stack", [])))
 
+    def _history_kind_fields(self):
+        return (
+            ("source", "attach_sources"),
+            ("star", "generated_star_models"),
+            ("membrane", "generated_membranes"),
+            ("marker_path", "generated_marker_paths"),
+            ("attachment", "attachments"),
+        )
+
+    def _capture_history_scene_state(self):
+        export_cache = {}
+        return {
+            "attach_sources": copy.deepcopy(self._attach_source_models_state(None, None, export_cache)),
+            "generated_star_models": copy.deepcopy(self._generated_star_models()),
+            "generated_membranes": copy.deepcopy(self._generated_membrane_models()),
+            "generated_marker_paths": copy.deepcopy(self._generated_marker_path_models()),
+            "attachments": copy.deepcopy(self._attachment_models_state(None, None, export_cache)),
+        }
+
+    def _build_history_action_record(self, before_state, after_state):
+        record = {
+            "created": {kind: [] for kind, _field in self._history_kind_fields()},
+            "deleted": {kind: [] for kind, _field in self._history_kind_fields()},
+            "modified_before": {kind: [] for kind, _field in self._history_kind_fields()},
+            "modified_after": {kind: [] for kind, _field in self._history_kind_fields()},
+        }
+        has_changes = False
+
+        for kind, field in self._history_kind_fields():
+            before_items = list((before_state or {}).get(field, []) or [])
+            after_items = list((after_state or {}).get(field, []) or [])
+            before_by_key = {self._history_item_key(kind, item): item for item in before_items}
+            after_by_key = {self._history_item_key(kind, item): item for item in after_items}
+
+            for item in after_items:
+                key = self._history_item_key(kind, item)
+                if key not in before_by_key:
+                    record["created"][kind].append(copy.deepcopy(item))
+                    has_changes = True
+
+            for item in before_items:
+                key = self._history_item_key(kind, item)
+                if key not in after_by_key:
+                    record["deleted"][kind].append(copy.deepcopy(item))
+                    has_changes = True
+
+            for item in before_items:
+                key = self._history_item_key(kind, item)
+                other = after_by_key.get(key, None)
+                if other is None:
+                    continue
+                if self._history_item_restore_signature(kind, item) != self._history_item_restore_signature(kind, other):
+                    record["modified_before"][kind].append(copy.deepcopy(item))
+                    record["modified_after"][kind].append(copy.deepcopy(other))
+                    has_changes = True
+
+        return record if has_changes else None
+
     def _history_state_signature(self, payload):
         if payload is None:
             return ""
@@ -2208,17 +2303,18 @@ class CiliaBuilder2Tool(ToolInstance):
     def _begin_history_action(self):
         if bool(getattr(self, "_history_replaying", False)):
             return None
-        return copy.deepcopy(self._session_payload(include_history_selected=True))
+        return self._capture_history_scene_state()
 
     def _commit_history_action(self, before_payload):
         if before_payload is None or bool(getattr(self, "_history_replaying", False)):
             self._update_history_buttons()
             return
-        after_payload = self._session_payload(include_history_selected=True)
-        if self._history_state_signature(before_payload) == self._history_state_signature(after_payload):
+        after_payload = self._capture_history_scene_state()
+        record = self._build_history_action_record(before_payload, after_payload)
+        if record is None:
             self._update_history_buttons()
             return
-        self._history_undo_stack.append(copy.deepcopy(before_payload))
+        self._history_undo_stack.append(copy.deepcopy(record))
         if len(self._history_undo_stack) > int(max(1, getattr(self, "_history_limit", 30))):
             self._history_undo_stack = self._history_undo_stack[-int(self._history_limit):]
         self._history_redo_stack = []
@@ -2571,19 +2667,144 @@ class CiliaBuilder2Tool(ToolInstance):
             self._history_replaying = False
             self._update_history_buttons()
 
+    def _prune_attached_results_state(self):
+        live = {}
+        for attach_key, out_root in list(getattr(self, "_attached_results", {}).items()):
+            if out_root is None or self._model_ref(out_root) is None:
+                continue
+            live[attach_key] = out_root
+        self._attached_results = live
+        if self._last_attached_result is not None and self._model_ref(self._last_attached_result) is None:
+            self._last_attached_result = None
+
+    def _history_attachment_star_model(self, item):
+        model = self._restored_session_star_model(item)
+        if model is None:
+            model = self._find_model_by_name(item.get("star_name"), require_star=True)
+        return model
+
+    def _history_attachment_source_model(self, item):
+        model = self._restored_session_source_model(item)
+        fetch_type = item.get("fetch_type", None)
+        fetch_id = item.get("fetch_id", None)
+        if model is None and fetch_type and fetch_id:
+            model = self._find_model_by_fetch(fetch_type, fetch_id)
+        map_path = item.get("map_path", None)
+        if model is None and map_path:
+            model = self._find_model_by_path(map_path)
+        if model is None:
+            model = self._find_model_by_name(item.get("map_name"), require_star=False)
+        return model
+
+    def _other_live_attachment_uses_model(self, target_model, attr_ref_name, attr_name_name, exclude_model=None):
+        if target_model is None:
+            return False
+        want_ref = self._model_ref(target_model)
+        want_name = str(getattr(target_model, "name", "") or "")
+        for model in self._all_session_models():
+            if model is None or model is exclude_model:
+                continue
+            if not bool(getattr(model, "_cb_generated_attached", False)):
+                continue
+            if self._model_ref(model) is None:
+                continue
+            if want_ref and str(getattr(model, attr_ref_name, None) or "") == str(want_ref):
+                return True
+            if want_name and str(getattr(model, attr_name_name, "") or "") == want_name:
+                return True
+        return False
+
+    def _history_remove_item(self, kind, item):
+        kind = str(kind or "").strip().lower()
+        model = self._history_live_model_for_item(kind, item)
+        if model is None:
+            return
+        if kind == "attachment":
+            star_model = self._history_attachment_star_model(item)
+            source_model = self._history_attachment_source_model(item)
+            self._hide_and_close_model_tree(model)
+            self._prune_attached_results_state()
+            if source_model is not None and not self._other_live_attachment_uses_model(
+                source_model, "_cb_attachment_source_ref", "_cb_attachment_map_name"
+            ):
+                try:
+                    source_model.display = True
+                except Exception:
+                    pass
+            if star_model is not None and not self._other_live_attachment_uses_model(
+                star_model, "_cb_attachment_star_ref", "_cb_attachment_star_name"
+            ):
+                try:
+                    star_model.display = True
+                except Exception:
+                    pass
+            return
+        self._hide_and_close_model_tree(model)
+
+    def _history_restore_item(self, kind, item):
+        kind = str(kind or "").strip().lower()
+        if kind == "source":
+            self._restore_attach_source_models([copy.deepcopy(item)], base_dir="")
+            return
+        if kind == "star":
+            self._restore_generated_star_models([copy.deepcopy(item)])
+            return
+        if kind == "membrane":
+            self._restore_generated_membranes([copy.deepcopy(item)])
+            return
+        if kind == "marker_path":
+            self._restore_generated_marker_paths([copy.deepcopy(item)])
+            return
+        if kind == "attachment":
+            self._restore_attachments([copy.deepcopy(item)], reset_runtime=False)
+            return
+
+    def _apply_history_action_record(self, record, undo=True):
+        if not isinstance(record, dict):
+            return
+        self._history_replaying = True
+        try:
+            self._cancel_active_tool_interactions_for_history()
+            remove_bucket = "created" if undo else "deleted"
+            restore_bucket = "deleted" if undo else "created"
+            modified_bucket = "modified_before" if undo else "modified_after"
+
+            for kind, _field in reversed(self._history_kind_fields()):
+                for item in list(record.get(remove_bucket, {}).get(kind, []) or []):
+                    self._history_remove_item(kind, item)
+
+            for kind, _field in self._history_kind_fields():
+                for item in list(record.get(restore_bucket, {}).get(kind, []) or []):
+                    self._history_restore_item(kind, item)
+
+            for kind, _field in self._history_kind_fields():
+                modified_items = list(record.get(modified_bucket, {}).get(kind, []) or [])
+                if not modified_items:
+                    continue
+                if kind in ("attachment", "source"):
+                    for item in modified_items:
+                        self._history_remove_item(kind, item)
+                for item in modified_items:
+                    self._history_restore_item(kind, item)
+
+            self._prune_attached_results_state()
+            self._refresh_model_selectors()
+        finally:
+            self._history_replaying = False
+            self._update_history_buttons()
+
     def _undo_last_action(self):
         from Qt.QtWidgets import QMessageBox
 
         if not self._history_undo_stack:
             self._update_history_buttons()
             return
-        target_payload = copy.deepcopy(self._history_undo_stack.pop())
-        current_payload = copy.deepcopy(self._session_payload(include_history_selected=True))
+        record = copy.deepcopy(self._history_undo_stack.pop())
         try:
-            self._restore_history_state(target_payload)
-            self._history_redo_stack.append(current_payload)
+            self._apply_history_action_record(record, undo=True)
+            self._history_redo_stack.append(copy.deepcopy(record))
         except Exception as e:
-            self._history_undo_stack.append(target_payload)
+            self._history_undo_stack.append(record)
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
         finally:
@@ -2596,13 +2817,12 @@ class CiliaBuilder2Tool(ToolInstance):
         if not self._history_redo_stack:
             self._update_history_buttons()
             return
-        target_payload = copy.deepcopy(self._history_redo_stack.pop())
-        current_payload = copy.deepcopy(self._session_payload(include_history_selected=True))
+        record = copy.deepcopy(self._history_redo_stack.pop())
         try:
-            self._restore_history_state(target_payload)
-            self._history_undo_stack.append(current_payload)
+            self._apply_history_action_record(record, undo=False)
+            self._history_undo_stack.append(copy.deepcopy(record))
         except Exception as e:
-            self._history_redo_stack.append(target_payload)
+            self._history_redo_stack.append(record)
             self.session.logger.error(str(e))
             QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
         finally:
@@ -4317,6 +4537,11 @@ class CiliaBuilder2Tool(ToolInstance):
         tube_ids = sorted({self._tube_id_from_row(row) for row in rows if self._tube_id_from_row(row) > 0})
         if not tube_ids:
             return
+        base_z_offset = getattr(star_model, "_cb_outer_z_offset_ang", 0.0)
+        try:
+            base_z_offset = float(base_z_offset)
+        except Exception:
+            base_z_offset = 0.0
         max_length = 0.0
         for tube_id in tube_ids:
             try:
@@ -4326,7 +4551,7 @@ class CiliaBuilder2Tool(ToolInstance):
             max_length = max(max_length, float(geom["length_ang"]))
         try:
             star_model._cb_outer_spacing_ang = float(spacing_ang)
-            star_model._cb_outer_continue_offset_ang = float(max_length) + float(spacing_ang)
+            star_model._cb_outer_continue_offset_ang = float(base_z_offset) + float(max_length) + float(spacing_ang)
         except Exception:
             pass
 
@@ -6210,13 +6435,23 @@ class CiliaBuilder2Tool(ToolInstance):
         return [m for m in self.session.models.list() if m not in before]
 
     def _iter_model_tree(self, model):
-        yield model
-        try:
-            children = list(model.child_models())
-        except Exception:
-            children = []
-        for child in children:
-            yield from self._iter_model_tree(child)
+        seen = set()
+        stack = [model]
+        while stack:
+            node = stack.pop()
+            if node is None:
+                continue
+            node_id = id(node)
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            yield node
+            try:
+                children = list(node.child_models())
+            except Exception:
+                children = []
+            for child in reversed(children):
+                stack.append(child)
 
     def _all_session_models(self):
         seen = set()
@@ -6586,6 +6821,7 @@ class CiliaBuilder2Tool(ToolInstance):
                         "name": str(model.name),
                         "rows": rows,
                         "star_text": getattr(model, "_cb_star_text", None),
+                        "outer_z_offset_ang": getattr(model, "_cb_outer_z_offset_ang", None),
                         "outer_continue_offset_ang": getattr(model, "_cb_outer_continue_offset_ang", None),
                         "outer_spacing_ang": getattr(model, "_cb_outer_spacing_ang", None),
                         "display": bool(getattr(model, "display", True)),
@@ -6993,6 +7229,7 @@ class CiliaBuilder2Tool(ToolInstance):
             created._cb_star_rows = rows
             created._cb_star_text = item.get("star_text", None)
             created._cb_random_clip_info = item.get("clip_info", None)
+            created._cb_outer_z_offset_ang = item.get("outer_z_offset_ang", None)
             created._cb_outer_continue_offset_ang = item.get("outer_continue_offset_ang", None)
             created._cb_outer_spacing_ang = item.get("outer_spacing_ang", None)
             cmd._render_star_model(self.session, created, rows, True)
@@ -7162,11 +7399,12 @@ class CiliaBuilder2Tool(ToolInstance):
             except Exception:
                 pass
 
-    def _restore_attachments(self, attachment_state):
+    def _restore_attachments(self, attachment_state, reset_runtime=True):
         from .map import cbsubmap_impl
 
-        self._attached_results = {}
-        self._last_attached_result = None
+        if bool(reset_runtime):
+            self._attached_results = {}
+            self._last_attached_result = None
 
         for item in attachment_state or []:
             star_model = self._restored_session_star_model(item)
@@ -7652,10 +7890,14 @@ class CiliaBuilder2Tool(ToolInstance):
             stored_continue_offset = None
         if stored_continue_offset is not None and stored_continue_offset < 0.0:
             stored_continue_offset = None
+        base_z_offset = getattr(star_model, "_cb_outer_z_offset_ang", None)
+        try:
+            base_z_offset = float(base_z_offset)
+        except Exception:
+            base_z_offset = 0.0
 
-        combined_rows = []
-        any_added = False
-        used_continue_offset = None
+        tube_data = []
+        max_projected_length = 0.0
         for tube_id in tube_order:
             tube_rows = list(rows_by_tube.get(tube_id, []))
             if not tube_rows:
@@ -7685,38 +7927,55 @@ class CiliaBuilder2Tool(ToolInstance):
                 pixel_size = 1.0
             if pixel_size <= 0.0:
                 pixel_size = 1.0
-            combined_rows.extend(ordered_rows)
+            projected_length = max(0.0, float(np.dot(last_center - first_center, axis_dir)))
+            max_projected_length = max(max_projected_length, projected_length)
+            tube_data.append(
+                {
+                    "tube_id": tube_id,
+                    "first_center": first_center,
+                    "axis_dir": axis_dir,
+                    "last_row": last_row,
+                    "pixel_size": pixel_size,
+                    "ex": ex,
+                    "ey": ey,
+                    "ez": ez,
+                }
+            )
 
-            if stored_continue_offset is None:
-                projected_length = float(np.dot(last_center - first_center, axis_dir))
-                continue_offset = max(0.0, projected_length) + float(spacing_ang)
-            else:
-                continue_offset = float(stored_continue_offset)
-            if used_continue_offset is None:
-                used_continue_offset = float(continue_offset)
+        if not tube_data:
+            raise RuntimeError("Selected STAR model has no valid tubes to continue")
 
-            current_offset = float(continue_offset)
-            offset_limit = float(continue_offset) + float(extra_length_ang)
+        if stored_continue_offset is None:
+            used_continue_offset = float(base_z_offset) + float(max_projected_length) + float(spacing_ang)
+        else:
+            used_continue_offset = float(stored_continue_offset)
+
+        continued_rows = []
+        any_added = False
+        for info in tube_data:
+            origin = np.array(info["first_center"], dtype=float) - np.array(info["axis_dir"], dtype=float) * float(base_z_offset)
+            current_offset = float(used_continue_offset)
+            offset_limit = float(used_continue_offset) + float(extra_length_ang)
             while current_offset <= offset_limit + 1e-6:
-                world = first_center + axis_dir * current_offset
-                combined_rows.append(
+                world = origin + np.array(info["axis_dir"], dtype=float) * current_offset
+                continued_rows.append(
                     {
-                        "rlnTomoName": str(last_row.get("rlnTomoName", "TS_001")),
-                        "rlnCoordinateX": float(world[0]) / pixel_size,
-                        "rlnCoordinateY": float(world[1]) / pixel_size,
-                        "rlnCoordinateZ": float(world[2]) / pixel_size,
-                        "rlnAngleRot": float(last_row.get("rlnAngleRot", 0.0) or 0.0),
-                        "rlnAngleTilt": float(last_row.get("rlnAngleTilt", 0.0) or 0.0),
-                        "rlnAnglePsi": float(last_row.get("rlnAnglePsi", 0.0) or 0.0),
-                        "rlnImagePixelSize": float(pixel_size),
-                        "rlnHelicalTubeID": int(last_row.get("rlnHelicalTubeID", tube_id) or tube_id),
-                        "rlnClassNumber": int(last_row.get("rlnClassNumber", 1) or 1),
+                        "rlnTomoName": str(info["last_row"].get("rlnTomoName", "TS_001")),
+                        "rlnCoordinateX": float(world[0]) / float(info["pixel_size"]),
+                        "rlnCoordinateY": float(world[1]) / float(info["pixel_size"]),
+                        "rlnCoordinateZ": float(world[2]) / float(info["pixel_size"]),
+                        "rlnAngleRot": float(info["last_row"].get("rlnAngleRot", 0.0) or 0.0),
+                        "rlnAngleTilt": float(info["last_row"].get("rlnAngleTilt", 0.0) or 0.0),
+                        "rlnAnglePsi": float(info["last_row"].get("rlnAnglePsi", 0.0) or 0.0),
+                        "rlnImagePixelSize": float(info["pixel_size"]),
+                        "rlnHelicalTubeID": int(info["last_row"].get("rlnHelicalTubeID", info["tube_id"]) or info["tube_id"]),
+                        "rlnClassNumber": int(info["last_row"].get("rlnClassNumber", 1) or 1),
                         "_cbWorldCoordinateX": float(world[0]),
                         "_cbWorldCoordinateY": float(world[1]),
                         "_cbWorldCoordinateZ": float(world[2]),
-                        "_cbAxisX": [float(v) for v in ex],
-                        "_cbAxisY": [float(v) for v in ey],
-                        "_cbAxisZ": [float(v) for v in ez],
+                        "_cbAxisX": [float(v) for v in info["ex"]],
+                        "_cbAxisY": [float(v) for v in info["ey"]],
+                        "_cbAxisZ": [float(v) for v in info["ez"]],
                     }
                 )
                 any_added = True
@@ -7724,10 +7983,8 @@ class CiliaBuilder2Tool(ToolInstance):
 
         if not any_added:
             raise RuntimeError("Continuation length is too short for the chosen spacing")
-        if used_continue_offset is None:
-            raise RuntimeError("Selected STAR model has no valid tubes to continue")
         next_continue_offset = float(used_continue_offset) + float(extra_length_ang) + float(spacing_ang)
-        return combined_rows, next_continue_offset
+        return continued_rows, used_continue_offset, next_continue_offset
 
     def _build_outer(self, continue_mode=False):
         from Qt.QtWidgets import QMessageBox
@@ -7751,19 +8008,20 @@ class CiliaBuilder2Tool(ToolInstance):
                 source_model = self._selected_continue_outer_star_model()
                 if source_model is None:
                     raise RuntimeError("Select a STAR model in Continue from STAR first")
-                combined_rows, next_continue_offset = self._continue_outer_star_rows(source_model, length, spacing)
-                star_text = rows_to_star_text(combined_rows)
+                continued_rows, continued_z_offset, next_continue_offset = self._continue_outer_star_rows(source_model, length, spacing)
+                star_text = rows_to_star_text(continued_rows)
                 continued_name = self._next_loaded_star_name(f"{getattr(source_model, 'name', 'Microtubules STAR')} continued")
                 model = cmd._create_star_model(
                     self.session,
                     continued_name,
-                    combined_rows,
+                    continued_rows,
                     star_text,
                     open_star=True,
                     star_format="relion",
                     show_arrows=True,
                     view_orient=False,
                 )
+                model._cb_outer_z_offset_ang = float(continued_z_offset)
                 model._cb_outer_continue_offset_ang = float(next_continue_offset)
                 model._cb_outer_spacing_ang = float(spacing)
                 try:
@@ -7805,7 +8063,8 @@ class CiliaBuilder2Tool(ToolInstance):
                         model._cb_random_clip_info = None
                 except Exception:
                     pass
-                model._cb_outer_continue_offset_ang = float(length) + float(spacing)
+                model._cb_outer_z_offset_ang = float(z_offset)
+                model._cb_outer_continue_offset_ang = float(z_offset) + float(length) + float(spacing)
                 model._cb_outer_spacing_ang = float(spacing)
 
             self._last_outer_star_model = model
