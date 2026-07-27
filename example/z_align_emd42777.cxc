@@ -1,24 +1,48 @@
-# Script to align EMD-19515 (Retrograde) so the longitudinal axis parallel to the Y axis
+# Script to align EMD-42777 proximal triplet so the longitudinal axis parallel to the Z axis
+# This needs to be done together with EMD-42776
 # Reset the session
 close all
 
 # Fetch the map from EMDB
-open emdb:42777
+open emdb:42776
 
 # Copy volume
 volume copy #1
 
 # Rotate around z
-roll y -3 1 models #2; wait;
+roll y -4.25 1 models #2; wait;
 
 # Rotate around x
 roll x -2 1 models #2; wait;
 
 # Rotate around z
-roll z 138 1 models #2; wait;
+roll z 140 1 models #2; wait;
 
 # Resample to keep the rotated volume
 volume resample #2 onGrid #1
 
+# Copy volume
+open emdb:42777
+
+# Rotate around z
+roll y -3 1 models #4; wait;
+
+# Rotate around x
+roll x -2 1 models #4; wait;
+
+# Rotate around z
+roll z 138 1 models #4; wait;
+
+# Move down
+move y -110 1 models #4; wait;
+
+move x 40 1 models #4; wait;
+
+# Fit 42777 to Z-aligned 42776
+fit #4 inmap #3
+
+# Resample to keep the rotated volume
+volume resample #4 onGrid #3
+
 # Save rotated volume
-save ~/Desktop/emd_42777_zaligned.mrc models #3
+save ~/Desktop/emd_42777_zaligned.mrc models #5
