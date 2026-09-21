@@ -296,6 +296,33 @@ def _particle_axes_from_row(row):
     )
 
 
+def _star_filament_axes(rows, diameter_scale):
+    by_tube = {}
+    for row in rows:
+        try:
+            center, has_world_center = _row_world_center(row)
+            if not has_world_center:
+                center = np.array(
+                    [center[0] * diameter_scale, center[1] * diameter_scale, center[2]],
+                    dtype=float,
+                )
+            tube_id = int(float(row.get("rlnHelicalTubeID", 0)))
+        except Exception:
+            continue
+        by_tube.setdefault(tube_id, []).append((center, row))
+
+    axes = {}
+    for tube_id, points in by_tube.items():
+        reference_axis = _particle_axes_from_row(points[0][1])[2]
+        direction = points[-1][0] - points[0][0]
+        if float(np.linalg.norm(direction)) <= 1e-9:
+            direction = reference_axis
+        elif np.dot(direction, reference_axis) < 0:
+            direction = -direction
+        axes[tube_id] = _safe_unit(direction)
+    return axes
+
+
 def _copy_source_instance(session, src):
     if _is_glb_like_model(src):
         cls_name = src.__class__.__name__.lower()
@@ -783,6 +810,13 @@ def _shared_map_anchor_local(session, src_map):
     This keeps file-backed map placement consistent and avoids density-dependent
     anchor drift.
     """
+    try:
+        center = np.array(src_map.center(), dtype=float)
+        if center.shape == (3,) and np.all(np.isfinite(center)):
+            return center
+    except Exception:
+        pass
+
     probe = _copy_source_instance(session, src_map)
     if probe is None:
         return np.array([0.0, 0.0, 0.0], dtype=float)
@@ -805,9 +839,6 @@ def _shared_source_anchor_local(session, src_model):
         return _shared_map_anchor_local(session, src_model)
 
     if _is_surface_like(src_model):
-        match = _matching_volume_for_surface(session, src_model)
-        if match is not None:
-            return _shared_map_anchor_local(session, match)
         probe = _copy_source_instance(session, src_model)
         if probe is not None:
             try:
@@ -913,9 +944,7 @@ def cbsubmap_impl(
     except Exception:
         session.models.add([out_root])
 
-    # Keep the user-facing Y rotation separate from the fixed calibration
-    # so Attachment Y rotation defines a new local model orientation first,
-    # and Attachment Z offset then rotates that result in the line plane.
+    # Keep the user-facing Y rotation separate from the fixed calibration.
     Rc = _calibration_rotation_matrix(
         rx_deg=float(attach_axis_rot_x_deg),
         ry_deg=0.0,
@@ -937,6 +966,8 @@ def cbsubmap_impl(
     base_copy = None
     tube_ids = sorted({int(float(r.get("rlnHelicalTubeID", 0))) for r in rows})
     tube_index = {tid: i for i, tid in enumerate(tube_ids)}
+    if abs(float(attach_z_offset_deg)) > 1e-12 or abs(float(attach_all_z_offset_deg)) > 1e-12:
+        filament_axes = _star_filament_axes(rows, float(attach_diameter_scale))
 
     for i, r in enumerate(rows):
         try:
@@ -980,7 +1011,7 @@ def cbsubmap_impl(
                 raise RuntimeError("cbsubmap could not create an instance from the source model")
             _zero_volume_origin(session, mcopy)
 
-        # Use map offset if present, otherwise built-in ChimeraX center-of-mass.
+        # Place this source model's own geometric center on the STAR point.
         local_anchor = shared_anchor + calib_shift
 
         # Volume attachments should keep the same displayed size as the
@@ -1011,7 +1042,6 @@ def cbsubmap_impl(
             exw, eyw = eyw, -exw
         if bool(attach_inout_flip):
             exw, eyw = -exw, -eyw
-        macro_z_axis = _safe_unit(ezw)
         if abs(extra_local_y_deg) > 1e-12:
             By = np.column_stack((exw, eyw, ezw)) @ _rot_y(extra_local_y_deg)
             exw = By[:, 0]
@@ -1031,7 +1061,7 @@ def cbsubmap_impl(
         all_z_offset = float(attach_all_z_offset_deg)
         total_z_offset = per_line_z_offset + all_z_offset
         if abs(total_z_offset) > 1e-12:
-            Rmacro_z = _rotation_about_axis(macro_z_axis, total_z_offset)
+            Rmacro_z = _rotation_about_axis(filament_axes.get(tid, display_blue_axis), total_z_offset)
             exw = Rmacro_z @ exw
             eyw = Rmacro_z @ eyw
             ezw = Rmacro_z @ ezw
