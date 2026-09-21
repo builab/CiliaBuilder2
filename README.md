@@ -38,6 +38,11 @@ Attachment supports common ChimeraX model types including:
 
 ## Install In ChimeraX
 
+Uninstall the old version in the command line of ChimeraX, type:
+```bash
+toolshed uninstall CiliaBuilder2
+```
+
 From the project root, install the bundle into ChimeraX with:
 
 ```bash
