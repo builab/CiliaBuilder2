@@ -1,0 +1,24 @@
+# Script to align EMD-42776 proximal triplet so the longitudinal axis parallel to the Z axis
+# Reset the session
+close all
+
+# Fetch the map from EMDB
+open emdb:42776
+
+# Copy volume
+volume copy #1
+
+# Rotate around z
+roll y -4.25 1 models #2; wait;
+
+# Rotate around x
+roll x -2 1 models #2; wait;
+
+# Rotate around z
+roll z 140 1 models #2; wait;
+
+# Resample to keep the rotated volume
+volume resample #2 onGrid #1
+
+# Save rotated volume
+save ~/Desktop/emd_42776_zaligned.mrc models #3
