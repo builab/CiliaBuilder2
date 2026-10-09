@@ -2,6 +2,8 @@
 
 import tempfile
 
+from .orientation import row_with_relion_angles
+
 STAR_COLS = [
     "rlnTomoName",
     "rlnCoordinateX",
@@ -24,6 +26,7 @@ def rows_to_star_text(rows):
     for i, c in enumerate(STAR_COLS, start=1):
         lines.append(f"_{c} #{i}")
     for r in rows:
+        r = row_with_relion_angles(r)
         vals = []
         for c in STAR_COLS:
             v = r.get(c, "")

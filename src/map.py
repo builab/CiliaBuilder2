@@ -5,6 +5,13 @@ import os
 import tempfile
 import numpy as np
 
+from .orientation import (
+    particle_axes_from_row as _particle_axes_from_row,
+    particle_axes_from_star as _particle_axes_from_star,
+    relion_rotation_matrix as _relion_rotation_matrix,
+    rotation_align_vector_to_vector as _rotation_align_vector_to_vector,
+)
+
 from chimerax.core.models import Model
 from chimerax.core.commands import run as _run
 from chimerax.geometry import Place
@@ -66,6 +73,8 @@ def _iter_model_tree(model_obj):
 
 
 def _candidate_model_paths(model_obj):
+    from .source_paths import original_glb_path
+
     paths = []
     seen = set()
 
@@ -82,6 +91,7 @@ def _candidate_model_paths(model_obj):
         paths.append(norm)
 
     for node in _iter_model_tree(model_obj):
+        add_path(original_glb_path(node))
         for attr in ("path", "filename"):
             try:
                 add_path(getattr(node, attr, None))
@@ -117,7 +127,7 @@ def _is_glb_like_model(model_obj):
     if "gltf" in cls_name or "glb" in cls_name:
         return True
     model_name = str(getattr(model_obj, "name", "") or "").lower()
-    return model_name.endswith((".glb", ".gltf"))
+    return model_name.endswith((".glb", ".gltf", ".glb.gz", ".gltf.gz"))
 
 
 def _looks_like_surface_leaf(model_obj):
@@ -211,28 +221,6 @@ def _rot_z(deg):
     )
 
 
-def _rotation_align_vector_to_vector(v_from, v_to):
-    v = _safe_unit(v_from)
-    z = _safe_unit(v_to)
-    c = float(np.clip(np.dot(v, z), -1.0, 1.0))
-    if c > 1.0 - 1e-8:
-        return np.eye(3, dtype=float)
-    if c < -1.0 + 1e-8:
-        return _rot_x(180.0)
-    axis = _safe_unit(np.cross(v, z))
-    x, y, zz = axis
-    s = float(np.linalg.norm(np.cross(v, z)))
-    K = np.array(
-        [
-            [0.0, -zz, y],
-            [zz, 0.0, -x],
-            [-y, x, 0.0],
-        ],
-        dtype=float,
-    )
-    return np.eye(3, dtype=float) + K + (K @ K) * ((1.0 - c) / (s * s))
-
-
 def _rotation_about_axis(axis, deg):
     axis = _safe_unit(axis)
     a = math.radians(float(deg))
@@ -251,54 +239,10 @@ def _rotation_about_axis(axis, deg):
     return c * np.eye(3, dtype=float) + s * K + (1.0 - c) * outer
 
 
-def _relion_rotation_matrix(rot_deg, tilt_deg, psi_deg):
-    """
-    Relion ZYZ:
-    R = Rz(psi) * Ry(tilt) * Rz(rot)
-    """
-    return _rot_z(float(psi_deg)) @ _rot_y(float(tilt_deg)) @ _rot_z(float(rot_deg))
-
-
-def _particle_axes_from_star(rot_deg, tilt_deg, psi_deg):
-    """
-    Use the same conceptual model as ArtiaX style particle display:
-    compute one stable particle transform from metadata.
-
-    We use R^T here because that usually matches the displayed particle axes
-    in ChimeraX style viewers better than raw R.
-    """
-    R = _relion_rotation_matrix(rot_deg, tilt_deg, psi_deg)
-    Rt = R.T
-
-    ex = _safe_unit(Rt @ np.array([1.0, 0.0, 0.0], dtype=float))
-    ey = _safe_unit(Rt @ np.array([0.0, 1.0, 0.0], dtype=float))
-    ez = _safe_unit(Rt @ np.array([0.0, 0.0, 1.0], dtype=float))
-    return ex, ey, ez
-
-
-def _particle_axes_from_row(row):
-    try:
-        ex = row.get("_cbAxisX", None)
-        ey = row.get("_cbAxisY", None)
-        ez = row.get("_cbAxisZ", None)
-        if ex is not None and ey is not None and ez is not None:
-            return (
-                _safe_unit(np.array(ex, dtype=float)),
-                _safe_unit(np.array(ey, dtype=float)),
-                _safe_unit(np.array(ez, dtype=float)),
-            )
-    except Exception:
-        pass
-    return _particle_axes_from_star(
-        row.get("rlnAngleRot", 0.0),
-        row.get("rlnAngleTilt", 0.0),
-        row.get("rlnAnglePsi", 0.0),
-    )
-
-
 def _star_filament_axes(rows, diameter_scale):
+    """Local filament tangents indexed by STAR row, retaining within-tube order."""
     by_tube = {}
-    for row in rows:
+    for row_index, row in enumerate(rows):
         try:
             center, has_world_center = _row_world_center(row)
             if not has_world_center:
@@ -309,17 +253,22 @@ def _star_filament_axes(rows, diameter_scale):
             tube_id = int(float(row.get("rlnHelicalTubeID", 0)))
         except Exception:
             continue
-        by_tube.setdefault(tube_id, []).append((center, row))
+        key = (str(row.get("rlnTomoName", "")), tube_id)
+        by_tube.setdefault(key, []).append((center, row, row_index))
 
     axes = {}
-    for tube_id, points in by_tube.items():
-        reference_axis = _particle_axes_from_row(points[0][1])[2]
-        direction = points[-1][0] - points[0][0]
-        if float(np.linalg.norm(direction)) <= 1e-9:
-            direction = reference_axis
-        elif np.dot(direction, reference_axis) < 0:
-            direction = -direction
-        axes[tube_id] = _safe_unit(direction)
+    for points in by_tube.values():
+        for i, (_center, row, row_index) in enumerate(points):
+            reference_axis = _particle_axes_from_row(row)[2]
+            # A single end-to-end chord is only correct for a straight filament.
+            before = points[max(0, i - 1)][0]
+            after = points[min(len(points) - 1, i + 1)][0]
+            direction = after - before
+            if float(np.linalg.norm(direction)) <= 1e-9:
+                direction = reference_axis
+            elif np.dot(direction, reference_axis) < 0:
+                direction = -direction
+            axes[row_index] = _safe_unit(direction)
     return axes
 
 
@@ -347,7 +296,7 @@ def _copy_source_instance(session, src):
 
                 fd, temp_path = tempfile.mkstemp(prefix="cb_attach_glb_", suffix=".glb")
                 os.close(fd)
-                write_gltf(session, filename=temp_path, models=[src])
+                write_gltf(session, filename=temp_path, models=[src], center=False)
                 before = set(session.models.list())
                 _run(session, f'open "{temp_path}"')
                 opened = [m for m in session.models.list() if m not in before]
@@ -1061,7 +1010,7 @@ def cbsubmap_impl(
         all_z_offset = float(attach_all_z_offset_deg)
         total_z_offset = per_line_z_offset + all_z_offset
         if abs(total_z_offset) > 1e-12:
-            Rmacro_z = _rotation_about_axis(filament_axes.get(tid, display_blue_axis), total_z_offset)
+            Rmacro_z = _rotation_about_axis(filament_axes.get(i, display_blue_axis), total_z_offset)
             exw = Rmacro_z @ exw
             eyw = Rmacro_z @ eyw
             ezw = Rmacro_z @ ezw

@@ -4,6 +4,14 @@ import math
 import random
 
 
+def _axial_positions(start_z, length_ang, bead_spacing_ang, line_offset):
+    current_z = float(start_z)
+    end_z = float(start_z) + length_ang + 1e-6
+    while current_z <= end_z:
+        yield current_z + line_offset
+        current_z += bead_spacing_ang
+
+
 def build_cilia_lines_star_rows(
     n_lines,
     length_ang,
@@ -47,7 +55,7 @@ def build_cilia_lines_star_rows(
 
     use_random = bool(random_spacing)
     max_diff = abs(float(random_max_diff))
-    if bool(random_spacing):
+    if use_random:
         default_cap = 0.49 * bead_spacing_ang
         if max_diff <= 0.0:
             max_diff = default_cap
@@ -70,14 +78,9 @@ def build_cilia_lines_star_rows(
         tube_id = int(tube_id_offset) + (k + 1)
 
         line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
-        current_z = float(z_offset_ang)
-        z_list = []
-
-        while current_z <= float(z_offset_ang) + length_ang + 1e-6:
-            z_list.append(current_z + line_offset)
-            current_z += bead_spacing_ang
-
-        for layer_index, z_ang in enumerate(z_list):
+        for layer_index, z_ang in enumerate(
+            _axial_positions(z_offset_ang, length_ang, bead_spacing_ang, line_offset)
+        ):
             # Interpret 180 degrees in the UI as neutral, then rotate each line
             # an additional 90 degrees clockwise. Twist is applied in place
             # per axial layer, without changing the ring coordinates.
@@ -144,16 +147,9 @@ def build_central_pair_star_rows(
         else:
             max_diff = min(max_diff, default_cap)
     line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
-    current_z = float(z_offset_ang)
-    z_list = []
-
-    while current_z <= float(z_offset_ang) + length_ang + 1e-6:
-        z_list.append(current_z + line_offset)
-        current_z += bead_spacing_ang
-
     rows = []
 
-    for z_ang in z_list:
+    for z_ang in _axial_positions(z_offset_ang, length_ang, bead_spacing_ang, line_offset):
         rows.append(
             {
                 "rlnTomoName": str(tomo_name),
@@ -218,6 +214,22 @@ def build_ift_star_rows(
     radius_ang = outer_radius_ang + radial_offset_ang
     rows = []
 
+    def append_row(x_ang, y_ang, z_ang, rot_deg, tube_id):
+        rows.append(
+            {
+                "rlnTomoName": str(tomo_name),
+                "rlnCoordinateX": float(x_ang) / pixel_size_ang,
+                "rlnCoordinateY": float(y_ang) / pixel_size_ang,
+                "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
+                "rlnAngleRot": float(rot_deg),
+                "rlnAngleTilt": 0.0,
+                "rlnAnglePsi": 0.0,
+                "rlnImagePixelSize": float(pixel_size_ang),
+                "rlnHelicalTubeID": int(tube_id),
+                "rlnClassNumber": int(class_number),
+            }
+        )
+
     if bool(line_mode):
         per_line = max(1, int(math.ceil(float(n_particles) / float(n))))
         spacing = max(1e-6, float(length_ang) / float(max(1, per_line)))
@@ -236,20 +248,7 @@ def build_ift_star_rows(
                 z_ang = z_offset_ang + start_shift + j * spacing
                 if z_ang > z_offset_ang + length_ang:
                     break
-                rows.append(
-                    {
-                        "rlnTomoName": str(tomo_name),
-                        "rlnCoordinateX": float(x_ang) / pixel_size_ang,
-                        "rlnCoordinateY": float(y_ang) / pixel_size_ang,
-                        "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
-                        "rlnAngleRot": float(rot_deg),
-                        "rlnAngleTilt": 0.0,
-                        "rlnAnglePsi": 0.0,
-                        "rlnImagePixelSize": float(pixel_size_ang),
-                        "rlnHelicalTubeID": int(tube_id),
-                        "rlnClassNumber": int(class_number),
-                    }
-                )
+                append_row(x_ang, y_ang, z_ang, rot_deg, tube_id)
                 created += 1
     else:
         for _ in range(n_particles):
@@ -263,19 +262,6 @@ def build_ift_star_rows(
             tube_id = k + 1
             rot_deg = -phi_deg + 90.0
 
-            rows.append(
-                {
-                    "rlnTomoName": str(tomo_name),
-                    "rlnCoordinateX": float(x_ang) / pixel_size_ang,
-                    "rlnCoordinateY": float(y_ang) / pixel_size_ang,
-                    "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
-                    "rlnAngleRot": float(rot_deg),
-                    "rlnAngleTilt": 0.0,
-                    "rlnAnglePsi": 0.0,
-                    "rlnImagePixelSize": float(pixel_size_ang),
-                    "rlnHelicalTubeID": int(tube_id),
-                    "rlnClassNumber": int(class_number),
-                }
-            )
+            append_row(x_ang, y_ang, z_ang, rot_deg, tube_id)
 
     return rows

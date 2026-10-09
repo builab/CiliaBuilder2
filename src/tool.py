@@ -11,6 +11,8 @@ from chimerax.core.tools import ToolInstance
 from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
 
+from .history_mixin import HistoryMixin
+
 
 class EmbeddedModelsBrowser:
     NAME_COLUMN = 0
@@ -259,11 +261,15 @@ class EmbeddedModelsBrowser:
             mode = "add" if item.checkState(self.SELECT_COLUMN) == Qt.CheckState.Checked else "subtract"
             _run(self.session, f"select {mode} #{model.id_string}")
 
-class CiliaBuilder2Tool(ToolInstance):
+class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     SESSION_ENDURING = True
+    help = "help:user/tools/ciliabuilder2.html"
 
     def __init__(self, session, tool_name):
         super().__init__(session, tool_name)
+
+        from .source_paths import track_glb_sources
+        track_glb_sources(session)
 
         self.display_name = tool_name
 
@@ -435,7 +441,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.length = TypedOnlyDoubleSpinBox(main)
         self.length.setRange(0.0, 1e9)
         self.length.setDecimals(2)
-        self.length.setValue(3000.0)
+        self.length.setValue(9000.0)
         outer_row_spin("Length", self.length)
 
         self.n_doublet = TypedOnlySpinBox(main)
@@ -521,7 +527,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.central_pair_length = TypedOnlyDoubleSpinBox(main)
         self.central_pair_length.setRange(0.0, 1e9)
         self.central_pair_length.setDecimals(2)
-        self.central_pair_length.setValue(3000.0)
+        self.central_pair_length.setValue(9000.0)
         cent_row_spin("Length", self.central_pair_length)
 
         self.central_pair_spacing = TypedOnlyDoubleSpinBox(main)
@@ -541,7 +547,7 @@ class CiliaBuilder2Tool(ToolInstance):
         cent_mode_lay.setContentsMargins(0, 0, 0, 0)
         cent_mode_lay.addWidget(QLabel("Central pair mode", cent_mode_row))
         self.central_pair_mode = QComboBox(cent_mode_row)
-        self.central_pair_mode.addItem("Single line", "singlet")
+        self.central_pair_mode.addItem("Singlet line", "singlet")
         self.central_pair_mode.addItem("C1 + C2 lines", "doublet")
         cent_mode_lay.addWidget(self.central_pair_mode, 1)
         cent_layout.addWidget(cent_mode_row)
@@ -583,7 +589,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.membrane_length = TypedOnlyDoubleSpinBox(main)
         self.membrane_length.setRange(0.0, 1e9)
         self.membrane_length.setDecimals(2)
-        self.membrane_length.setValue(3000.0)
+        self.membrane_length.setValue(9000.0)
         mem_row_spin("Length", self.membrane_length)
 
         self.membrane_radius = TypedOnlyDoubleSpinBox(main)
@@ -936,7 +942,7 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_rot_row = QWidget(main)
         attach_rot_lay = QHBoxLayout(attach_rot_row)
         attach_rot_lay.setContentsMargins(0, 0, 0, 0)
-        attach_rot_lay.addWidget(QLabel("Attachment Z rotation (angleRot °)", attach_rot_row))
+        attach_rot_lay.addWidget(QLabel("Attachment Z offset (deg)", attach_rot_row))
         self.attach_line_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_line_rotation.setRange(-360.0, 360.0)
         self.attach_line_rotation.setDecimals(2)
@@ -950,7 +956,7 @@ class CiliaBuilder2Tool(ToolInstance):
         attach_y_row = QWidget(main)
         attach_y_lay = QHBoxLayout(attach_y_row)
         attach_y_lay.setContentsMargins(0, 0, 0, 0)
-        attach_y_lay.addWidget(QLabel("Attachment Y rotation (angleTilt °)", attach_y_row))
+        attach_y_lay.addWidget(QLabel("Attachment Y rotation (deg)", attach_y_row))
         self.attach_y_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_y_rotation.setRange(-360.0, 360.0)
         self.attach_y_rotation.setDecimals(2)
@@ -1313,6 +1319,8 @@ class CiliaBuilder2Tool(ToolInstance):
                         break
 
     def _candidate_model_paths(self, model):
+        from .source_paths import original_glb_path
+
         paths = []
         seen = set()
 
@@ -1333,6 +1341,7 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             scan_models = [model]
         for obj in scan_models:
+            add_path(original_glb_path(obj))
             for attr in ("path", "filename"):
                 try:
                     add_path(getattr(obj, attr, None))
@@ -1360,9 +1369,13 @@ class CiliaBuilder2Tool(ToolInstance):
         return paths[0] if paths else None
 
     def _store_model_saved_path(self, model, path):
+        from .source_paths import remember_glb_source
+
         norm = os.path.abspath(os.path.expanduser(str(path or "")))
         if not norm:
             return None
+        if not getattr(model, "_cb_original_source_path", None):
+            remember_glb_source(model, norm)
         try:
             targets = list(self._iter_model_tree(model))
         except Exception:
@@ -1870,7 +1883,7 @@ class CiliaBuilder2Tool(ToolInstance):
             ext = str(ext or "").lower()
             if ext in (".glb", ".gltf"):
                 from chimerax.gltf.gltf import write_gltf
-                write_gltf(self.session, filename=out_path, models=[model])
+                write_gltf(self.session, filename=out_path, models=[model], center=False)
             elif ext == ".stl":
                 from chimerax.stl.stl import write_stl
                 write_stl(self.session, out_path, [model])
@@ -1884,10 +1897,14 @@ class CiliaBuilder2Tool(ToolInstance):
                     pass
 
     def _session_model_path(self, model, save_dir=None, session_stem=None, export_cache=None):
+        from .source_paths import is_glb_path
+
         if model is None:
             return None
+        source_path = self._model_source_path(model)
+        if source_path and is_glb_path(source_path):
+            return source_path
         if save_dir and session_stem is not None and export_cache is not None:
-            source_path = self._model_source_path(model)
             ext = ""
             if source_path:
                 ext = os.path.splitext(str(source_path))[1].lower()
@@ -1982,7 +1999,7 @@ class CiliaBuilder2Tool(ToolInstance):
             self.tool_window.ui_area,
             title,
             os.path.dirname(str(missing_path or "")) or "",
-            "Model files (*.mrc *.map *.ccp4 *.mrcs *.stl *.glb *.gltf *.pdb *.cif *.mmcif);;All files (*)",
+            "Model files (*.mrc *.map *.ccp4 *.mrcs *.stl *.glb *.gltf *.glb.gz *.gltf.gz *.pdb *.cif *.mmcif);;All files (*)",
         )
         if not replacement:
             raise RuntimeError(f"Session load cancelled. Provide a replacement for {title_label} to continue.")
@@ -2231,604 +2248,6 @@ class CiliaBuilder2Tool(ToolInstance):
             self._attached_results = dict(live_items)
         return latest
 
-    def _update_history_buttons(self):
-        if hasattr(self, "undo_action_btn"):
-            self.undo_action_btn.setEnabled(bool(getattr(self, "_history_undo_stack", [])))
-        if hasattr(self, "redo_action_btn"):
-            self.redo_action_btn.setEnabled(bool(getattr(self, "_history_redo_stack", [])))
-
-    def _history_kind_fields(self):
-        return (
-            ("source", "attach_sources"),
-            ("star", "generated_star_models"),
-            ("membrane", "generated_membranes"),
-            ("marker_path", "generated_marker_paths"),
-            ("attachment", "attachments"),
-        )
-
-    def _capture_history_scene_state(self):
-        export_cache = {}
-        return {
-            "attach_sources": copy.deepcopy(self._attach_source_models_state(None, None, export_cache)),
-            "generated_star_models": copy.deepcopy(self._generated_star_models()),
-            "generated_membranes": copy.deepcopy(self._generated_membrane_models()),
-            "generated_marker_paths": copy.deepcopy(self._generated_marker_path_models()),
-            "attachments": copy.deepcopy(self._attachment_models_state(None, None, export_cache)),
-        }
-
-    def _build_history_action_record(self, before_state, after_state):
-        record = {
-            "created": {kind: [] for kind, _field in self._history_kind_fields()},
-            "deleted": {kind: [] for kind, _field in self._history_kind_fields()},
-            "modified_before": {kind: [] for kind, _field in self._history_kind_fields()},
-            "modified_after": {kind: [] for kind, _field in self._history_kind_fields()},
-        }
-        has_changes = False
-
-        for kind, field in self._history_kind_fields():
-            before_items = list((before_state or {}).get(field, []) or [])
-            after_items = list((after_state or {}).get(field, []) or [])
-            before_by_key = {self._history_item_key(kind, item): item for item in before_items}
-            after_by_key = {self._history_item_key(kind, item): item for item in after_items}
-
-            for item in after_items:
-                key = self._history_item_key(kind, item)
-                if key not in before_by_key:
-                    record["created"][kind].append(copy.deepcopy(item))
-                    has_changes = True
-
-            for item in before_items:
-                key = self._history_item_key(kind, item)
-                if key not in after_by_key:
-                    record["deleted"][kind].append(copy.deepcopy(item))
-                    has_changes = True
-
-            for item in before_items:
-                key = self._history_item_key(kind, item)
-                other = after_by_key.get(key, None)
-                if other is None:
-                    continue
-                if self._history_item_restore_signature(kind, item) != self._history_item_restore_signature(kind, other):
-                    record["modified_before"][kind].append(copy.deepcopy(item))
-                    record["modified_after"][kind].append(copy.deepcopy(other))
-                    has_changes = True
-
-        return record if has_changes else None
-
-    def _history_state_signature(self, payload):
-        if payload is None:
-            return ""
-        return json.dumps(payload, sort_keys=True)
-
-    def _begin_history_action(self):
-        if bool(getattr(self, "_history_replaying", False)):
-            return None
-        return self._capture_history_scene_state()
-
-    def _commit_history_action(self, before_payload):
-        if before_payload is None or bool(getattr(self, "_history_replaying", False)):
-            self._update_history_buttons()
-            return
-        after_payload = self._capture_history_scene_state()
-        record = self._build_history_action_record(before_payload, after_payload)
-        if record is None:
-            self._update_history_buttons()
-            return
-        self._history_undo_stack.append(copy.deepcopy(record))
-        if len(self._history_undo_stack) > int(max(1, getattr(self, "_history_limit", 30))):
-            self._history_undo_stack = self._history_undo_stack[-int(self._history_limit):]
-        self._history_redo_stack = []
-        self._update_history_buttons()
-
-    def _reset_history(self):
-        self._history_undo_stack = []
-        self._history_redo_stack = []
-        self._update_history_buttons()
-
-    def _top_level_model(self, model):
-        cur = model
-        seen = set()
-        while cur is not None and id(cur) not in seen:
-            seen.add(id(cur))
-            parent = self._model_parent(cur)
-            if parent is None:
-                return cur
-            cur = parent
-        return model
-
-    def _history_source_items(self, payload):
-        source_items = []
-        for item in payload.get("attach_sources", []) or []:
-            source_items.append(dict(item))
-        for item in payload.get("attachments", []) or []:
-            source_items.append(
-                {
-                    "name": item.get("map_name", ""),
-                    "path": item.get("map_path", None),
-                    "fetch_type": item.get("fetch_type", None),
-                    "fetch_id": item.get("fetch_id", None),
-                    "display": False,
-                    "under_cb_map_group": True,
-                }
-            )
-        deduped = []
-        seen = set()
-        for item in source_items:
-            key = (
-                str(item.get("fetch_type", "") or "").lower(),
-                str(item.get("fetch_id", "") or "").lower(),
-                os.path.abspath(os.path.expanduser(str(item.get("path", "") or ""))) if item.get("path", None) else "",
-                str(item.get("name", "") or ""),
-            )
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(item)
-        return deduped
-
-    def _cancel_active_tool_interactions_for_history(self):
-        try:
-            self._cancel_marker_path_pick_mode(remove_temp=True, log_message=False)
-        except Exception:
-            pass
-        try:
-            self._cancel_filament_sub_pick_mode(log_message=False)
-        except Exception:
-            pass
-        self._filament_sub_target = None
-        self._filament_sub_edit_pending = False
-        dialog = getattr(self, "_filament_sub_dialog", None)
-        if dialog is not None:
-            try:
-                dialog._filament_sub_selected_label.setText("None")
-                dialog._filament_sub_status_label.setText(
-                    "Press 'Pick filament from STAR point', then click one displayed STAR marker in ChimeraX."
-                )
-            except Exception:
-                pass
-            try:
-                self._update_filament_sub_buttons()
-            except Exception:
-                pass
-        try:
-            self._ift_pick_pending = False
-            self._restore_ift_pick_hidden_models()
-            self._restore_ift_mouse_mode()
-        except Exception:
-            pass
-        try:
-            _run(self.session, "select clear", log=False)
-        except Exception:
-            pass
-
-    def _close_history_managed_models(self, current_payload=None):
-        models_to_close = []
-        seen = set()
-
-        def remember(model):
-            top = self._top_level_model(model)
-            if top is None or id(top) in seen:
-                return
-            seen.add(id(top))
-            models_to_close.append(top)
-
-        root = self._cb_root_model()
-        if root is not None:
-            remember(root)
-
-        for model in list(self.session.models.list()):
-            if bool(getattr(model, "_cb_attach_source", False)):
-                remember(model)
-
-        payload = current_payload if isinstance(current_payload, dict) else self._session_payload(include_history_selected=True)
-        for item in self._history_source_items(payload):
-            model = self._saved_source_item_model(item)
-            if model is None:
-                fetch_type = item.get("fetch_type", None)
-                fetch_id = item.get("fetch_id", None)
-                if fetch_type and fetch_id:
-                    model = self._find_model_by_fetch(fetch_type, fetch_id)
-            if model is None:
-                path = item.get("path", None)
-                if path:
-                    model = self._find_model_by_path(path)
-            if model is None:
-                model = self._find_model_by_name(item.get("name"), require_star=False)
-            if model is not None:
-                remember(model)
-
-        if models_to_close:
-            for model in models_to_close:
-                self._hide_and_close_model_tree(model)
-
-        try:
-            update_loop = getattr(self.session, "update_loop", None)
-            if update_loop is not None:
-                update_loop.draw_new_frame()
-        except Exception:
-            pass
-
-        self._attached_results = {}
-        self._last_attached_result = None
-        self._last_attach_star_id = None
-        self._last_attach_map_id = None
-        self._known_star_models = []
-        self._last_outer_star_model = None
-        self._last_cent_star_model = None
-        self._ift_target_snapshot = None
-        self._marker_path_template_ref = None
-        self._restored_session_sources = {}
-        self._restored_session_stars = {}
-        self._restored_session_layout_models = {}
-
-    def _history_item_key(self, kind, item):
-        kind = str(kind or "").strip().lower()
-        if kind == "source":
-            return (
-                str(item.get("session_source_id", "") or ""),
-                str(item.get("fetch_type", "") or ""),
-                str(item.get("fetch_id", "") or ""),
-                str(item.get("path", "") or ""),
-                str(item.get("name", "") or ""),
-            )
-        if kind == "star":
-            return (
-                str(item.get("session_star_id", "") or ""),
-                str(item.get("name", "") or ""),
-            )
-        if kind == "membrane":
-            return (
-                str(item.get("session_membrane_id", "") or ""),
-                str(item.get("name", "") or ""),
-            )
-        if kind == "marker_path":
-            return (
-                str(item.get("session_marker_path_id", "") or ""),
-                str(item.get("name", "") or ""),
-            )
-        if kind == "attachment":
-            return (
-                str(item.get("session_attachment_id", "") or ""),
-                str(item.get("name", "") or ""),
-                str(item.get("star_name", "") or ""),
-                str(item.get("map_name", "") or ""),
-            )
-        return ("", "")
-
-    def _history_item_restore_signature(self, kind, item):
-        kind = str(kind or "").strip().lower()
-        if kind == "source":
-            return json.dumps(
-                {
-                    "name": item.get("name", ""),
-                    "path": item.get("path", None),
-                    "fetch_type": item.get("fetch_type", None),
-                    "fetch_id": item.get("fetch_id", None),
-                    "under_cb_map_group": bool(item.get("under_cb_map_group", False)),
-                },
-                sort_keys=True,
-            )
-        if kind == "star":
-            return json.dumps(
-                {
-                    "name": item.get("name", ""),
-                    "rows": item.get("rows", []),
-                    "star_text": item.get("star_text", None),
-                    "clip_info": item.get("clip_info", None),
-                },
-                sort_keys=True,
-            )
-        if kind == "membrane":
-            return json.dumps(
-                {
-                    "name": item.get("name", ""),
-                    "state": item.get("state", {}),
-                },
-                sort_keys=True,
-            )
-        if kind == "marker_path":
-            return json.dumps(
-                {
-                    "name": item.get("name", ""),
-                    "state": item.get("state", {}),
-                },
-                sort_keys=True,
-            )
-        if kind == "attachment":
-            return json.dumps(
-                {
-                    "name": item.get("name", ""),
-                    "star_name": item.get("star_name", ""),
-                    "map_name": item.get("map_name", ""),
-                    "map_path": item.get("map_path", None),
-                    "fetch_type": item.get("fetch_type", None),
-                    "fetch_id": item.get("fetch_id", None),
-                    "line_rotation": float(item.get("line_rotation", 0.0) or 0.0),
-                    "y_rotation": float(item.get("y_rotation", 0.0) or 0.0),
-                    "pre_rotate_y_90": bool(item.get("pre_rotate_y_90", False)),
-                },
-                sort_keys=True,
-            )
-        return self._history_state_signature(item)
-
-    def _history_live_model_for_item(self, kind, item):
-        kind = str(kind or "").strip().lower()
-        if kind == "source":
-            return self._saved_source_item_model(item)
-        if kind == "star":
-            return self._saved_star_item_model(item)
-        if kind == "membrane":
-            return self._saved_membrane_item_model(item)
-        if kind == "marker_path":
-            return self._saved_marker_path_item_model(item)
-        if kind == "attachment":
-            return self._saved_attachment_item_model(item)
-        return None
-
-    def _close_models_changed_since_target(self, current_payload, target_payload):
-        kinds = (
-            ("source", "attach_sources"),
-            ("star", "generated_star_models"),
-            ("membrane", "generated_membranes"),
-            ("marker_path", "generated_marker_paths"),
-            ("attachment", "attachments"),
-        )
-        seen_models = set()
-        for kind, field in kinds:
-            current_items = list((current_payload or {}).get(field, []) or [])
-            target_items = list((target_payload or {}).get(field, []) or [])
-            target_by_key = {
-                self._history_item_key(kind, item): item
-                for item in target_items
-            }
-            for item in current_items:
-                key = self._history_item_key(kind, item)
-                target_item = target_by_key.get(key, None)
-                if target_item is not None:
-                    current_sig = self._history_item_restore_signature(kind, item)
-                    target_sig = self._history_item_restore_signature(kind, target_item)
-                    if current_sig == target_sig:
-                        continue
-                model = self._history_live_model_for_item(kind, item)
-                if model is None or id(model) in seen_models:
-                    continue
-                seen_models.add(id(model))
-                self._hide_and_close_model_tree(model)
-
-        self._close_empty_cb_wrappers()
-        try:
-            update_loop = getattr(self.session, "update_loop", None)
-            if update_loop is not None:
-                update_loop.draw_new_frame()
-        except Exception:
-            pass
-
-    def _close_empty_cb_wrappers(self):
-        to_close = []
-        seen = set()
-        for model in self._all_session_models():
-            if not (
-                bool(getattr(model, "_cb_saved_structure_wrapper", False))
-                or str(getattr(model, "_cb_marker_path_role", "") or "") == "replicated_auto_group"
-            ):
-                continue
-            try:
-                children = list(model.child_models())
-            except Exception:
-                children = []
-            if children:
-                continue
-            if id(model) in seen:
-                continue
-            seen.add(id(model))
-            to_close.append(model)
-        for model in to_close:
-            self._hide_and_close_model_tree(model)
-
-    def _hide_and_close_model_tree(self, model):
-        if model is None:
-            return
-        try:
-            nodes = list(self._iter_model_tree(model))
-        except Exception:
-            nodes = [model]
-        nodes = [node for node in nodes if node is not None]
-        for node in reversed(nodes):
-            try:
-                node.display = False
-            except Exception:
-                pass
-        try:
-            self.session.models.close(list(reversed(nodes)))
-            return
-        except Exception:
-            pass
-        for node in reversed(nodes):
-            try:
-                self.session.models.close([node])
-            except Exception:
-                pass
-
-    def _restore_history_state(self, payload):
-        if not isinstance(payload, dict):
-            return
-        current_payload = self._session_payload(include_history_selected=True)
-        self._history_replaying = True
-        try:
-            self._cancel_active_tool_interactions_for_history()
-            self._close_models_changed_since_target(current_payload, payload)
-            self._attached_results = {}
-            self._last_attached_result = None
-            self._last_attach_star_id = None
-            self._last_attach_map_id = None
-            self._ift_target_snapshot = None
-            self._apply_session_payload_to_scene(copy.deepcopy(payload), base_dir="")
-        finally:
-            self._history_replaying = False
-            self._update_history_buttons()
-
-    def _prune_attached_results_state(self):
-        live = {}
-        for attach_key, out_root in list(getattr(self, "_attached_results", {}).items()):
-            if out_root is None or self._model_ref(out_root) is None:
-                continue
-            live[attach_key] = out_root
-        self._attached_results = live
-        if self._last_attached_result is not None and self._model_ref(self._last_attached_result) is None:
-            self._last_attached_result = None
-
-    def _history_attachment_star_model(self, item):
-        model = self._restored_session_star_model(item)
-        if model is None:
-            model = self._find_model_by_name(item.get("star_name"), require_star=True)
-        return model
-
-    def _history_attachment_source_model(self, item):
-        model = self._restored_session_source_model(item)
-        fetch_type = item.get("fetch_type", None)
-        fetch_id = item.get("fetch_id", None)
-        if model is None and fetch_type and fetch_id:
-            model = self._find_model_by_fetch(fetch_type, fetch_id)
-        map_path = item.get("map_path", None)
-        if model is None and map_path:
-            model = self._find_model_by_path(map_path)
-        if model is None:
-            model = self._find_model_by_name(item.get("map_name"), require_star=False)
-        return model
-
-    def _other_live_attachment_uses_model(self, target_model, attr_ref_name, attr_name_name, exclude_model=None):
-        if target_model is None:
-            return False
-        want_ref = self._model_ref(target_model)
-        want_name = str(getattr(target_model, "name", "") or "")
-        for model in self._all_session_models():
-            if model is None or model is exclude_model:
-                continue
-            if not bool(getattr(model, "_cb_generated_attached", False)):
-                continue
-            if self._model_ref(model) is None:
-                continue
-            if want_ref and str(getattr(model, attr_ref_name, None) or "") == str(want_ref):
-                return True
-            if want_name and str(getattr(model, attr_name_name, "") or "") == want_name:
-                return True
-        return False
-
-    def _history_remove_item(self, kind, item):
-        kind = str(kind or "").strip().lower()
-        model = self._history_live_model_for_item(kind, item)
-        if model is None:
-            return
-        if kind == "attachment":
-            star_model = self._history_attachment_star_model(item)
-            source_model = self._history_attachment_source_model(item)
-            self._hide_and_close_model_tree(model)
-            self._prune_attached_results_state()
-            if source_model is not None and not self._other_live_attachment_uses_model(
-                source_model, "_cb_attachment_source_ref", "_cb_attachment_map_name"
-            ):
-                try:
-                    source_model.display = True
-                except Exception:
-                    pass
-            if star_model is not None and not self._other_live_attachment_uses_model(
-                star_model, "_cb_attachment_star_ref", "_cb_attachment_star_name"
-            ):
-                try:
-                    star_model.display = True
-                except Exception:
-                    pass
-            return
-        self._hide_and_close_model_tree(model)
-
-    def _history_restore_item(self, kind, item):
-        kind = str(kind or "").strip().lower()
-        if kind == "source":
-            self._restore_attach_source_models([copy.deepcopy(item)], base_dir="")
-            return
-        if kind == "star":
-            self._restore_generated_star_models([copy.deepcopy(item)])
-            return
-        if kind == "membrane":
-            self._restore_generated_membranes([copy.deepcopy(item)])
-            return
-        if kind == "marker_path":
-            self._restore_generated_marker_paths([copy.deepcopy(item)])
-            return
-        if kind == "attachment":
-            self._restore_attachments([copy.deepcopy(item)], reset_runtime=False)
-            return
-
-    def _apply_history_action_record(self, record, undo=True):
-        if not isinstance(record, dict):
-            return
-        self._history_replaying = True
-        try:
-            self._cancel_active_tool_interactions_for_history()
-            remove_bucket = "created" if undo else "deleted"
-            restore_bucket = "deleted" if undo else "created"
-            modified_bucket = "modified_before" if undo else "modified_after"
-
-            for kind, _field in reversed(self._history_kind_fields()):
-                for item in list(record.get(remove_bucket, {}).get(kind, []) or []):
-                    self._history_remove_item(kind, item)
-
-            for kind, _field in self._history_kind_fields():
-                for item in list(record.get(restore_bucket, {}).get(kind, []) or []):
-                    self._history_restore_item(kind, item)
-
-            for kind, _field in self._history_kind_fields():
-                modified_items = list(record.get(modified_bucket, {}).get(kind, []) or [])
-                if not modified_items:
-                    continue
-                if kind in ("attachment", "source"):
-                    for item in modified_items:
-                        self._history_remove_item(kind, item)
-                for item in modified_items:
-                    self._history_restore_item(kind, item)
-
-            self._prune_attached_results_state()
-            self._refresh_model_selectors()
-        finally:
-            self._history_replaying = False
-            self._update_history_buttons()
-
-    def _undo_last_action(self):
-        from Qt.QtWidgets import QMessageBox
-
-        if not self._history_undo_stack:
-            self._update_history_buttons()
-            return
-        record = copy.deepcopy(self._history_undo_stack.pop())
-        try:
-            self._apply_history_action_record(record, undo=True)
-            self._history_redo_stack.append(copy.deepcopy(record))
-        except Exception as e:
-            self._history_undo_stack.append(record)
-            self.session.logger.error(str(e))
-            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
-        finally:
-            self._update_history_buttons()
-            self._keep_tool_visible()
-
-    def _redo_last_action(self):
-        from Qt.QtWidgets import QMessageBox
-
-        if not self._history_redo_stack:
-            self._update_history_buttons()
-            return
-        record = copy.deepcopy(self._history_redo_stack.pop())
-        try:
-            self._apply_history_action_record(record, undo=False)
-            self._history_undo_stack.append(copy.deepcopy(record))
-        except Exception as e:
-            self._history_redo_stack.append(record)
-            self.session.logger.error(str(e))
-            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
-        finally:
-            self._update_history_buttons()
-            self._keep_tool_visible()
-
     def _register_star_model(self, model):
         if model is None:
             return
@@ -2920,6 +2339,11 @@ class CiliaBuilder2Tool(ToolInstance):
         self._last_attached_result = None
 
     def _refresh_model_selectors(self):
+        from .source_paths import normalize_glb_name
+
+        for model in self._selector_attach_models():
+            if self._is_selector_attach_source(model):
+                normalize_glb_name(model)
         star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         continue_outer_current = self.continue_outer_star_model.currentData() if hasattr(self, "continue_outer_star_model") else None
@@ -3549,7 +2973,8 @@ class CiliaBuilder2Tool(ToolInstance):
                     raise RuntimeError("Could not apply the Z-alignment transform")
 
             self._apply_model_color_state(aligned_live, source_color_state)
-            _run(self.session, f'save "{save_path}" #{self._model_ref(aligned_live)}')
+            center_option = " center false" if str(save_path).lower().endswith((".glb", ".gltf")) else ""
+            _run(self.session, f'save "{save_path}" #{self._model_ref(aligned_live)}{center_option}')
 
             before = set(self.session.models.list())
             _run(self.session, f'open "{save_path}"')
@@ -4234,27 +3659,9 @@ class CiliaBuilder2Tool(ToolInstance):
         }
 
     def _relion_angles_from_axes(self, ex, ey, ez):
-        basis = np.column_stack(
-            [
-                self._safe_unit_array(ex, (1.0, 0.0, 0.0)),
-                self._safe_unit_array(ey, (0.0, 1.0, 0.0)),
-                self._safe_unit_array(ez, (0.0, 0.0, 1.0)),
-            ]
-        )
-        rotation = basis.T
-        c_theta = max(-1.0, min(1.0, float(rotation[2, 2])))
-        theta = math.acos(c_theta)
-        s_theta = math.sin(theta)
-        if abs(s_theta) > 1e-8:
-            rot = math.degrees(math.atan2(float(rotation[2, 1]), float(rotation[2, 0])))
-            psi = math.degrees(math.atan2(float(rotation[1, 2]), float(-rotation[0, 2])))
-            tilt = math.degrees(theta)
-            return rot, tilt, psi
-        if c_theta >= 0.0:
-            rot = math.degrees(math.atan2(float(rotation[0, 1]), float(rotation[0, 0])))
-            return rot, 0.0, 0.0
-        rot = math.degrees(math.atan2(float(rotation[0, 1]), float(-rotation[0, 0])))
-        return rot, 180.0, 0.0
+        from .orientation import relion_angles_from_axes
+
+        return relion_angles_from_axes(ex, ey, ez)
 
     def _update_filament_sub_target_from_pick(self, pick):
         dialog = self._filament_sub_dialog
@@ -5489,6 +4896,7 @@ class CiliaBuilder2Tool(ToolInstance):
         for target_index, target_row in enumerate(source_rows):
             target_center = self._row_world_center(target_row)
             ex, ey, ez = self._resolved_axes_from_row(target_row)
+            rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(ex, ey, ez)
             try:
                 target_px = float(target_row.get("rlnImagePixelSize", 1.0) or 1.0)
             except Exception:
@@ -5508,9 +4916,9 @@ class CiliaBuilder2Tool(ToolInstance):
                         "rlnCoordinateX": float(world[0]) / float(target_px),
                         "rlnCoordinateY": float(world[1]) / float(target_px),
                         "rlnCoordinateZ": float(world[2]) / float(target_px),
-                        "rlnAngleRot": float(target_row.get("rlnAngleRot", 0.0) or 0.0),
-                        "rlnAngleTilt": float(target_row.get("rlnAngleTilt", 0.0) or 0.0),
-                        "rlnAnglePsi": float(target_row.get("rlnAnglePsi", 0.0) or 0.0),
+                        "rlnAngleRot": rot_deg,
+                        "rlnAngleTilt": tilt_deg,
+                        "rlnAnglePsi": psi_deg,
                         "rlnImagePixelSize": float(target_px),
                         "rlnHelicalTubeID": int(tube_id),
                         "rlnClassNumber": int(class_num),
@@ -5853,6 +5261,7 @@ class CiliaBuilder2Tool(ToolInstance):
             ex, ey, ez = self._axes_from_star_row(source_rows[0])
             base_axes = [np.array(ex, dtype=float), np.array(ey, dtype=float), np.array(ez, dtype=float)]
             basis_axes = [spin_rot @ axis for axis in base_axes]
+            rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(*basis_axes)
 
             star_rows = []
             for idx in range(repeat_count):
@@ -5869,9 +5278,9 @@ class CiliaBuilder2Tool(ToolInstance):
                         "rlnCoordinateX": float(ift_origin[0]),
                         "rlnCoordinateY": float(ift_origin[1]),
                         "rlnCoordinateZ": float(ift_origin[2]),
-                        "rlnAngleRot": 0.0,
-                        "rlnAngleTilt": 0.0,
-                        "rlnAnglePsi": 0.0,
+                        "rlnAngleRot": rot_deg,
+                        "rlnAngleTilt": tilt_deg,
+                        "rlnAnglePsi": psi_deg,
                         "rlnImagePixelSize": float(pixel_size),
                         "rlnHelicalTubeID": int(tube_id),
                         "rlnClassNumber": int(class_num),
@@ -5988,14 +5397,15 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             tube_id = 1
 
+        rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(*basis_axes)
         row = {
             "rlnTomoName": str(rows[0].get("rlnTomoName", "TS_001")),
             "rlnCoordinateX": float(ift_origin[0]),
             "rlnCoordinateY": float(ift_origin[1]),
             "rlnCoordinateZ": float(ift_origin[2]),
-            "rlnAngleRot": 0.0,
-            "rlnAngleTilt": 0.0,
-            "rlnAnglePsi": 0.0,
+            "rlnAngleRot": rot_deg,
+            "rlnAngleTilt": tilt_deg,
+            "rlnAnglePsi": psi_deg,
             "rlnImagePixelSize": float(pixel_size),
             "rlnHelicalTubeID": int(tube_id),
             "rlnClassNumber": int(class_num),
@@ -6090,14 +5500,15 @@ class CiliaBuilder2Tool(ToolInstance):
         except Exception:
             tube_id = 1
 
+        rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(*basis_axes)
         star_row = {
             "rlnTomoName": str(row.get("rlnTomoName", "TS_001")),
             "rlnCoordinateX": float(ift_origin[0]),
             "rlnCoordinateY": float(ift_origin[1]),
             "rlnCoordinateZ": float(ift_origin[2]),
-            "rlnAngleRot": 0.0,
-            "rlnAngleTilt": 0.0,
-            "rlnAnglePsi": 0.0,
+            "rlnAngleRot": rot_deg,
+            "rlnAngleTilt": tilt_deg,
+            "rlnAnglePsi": psi_deg,
             "rlnImagePixelSize": float(pixel_size),
             "rlnHelicalTubeID": int(tube_id),
             "rlnClassNumber": int(class_num),
@@ -6131,12 +5542,7 @@ class CiliaBuilder2Tool(ToolInstance):
         self.ift_target_label.setText(f"Generated: {created.name}")
 
     def _axes_from_star_row(self, row):
-        from .map import _particle_axes_from_star
-        return _particle_axes_from_star(
-            row.get("rlnAngleRot", 0.0),
-            row.get("rlnAngleTilt", 0.0),
-            row.get("rlnAnglePsi", 0.0),
-        )
+        return self._resolved_axes_from_row(row)
 
     def _row_world_center(self, row):
         try:
@@ -6452,6 +5858,30 @@ class CiliaBuilder2Tool(ToolInstance):
                 children = []
             for child in reversed(children):
                 stack.append(child)
+
+    def _hide_and_close_model_tree(self, model):
+        if model is None:
+            return
+        try:
+            nodes = list(self._iter_model_tree(model))
+        except Exception:
+            nodes = [model]
+        nodes = [node for node in nodes if node is not None]
+        for node in reversed(nodes):
+            try:
+                node.display = False
+            except Exception:
+                pass
+        try:
+            self.session.models.close(list(reversed(nodes)))
+            return
+        except Exception:
+            pass
+        for node in reversed(nodes):
+            try:
+                self.session.models.close([node])
+            except Exception:
+                pass
 
     def _all_session_models(self):
         seen = set()
@@ -7792,7 +7222,7 @@ class CiliaBuilder2Tool(ToolInstance):
         if "gltf" in cls_name or "glb" in cls_name:
             return True
         model_name = str(getattr(model, "name", "") or "").lower()
-        return model_name.endswith((".glb", ".gltf"))
+        return model_name.endswith((".glb", ".gltf", ".glb.gz", ".gltf.gz"))
 
     def _is_volume_like(self, model):
         cls_name = model.__class__.__name__.lower()
@@ -7954,6 +7384,7 @@ class CiliaBuilder2Tool(ToolInstance):
         any_added = False
         for info in tube_data:
             origin = np.array(info["first_center"], dtype=float) - np.array(info["axis_dir"], dtype=float) * float(base_z_offset)
+            rot_deg, tilt_deg, psi_deg = self._relion_angles_from_axes(info["ex"], info["ey"], info["ez"])
             current_offset = float(used_continue_offset)
             offset_limit = float(used_continue_offset) + float(extra_length_ang)
             while current_offset <= offset_limit + 1e-6:
@@ -7964,9 +7395,9 @@ class CiliaBuilder2Tool(ToolInstance):
                         "rlnCoordinateX": float(world[0]) / float(info["pixel_size"]),
                         "rlnCoordinateY": float(world[1]) / float(info["pixel_size"]),
                         "rlnCoordinateZ": float(world[2]) / float(info["pixel_size"]),
-                        "rlnAngleRot": float(info["last_row"].get("rlnAngleRot", 0.0) or 0.0),
-                        "rlnAngleTilt": float(info["last_row"].get("rlnAngleTilt", 0.0) or 0.0),
-                        "rlnAnglePsi": float(info["last_row"].get("rlnAnglePsi", 0.0) or 0.0),
+                        "rlnAngleRot": rot_deg,
+                        "rlnAngleTilt": tilt_deg,
+                        "rlnAnglePsi": psi_deg,
                         "rlnImagePixelSize": float(info["pixel_size"]),
                         "rlnHelicalTubeID": int(info["last_row"].get("rlnHelicalTubeID", info["tube_id"]) or info["tube_id"]),
                         "rlnClassNumber": int(info["last_row"].get("rlnClassNumber", 1) or 1),

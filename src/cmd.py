@@ -9,6 +9,10 @@ from chimerax.core.models import Model
 
 from .io import rows_to_star_text, write_star_tempfile
 from .draw import build_cilia_lines_star_rows, build_central_pair_star_rows, build_ift_star_rows
+from .orientation import (
+    particle_axes_from_row as _particle_axes_from_row,
+    rotation_align_vector_to_vector as _rotation_align_vector_to_vector,
+)
 
 
 _CB_CLASS_COUNTER = 0
@@ -72,26 +76,6 @@ def _row_world_center(row):
     )
 
 
-def _particle_axes_from_row(row):
-    try:
-        ex = row.get("_cbAxisX", None)
-        ey = row.get("_cbAxisY", None)
-        ez = row.get("_cbAxisZ", None)
-        if ex is not None and ey is not None and ez is not None:
-            return _safe_unit(ex), _safe_unit(ey), _safe_unit(ez)
-    except Exception:
-        pass
-    rot = float(row.get("rlnAngleRot", 0.0))
-    tilt = float(row.get("rlnAngleTilt", 0.0))
-    psi = float(row.get("rlnAnglePsi", 0.0))
-    r = _matmul(_rot_z(psi), _matmul(_rot_y(tilt), _rot_z(rot)))
-    rt = tuple(tuple(r[c][rr] for c in range(3)) for rr in range(3))
-    ex = _safe_unit(_matvec(rt, (1.0, 0.0, 0.0)))
-    ey = _safe_unit(_matvec(rt, (0.0, 1.0, 0.0)))
-    ez = _safe_unit(_matvec(rt, (0.0, 0.0, 1.0)))
-    return ex, ey, ez
-
-
 def _cross(a, b):
     return (
         a[1] * b[2] - a[2] * b[1],
@@ -107,37 +91,6 @@ def _arrow_head_basis(axis):
         ref = (0.0, 1.0, 0.0)
     side = _safe_unit(_cross(axis, ref))
     return side
-
-
-def _rotation_align_vector_to_vector(v_from, v_to):
-    v = np.array(v_from, dtype=float)
-    z = np.array(v_to, dtype=float)
-    nv = float(np.linalg.norm(v))
-    nz = float(np.linalg.norm(z))
-    if nv < 1e-12 or nz < 1e-12:
-        return np.eye(3, dtype=float)
-    v /= nv
-    z /= nz
-    c = float(np.clip(np.dot(v, z), -1.0, 1.0))
-    if c > 1.0 - 1e-8:
-        return np.eye(3, dtype=float)
-    if c < -1.0 + 1e-8:
-        return np.array(((1.0, 0.0, 0.0), (0.0, -1.0, 0.0), (0.0, 0.0, -1.0)), dtype=float)
-    axis = np.cross(v, z)
-    n = float(np.linalg.norm(axis))
-    if n < 1e-12:
-        return np.eye(3, dtype=float)
-    axis /= n
-    x, y, zz = axis
-    K = np.array(
-        [
-            [0.0, -zz, y],
-            [zz, 0.0, -x],
-            [-y, x, 0.0],
-        ],
-        dtype=float,
-    )
-    return np.eye(3, dtype=float) + K + (K @ K) * ((1.0 - c) / (n * n))
 
 
 def _append_transformed_geometry(bucket, vertices, normals, triangles, direction, origin, z_shift=0.0):
@@ -996,11 +949,8 @@ buildcentralpair_desc = CmdDesc(
 )
 
 
-def buildcentriole(*args, **kwargs):
-    # Legacy compatibility alias for older command wiring / callers.
-    return buildcentralpair(*args, **kwargs)
-
-
+# Keep the real signature: ChimeraX inspects it when registering the command.
+buildcentriole = buildcentralpair
 buildcentriole_desc = buildcentralpair_desc
 
 
