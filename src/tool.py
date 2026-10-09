@@ -541,7 +541,7 @@ class CiliaBuilder2Tool(ToolInstance):
         cent_mode_lay.setContentsMargins(0, 0, 0, 0)
         cent_mode_lay.addWidget(QLabel("Central pair mode", cent_mode_row))
         self.central_pair_mode = QComboBox(cent_mode_row)
-        self.central_pair_mode.addItem("Singlet line", "singlet")
+        self.central_pair_mode.addItem("Single line", "singlet")
         self.central_pair_mode.addItem("C1 + C2 lines", "doublet")
         cent_mode_lay.addWidget(self.central_pair_mode, 1)
         cent_layout.addWidget(cent_mode_row)
