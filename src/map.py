@@ -814,6 +814,24 @@ def _shared_source_anchor_local(session, src_model):
     return np.array([0.0, 0.0, 0.0], dtype=float)
 
 
+def _parse_fixed_anchor(value):
+    """
+    Return a (3,) float array for a user-supplied fixed anchor, or None.
+
+    The anchor is expressed in the source model's own local coordinates (the
+    same frame the GLB file is stored in), not in STAR coordinates.
+    """
+    if value is None:
+        return None
+    try:
+        anchor = np.array([float(v) for v in value], dtype=float).reshape((3,))
+    except Exception:
+        return None
+    if not np.all(np.isfinite(anchor)):
+        return None
+    return anchor
+
+
 def _calibration_rotation_matrix(rx_deg=CALIB_ROT_X_DEG, ry_deg=CALIB_ROT_Y_DEG, rz_deg=CALIB_ROT_Z_DEG):
     return (
         _rot_z(rz_deg)
@@ -857,6 +875,7 @@ def cbsubmap_impl(
     attach_axis_rot_y_deg=CALIB_ROT_Y_DEG,
     attach_axis_rot_z_deg=CALIB_ROT_Z_DEG,
     attach_local_adjust_matrix=None,
+    attach_fixed_anchor=None,
 ):
     """
     Deep-fix placement pipeline
@@ -907,7 +926,21 @@ def cbsubmap_impl(
         except Exception:
             local_adjust = None
     calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
-    shared_anchor = _shared_source_anchor_local(session, src_map)
+    # Optional user-chosen center (x, y, z in the source file's own coordinates).
+    # It replaces the computed bounding-box center, and is the point that lands
+    # on each STAR coordinate and the pivot for all rotations. GLB sources only,
+    # so maps and atomic models keep their existing anchors.
+    fixed_anchor = _parse_fixed_anchor(attach_fixed_anchor)
+    if fixed_anchor is not None and _is_glb_like_model(src_map):
+        shared_anchor = fixed_anchor
+        session.logger.info(
+            "cbsubmap using fixed GLB center "
+            f"({fixed_anchor[0]:.3f}, {fixed_anchor[1]:.3f}, {fixed_anchor[2]:.3f})"
+        )
+    else:
+        if fixed_anchor is not None:
+            session.logger.info("cbsubmap ignored the fixed center because the source is not a GLB model")
+        shared_anchor = _shared_source_anchor_local(session, src_map)
     source_long_axis = _source_long_axis_local(session, src_map) if bool(attach_auto_align_long_axis) else None
 
     placed = 0

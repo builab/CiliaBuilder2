@@ -967,6 +967,32 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_y_lay.addStretch(1)
         attach_select_lay.addWidget(attach_y_row)
 
+        attach_fixed_row = QWidget(main)
+        attach_fixed_lay = QHBoxLayout(attach_fixed_row)
+        attach_fixed_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB (model coordinates)", attach_fixed_row)
+        self.attach_fixed_center_check.setChecked(False)
+        self.attach_fixed_center_check.toggled.connect(self._on_attach_fixed_center_toggled)
+        attach_fixed_lay.addWidget(self.attach_fixed_center_check)
+        attach_fixed_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_fixed_row)
+
+        attach_fixed_xyz_row = QWidget(main)
+        attach_fixed_xyz_lay = QHBoxLayout(attach_fixed_xyz_row)
+        attach_fixed_xyz_lay.setContentsMargins(0, 0, 0, 0)
+        for axis_name in ("x", "y", "z"):
+            attach_fixed_xyz_lay.addWidget(QLabel(axis_name.upper(), attach_fixed_xyz_row))
+            fixed_spin = TypedOnlyDoubleSpinBox(attach_select)
+            fixed_spin.setRange(-1.0e6, 1.0e6)
+            fixed_spin.setDecimals(3)
+            fixed_spin.setValue(0.0)
+            fixed_spin.setEnabled(False)
+            fixed_spin.valueChanged.connect(self._reattach_with_current_settings)
+            attach_fixed_xyz_lay.addWidget(fixed_spin)
+            setattr(self, f"attach_fixed_center_{axis_name}", fixed_spin)
+        attach_fixed_xyz_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_fixed_xyz_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -2123,6 +2149,51 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     def _y_control_matrix(self, deg):
         m = self._xy90_adjust_matrix()
         return m.T @ self._rot_y_matrix(deg) @ m
+
+    def _on_attach_fixed_center_toggled(self, checked):
+        for axis_name in ("x", "y", "z"):
+            spin = getattr(self, f"attach_fixed_center_{axis_name}", None)
+            if spin is not None:
+                spin.setEnabled(bool(checked))
+        self._reattach_with_current_settings(bool(checked))
+
+    def _attach_fixed_anchor(self):
+        """(x, y, z) fixed center in the GLB's own coordinates, or None when unchecked."""
+        check = getattr(self, "attach_fixed_center_check", None)
+        if check is None or not check.isChecked():
+            return None
+        try:
+            return [
+                float(getattr(self, f"attach_fixed_center_{axis_name}").value())
+                for axis_name in ("x", "y", "z")
+            ]
+        except Exception:
+            return None
+
+    def _apply_attach_fixed_center_state(self, enabled, center):
+        check = getattr(self, "attach_fixed_center_check", None)
+        if check is None:
+            return
+        spins = [getattr(self, f"attach_fixed_center_{axis_name}", None) for axis_name in ("x", "y", "z")]
+        widgets = [check] + [s for s in spins if s is not None]
+        # Block signals so restoring saved UI state does not trigger a re-attach per widget.
+        for w in widgets:
+            w.blockSignals(True)
+        try:
+            if isinstance(center, (list, tuple)) and len(center) == 3:
+                for spin, value in zip(spins, center):
+                    if spin is not None:
+                        try:
+                            spin.setValue(float(value))
+                        except Exception:
+                            pass
+            check.setChecked(bool(enabled))
+            for spin in spins:
+                if spin is not None:
+                    spin.setEnabled(bool(enabled))
+        finally:
+            for w in widgets:
+                w.blockSignals(False)
 
     def _attach_pre_rotate_y_90_enabled(self):
         return bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False
@@ -6379,6 +6450,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
+                        "fixed_anchor": getattr(out_root, "_cb_attachment_fixed_anchor", None),
                         "pre_rotate_y_90": bool(
                             getattr(
                                 out_root,
@@ -6530,6 +6602,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "attach_y_rotation": float(self.attach_y_rotation.value()),
             "attach_x_movement": 0.0,
             "attach_pre_rotate_y_90": bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False,
+            "attach_fixed_center_enabled": bool(self.attach_fixed_center_check.isChecked()) if hasattr(self, "attach_fixed_center_check") else False,
+            "attach_fixed_center": (
+                [float(getattr(self, f"attach_fixed_center_{axis_name}").value()) for axis_name in ("x", "y", "z")]
+                if hasattr(self, "attach_fixed_center_check")
+                else [0.0, 0.0, 0.0]
+            ),
             "pixel_size": float(self.pixel_size.value()),
             "align_z_model": self._combo_state(self.align_z_model) if hasattr(self, "align_z_model") else {"id": None, "text": ""},
             "align_z_save_path": self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
@@ -6629,6 +6707,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         ),
                     )
                 )
+            )
+        if hasattr(self, "attach_fixed_center_check"):
+            self._apply_attach_fixed_center_state(
+                state.get("attach_fixed_center_enabled", self.attach_fixed_center_check.isChecked()),
+                state.get("attach_fixed_center", None),
             )
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
         if hasattr(self, "align_z_save_path"):
@@ -6872,6 +6955,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 try:
                     existing_out_root._cb_attachment_line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
                     existing_out_root._cb_attachment_y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
+                    existing_out_root._cb_attachment_fixed_anchor = item.get("fixed_anchor", None)
                     existing_out_root._cb_attachment_pre_rotate_y_90 = bool(
                         item.get(
                             "pre_rotate_y_90",
@@ -6922,6 +7006,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 y_deg=y_rotation,
                 pre_rotate_y_90=pre_rotate_y_90,
             ).tolist()
+            restored_fixed_anchor = item.get("fixed_anchor", None)
 
             out_root = cbsubmap_impl(
                 session=self.session,
@@ -6939,6 +7024,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 attach_axis_rot_z_deg=-90.0,
                 attach_x_movement=0.0,
                 attach_local_adjust_matrix=adjust_matrix,
+                attach_fixed_anchor=restored_fixed_anchor,
             )
             if out_root is None:
                 continue
@@ -6948,6 +7034,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 out_root._cb_attachment_y_rotation = y_rotation
                 out_root._cb_attachment_x_movement = 0.0
                 out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
+                out_root._cb_attachment_fixed_anchor = restored_fixed_anchor
                 out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
                 out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
@@ -7795,6 +7882,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         source_color_state = self._capture_model_color_state(map_model)
         self._zero_map_origin_index(map_model)
         pre_rotate_y_90 = self._attach_pre_rotate_y_90_enabled()
+        fixed_anchor = self._attach_fixed_anchor()
 
         star_id = str(star_id)
         map_id = str(map_id)
@@ -7827,6 +7915,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             attach_local_adjust_matrix=self._current_attach_adjust_matrix(
                 pre_rotate_y_90=pre_rotate_y_90,
             ).tolist(),
+            attach_fixed_anchor=fixed_anchor,
         )
         self._apply_source_color_state_to_attached_result(out_root, source_color_state)
         try:
@@ -7834,6 +7923,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
             out_root._cb_attachment_x_movement = 0.0
             out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
+            out_root._cb_attachment_fixed_anchor = fixed_anchor
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)
