@@ -441,7 +441,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.length = TypedOnlyDoubleSpinBox(main)
         self.length.setRange(0.0, 1e9)
         self.length.setDecimals(2)
-        self.length.setValue(9000.0)
+        self.length.setValue(3000.0)
         outer_row_spin("Length", self.length)
 
         self.n_doublet = TypedOnlySpinBox(main)
@@ -527,7 +527,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_length = TypedOnlyDoubleSpinBox(main)
         self.central_pair_length.setRange(0.0, 1e9)
         self.central_pair_length.setDecimals(2)
-        self.central_pair_length.setValue(9000.0)
+        self.central_pair_length.setValue(3000.0)
         cent_row_spin("Length", self.central_pair_length)
 
         self.central_pair_spacing = TypedOnlyDoubleSpinBox(main)
@@ -589,7 +589,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_length = TypedOnlyDoubleSpinBox(main)
         self.membrane_length.setRange(0.0, 1e9)
         self.membrane_length.setDecimals(2)
-        self.membrane_length.setValue(9000.0)
+        self.membrane_length.setValue(3000.0)
         mem_row_spin("Length", self.membrane_length)
 
         self.membrane_radius = TypedOnlyDoubleSpinBox(main)
@@ -976,6 +976,20 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_fixed_lay.addWidget(self.attach_fixed_center_check)
         attach_fixed_lay.addStretch(1)
         attach_select_lay.addWidget(attach_fixed_row)
+
+        attach_fixed_map_row = QWidget(main)
+        attach_fixed_map_lay = QHBoxLayout(attach_fixed_map_row)
+        attach_fixed_map_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_fixed_center_read_btn = QPushButton("Read center coordinate from map", attach_fixed_map_row)
+        self.attach_fixed_center_read_btn.setEnabled(False)
+        self.attach_fixed_center_read_btn.clicked.connect(self._read_fixed_center_from_map)
+        attach_fixed_map_lay.addWidget(self.attach_fixed_center_read_btn)
+        self.attach_fixed_center_map = RefreshingComboBox(self._refresh_fixed_center_map_selector, attach_fixed_map_row)
+        self.attach_fixed_center_map.setMinimumContentsLength(18)
+        self.attach_fixed_center_map.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.attach_fixed_center_map.setEnabled(False)
+        attach_fixed_map_lay.addWidget(self.attach_fixed_center_map, 1)
+        attach_select_lay.addWidget(attach_fixed_map_row)
 
         attach_fixed_xyz_row = QWidget(main)
         attach_fixed_xyz_lay = QHBoxLayout(attach_fixed_xyz_row)
@@ -2150,12 +2164,118 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         m = self._xy90_adjust_matrix()
         return m.T @ self._rot_y_matrix(deg) @ m
 
-    def _on_attach_fixed_center_toggled(self, checked):
+    def _set_fixed_center_controls_enabled(self, enabled):
+        """Enable or grey out the X/Y/Z boxes, the map dropdown and the read button together."""
+        enabled = bool(enabled)
         for axis_name in ("x", "y", "z"):
             spin = getattr(self, f"attach_fixed_center_{axis_name}", None)
             if spin is not None:
-                spin.setEnabled(bool(checked))
+                spin.setEnabled(enabled)
+        for name in ("attach_fixed_center_map", "attach_fixed_center_read_btn"):
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(enabled)
+
+    def _on_attach_fixed_center_toggled(self, checked):
+        self._set_fixed_center_controls_enabled(checked)
+        if checked:
+            self._refresh_fixed_center_map_selector()
         self._reattach_with_current_settings(bool(checked))
+
+    def _fixed_center_map_models(self):
+        """Open maps (volumes with a real grid) that can supply a center."""
+        maps = []
+        for model in self._selector_attach_models():
+            try:
+                if self._model_ref(model) is None:
+                    continue
+                if not self._is_selector_attach_source(model) or not self._is_volume_like(model):
+                    continue
+                if self._volume_grid_center(model) is None:
+                    continue
+            except Exception:
+                continue
+            maps.append(model)
+        return maps
+
+    def _refresh_fixed_center_map_selector(self):
+        combo = getattr(self, "attach_fixed_center_map", None)
+        if combo is None:
+            return
+        current = combo.currentData()
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for model in self._fixed_center_map_models():
+                ref = self._model_ref(model)
+                combo.addItem(f"{model.name} (#{ref})", str(ref))
+            if combo.count() == 0:
+                combo.addItem("No maps open", None)
+            else:
+                idx = combo.findData(str(current)) if current is not None else -1
+                combo.setCurrentIndex(idx if idx >= 0 else 0)
+        finally:
+            combo.blockSignals(False)
+
+    def _volume_grid_center(self, model):
+        """
+        Geometric center (x, y, z) of a map's grid, in Angstrom, or None.
+
+        Voxel i sits at i * step once the origin is zeroed (cbsubmap zeroes it
+        before attaching), so the box center is (size - 1) / 2 * step on each
+        axis. For a 200-voxel box at 7.3 A/px that is 99.5 * 7.3 = 726.35.
+        """
+        data = getattr(model, "data", None)
+        if data is None:
+            data = getattr(model, "grid_data", None)
+        if data is None:
+            return None
+        size = getattr(data, "size", None)
+        if size is None:
+            try:
+                shape = data.full_matrix().shape  # (z, y, x)
+                size = (shape[2], shape[1], shape[0])
+            except Exception:
+                return None
+        try:
+            size = tuple(int(n) for n in size[:3])
+        except Exception:
+            return None
+        step = self._volume_voxel_size(model)
+        if len(size) != 3 or step is None or min(size) < 1:
+            return None
+        return tuple(0.5 * (n - 1) * float(s) for n, s in zip(size, step))
+
+    def _read_fixed_center_from_map(self):
+        from Qt.QtWidgets import QMessageBox
+
+        combo = getattr(self, "attach_fixed_center_map", None)
+        ref = combo.currentData() if combo is not None else None
+        if ref is None:
+            self._refresh_fixed_center_map_selector()
+            ref = combo.currentData() if combo is not None else None
+        if ref is None:
+            QMessageBox.warning(self.tool_window.ui_area, "CiliaBuilder2", "Open a map (.mrc) first, then choose it in the list.")
+            return
+        model = self._model_by_ref(ref)
+        center = self._volume_grid_center(model) if model is not None else None
+        if center is None:
+            QMessageBox.warning(self.tool_window.ui_area, "CiliaBuilder2", f"Could not read the grid size and voxel size of model #{ref}.")
+            return
+        spins = [getattr(self, f"attach_fixed_center_{axis_name}") for axis_name in ("x", "y", "z")]
+        for spin in spins:
+            spin.blockSignals(True)
+        try:
+            for spin, value in zip(spins, center):
+                spin.setValue(float(value))
+        finally:
+            for spin in spins:
+                spin.blockSignals(False)
+        self.session.logger.info(
+            f"Fixed GLB center set from map #{ref}: ({center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f})"
+        )
+        # One re-attach for all three values (no-op when nothing is attached yet).
+        self._reattach_with_current_settings(None)
 
     def _attach_fixed_anchor(self):
         """(x, y, z) fixed center in the GLB's own coordinates, or None when unchecked."""
@@ -2188,9 +2308,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         except Exception:
                             pass
             check.setChecked(bool(enabled))
-            for spin in spins:
-                if spin is not None:
-                    spin.setEnabled(bool(enabled))
+            self._set_fixed_center_controls_enabled(enabled)
+            if enabled:
+                self._refresh_fixed_center_map_selector()
         finally:
             for w in widgets:
                 w.blockSignals(False)
@@ -2415,7 +2535,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         for model in self._selector_attach_models():
             if self._is_selector_attach_source(model):
                 normalize_glb_name(model)
-        star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        try:
+            self._refresh_fixed_center_map_selector()
+        except Exception:
+            pass
+        star_current =self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         continue_outer_current = self.continue_outer_star_model.currentData() if hasattr(self, "continue_outer_star_model") else None
         export_star_current = self.export_star_model.currentData() if hasattr(self, "export_star_model") else None
