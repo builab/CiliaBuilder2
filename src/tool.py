@@ -441,7 +441,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.length = TypedOnlyDoubleSpinBox(main)
         self.length.setRange(0.0, 1e9)
         self.length.setDecimals(2)
-        self.length.setValue(9000.0)
+        self.length.setValue(3000.0)
         outer_row_spin("Length", self.length)
 
         self.n_doublet = TypedOnlySpinBox(main)
@@ -527,7 +527,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_length = TypedOnlyDoubleSpinBox(main)
         self.central_pair_length.setRange(0.0, 1e9)
         self.central_pair_length.setDecimals(2)
-        self.central_pair_length.setValue(9000.0)
+        self.central_pair_length.setValue(3000.0)
         cent_row_spin("Length", self.central_pair_length)
 
         self.central_pair_spacing = TypedOnlyDoubleSpinBox(main)
@@ -589,7 +589,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_length = TypedOnlyDoubleSpinBox(main)
         self.membrane_length.setRange(0.0, 1e9)
         self.membrane_length.setDecimals(2)
-        self.membrane_length.setValue(9000.0)
+        self.membrane_length.setValue(3000.0)
         mem_row_spin("Length", self.membrane_length)
 
         self.membrane_radius = TypedOnlyDoubleSpinBox(main)
@@ -967,6 +967,46 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_y_lay.addStretch(1)
         attach_select_lay.addWidget(attach_y_row)
 
+        attach_fixed_row = QWidget(main)
+        attach_fixed_lay = QHBoxLayout(attach_fixed_row)
+        attach_fixed_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB && PDB", attach_fixed_row)
+        self.attach_fixed_center_check.setChecked(False)
+        self.attach_fixed_center_check.toggled.connect(self._on_attach_fixed_center_toggled)
+        attach_fixed_lay.addWidget(self.attach_fixed_center_check)
+        attach_fixed_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_fixed_row)
+
+        attach_fixed_map_row = QWidget(main)
+        attach_fixed_map_lay = QHBoxLayout(attach_fixed_map_row)
+        attach_fixed_map_lay.setContentsMargins(0, 0, 0, 0)
+        self.attach_fixed_center_read_btn = QPushButton("Read center coordinate from map", attach_fixed_map_row)
+        self.attach_fixed_center_read_btn.setEnabled(False)
+        self.attach_fixed_center_read_btn.clicked.connect(self._read_fixed_center_from_map)
+        attach_fixed_map_lay.addWidget(self.attach_fixed_center_read_btn)
+        self.attach_fixed_center_map = RefreshingComboBox(self._refresh_fixed_center_map_selector, attach_fixed_map_row)
+        self.attach_fixed_center_map.setMinimumContentsLength(18)
+        self.attach_fixed_center_map.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.attach_fixed_center_map.setEnabled(False)
+        attach_fixed_map_lay.addWidget(self.attach_fixed_center_map, 1)
+        attach_select_lay.addWidget(attach_fixed_map_row)
+
+        attach_fixed_xyz_row = QWidget(main)
+        attach_fixed_xyz_lay = QHBoxLayout(attach_fixed_xyz_row)
+        attach_fixed_xyz_lay.setContentsMargins(0, 0, 0, 0)
+        for axis_name in ("x", "y", "z"):
+            attach_fixed_xyz_lay.addWidget(QLabel(axis_name.upper(), attach_fixed_xyz_row))
+            fixed_spin = TypedOnlyDoubleSpinBox(attach_select)
+            fixed_spin.setRange(-1.0e6, 1.0e6)
+            fixed_spin.setDecimals(3)
+            fixed_spin.setValue(0.0)
+            fixed_spin.setEnabled(False)
+            fixed_spin.valueChanged.connect(self._reattach_with_current_settings)
+            attach_fixed_xyz_lay.addWidget(fixed_spin)
+            setattr(self, f"attach_fixed_center_{axis_name}", fixed_spin)
+        attach_fixed_xyz_lay.addStretch(1)
+        attach_select_lay.addWidget(attach_fixed_xyz_row)
+
         sel_btn_row = QWidget(main)
         sel_btn_lay = QHBoxLayout(sel_btn_row)
         sel_btn_lay.setContentsMargins(0, 0, 0, 0)
@@ -1318,7 +1358,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         self._apply_model_color_state(child, source_color_state)
                         break
 
-    def _candidate_model_paths(self, model):
+    def _own_model_paths(self, model):
+        """Paths recorded on this model itself, not on its sub-layers."""
+        return self._candidate_model_paths(model, recursive=False)
+
+    def _candidate_model_paths(self, model, recursive=True):
         from .source_paths import original_glb_path
 
         paths = []
@@ -1337,7 +1381,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             paths.append(norm)
 
         try:
-            scan_models = list(self._iter_model_tree(model))
+            scan_models = list(self._iter_model_tree(model)) if recursive else [model]
         except Exception:
             scan_models = [model]
         for obj in scan_models:
@@ -1969,6 +2013,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         if not want_type or not want_id:
             return None
         for model in self._all_session_models():
+            if self._is_cb_container(model) or self._has_attach_source_ancestor(model):
+                continue
             spec = self._fetch_spec_for_model(model)
             if spec is None:
                 continue
@@ -1977,6 +2023,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         return None
 
     def _choose_opened_source_model(self, opened_models):
+        # session.models.list() is flat: keep only the top-most opened models so that
+        # multi-layer files (a .glb with sub-layers) resolve to the file's own model.
+        opened_ids = {id(m) for m in opened_models}
+        tops = [m for m in opened_models if id(self._model_parent(m)) not in opened_ids]
+        opened_models = tops or list(opened_models)
         for model in opened_models:
             if self._is_glb_like(model):
                 return model
@@ -2124,6 +2175,157 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         m = self._xy90_adjust_matrix()
         return m.T @ self._rot_y_matrix(deg) @ m
 
+    def _set_fixed_center_controls_enabled(self, enabled):
+        """Enable or grey out the X/Y/Z boxes, the map dropdown and the read button together."""
+        enabled = bool(enabled)
+        for axis_name in ("x", "y", "z"):
+            spin = getattr(self, f"attach_fixed_center_{axis_name}", None)
+            if spin is not None:
+                spin.setEnabled(enabled)
+        for name in ("attach_fixed_center_map", "attach_fixed_center_read_btn"):
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(enabled)
+
+    def _on_attach_fixed_center_toggled(self, checked):
+        self._set_fixed_center_controls_enabled(checked)
+        if checked:
+            self._refresh_fixed_center_map_selector()
+        self._reattach_with_current_settings(bool(checked))
+
+    def _fixed_center_map_models(self):
+        """Open maps (volumes with a real grid) that can supply a center."""
+        maps = []
+        for model in self._selector_attach_models():
+            try:
+                if self._model_ref(model) is None:
+                    continue
+                if not self._is_selector_attach_source(model) or not self._is_volume_like(model):
+                    continue
+                if self._volume_grid_center(model) is None:
+                    continue
+            except Exception:
+                continue
+            maps.append(model)
+        return maps
+
+    def _refresh_fixed_center_map_selector(self):
+        combo = getattr(self, "attach_fixed_center_map", None)
+        if combo is None:
+            return
+        current = combo.currentData()
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for model in self._fixed_center_map_models():
+                ref = self._model_ref(model)
+                combo.addItem(f"{model.name} (#{ref})", str(ref))
+            if combo.count() == 0:
+                combo.addItem("No maps open", None)
+            else:
+                idx = combo.findData(str(current)) if current is not None else -1
+                combo.setCurrentIndex(idx if idx >= 0 else 0)
+        finally:
+            combo.blockSignals(False)
+
+    def _volume_grid_center(self, model):
+        """
+        Geometric center (x, y, z) of a map's grid, in Angstrom, or None.
+
+        Voxel i sits at i * step once the origin is zeroed (cbsubmap zeroes it
+        before attaching), so the box center is (size - 1) / 2 * step on each
+        axis. For a 200-voxel box at 7.3 A/px that is 99.5 * 7.3 = 726.35.
+        """
+        data = getattr(model, "data", None)
+        if data is None:
+            data = getattr(model, "grid_data", None)
+        if data is None:
+            return None
+        size = getattr(data, "size", None)
+        if size is None:
+            try:
+                shape = data.full_matrix().shape  # (z, y, x)
+                size = (shape[2], shape[1], shape[0])
+            except Exception:
+                return None
+        try:
+            size = tuple(int(n) for n in size[:3])
+        except Exception:
+            return None
+        step = self._volume_voxel_size(model)
+        if len(size) != 3 or step is None or min(size) < 1:
+            return None
+        return tuple(0.5 * (n - 1) * float(s) for n, s in zip(size, step))
+
+    def _read_fixed_center_from_map(self):
+        from Qt.QtWidgets import QMessageBox
+
+        combo = getattr(self, "attach_fixed_center_map", None)
+        ref = combo.currentData() if combo is not None else None
+        if ref is None:
+            self._refresh_fixed_center_map_selector()
+            ref = combo.currentData() if combo is not None else None
+        if ref is None:
+            QMessageBox.warning(self.tool_window.ui_area, "CiliaBuilder2", "Open a map (.mrc) first, then choose it in the list.")
+            return
+        model = self._model_by_ref(ref)
+        center = self._volume_grid_center(model) if model is not None else None
+        if center is None:
+            QMessageBox.warning(self.tool_window.ui_area, "CiliaBuilder2", f"Could not read the grid size and voxel size of model #{ref}.")
+            return
+        spins = [getattr(self, f"attach_fixed_center_{axis_name}") for axis_name in ("x", "y", "z")]
+        for spin in spins:
+            spin.blockSignals(True)
+        try:
+            for spin, value in zip(spins, center):
+                spin.setValue(float(value))
+        finally:
+            for spin in spins:
+                spin.blockSignals(False)
+        self.session.logger.info(
+            f"Fixed center set from map #{ref}: ({center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f})"
+        )
+        # One re-attach for all three values (no-op when nothing is attached yet).
+        self._reattach_with_current_settings(None)
+
+    def _attach_fixed_anchor(self):
+        """(x, y, z) fixed center in the model's own coordinates, or None when unchecked."""
+        check = getattr(self, "attach_fixed_center_check", None)
+        if check is None or not check.isChecked():
+            return None
+        try:
+            return [
+                float(getattr(self, f"attach_fixed_center_{axis_name}").value())
+                for axis_name in ("x", "y", "z")
+            ]
+        except Exception:
+            return None
+
+    def _apply_attach_fixed_center_state(self, enabled, center):
+        check = getattr(self, "attach_fixed_center_check", None)
+        if check is None:
+            return
+        spins = [getattr(self, f"attach_fixed_center_{axis_name}", None) for axis_name in ("x", "y", "z")]
+        widgets = [check] + [s for s in spins if s is not None]
+        # Block signals so restoring saved UI state does not trigger a re-attach per widget.
+        for w in widgets:
+            w.blockSignals(True)
+        try:
+            if isinstance(center, (list, tuple)) and len(center) == 3:
+                for spin, value in zip(spins, center):
+                    if spin is not None:
+                        try:
+                            spin.setValue(float(value))
+                        except Exception:
+                            pass
+            check.setChecked(bool(enabled))
+            self._set_fixed_center_controls_enabled(enabled)
+            if enabled:
+                self._refresh_fixed_center_map_selector()
+        finally:
+            for w in widgets:
+                w.blockSignals(False)
+
     def _attach_pre_rotate_y_90_enabled(self):
         return bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False
 
@@ -2157,6 +2359,63 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 return True
             cur = self._model_parent(cur)
         return False
+
+    def _is_cb_container(self, model):
+        if model is None:
+            return False
+        if getattr(model, "_cb_root", False):
+            return True
+        return getattr(model, "_cb_group_tag", None) in ("star_models", "maps", "membrane")
+
+    def _is_inside_cb_root(self, model):
+        """True only for models that live below the CiliaBuilder2 root model."""
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_root", False):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
+    def _has_attach_source_ancestor(self, model):
+        """True for a sub-layer of a multi-layer source (e.g. a map or surface inside a GLB)."""
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if not self._is_cb_container(cur) and self._is_attach_source(cur):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
+    def _model_depth(self, model):
+        depth = 0
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            depth += 1
+            cur = self._model_parent(cur)
+        return depth
+
+    def _cb_scope_models(self, what="model"):
+        """All models inside the CiliaBuilder2 root; anything else is never saved."""
+        inside = []
+        outside = []
+        for model in self._all_session_models():
+            if self._is_cb_container(model):
+                continue
+            (inside if self._is_inside_cb_root(model) else outside).append(model)
+        return inside, outside
+
+    def _log_skipped_outside(self, kind, models):
+        names = [str(getattr(m, "name", "(unnamed)")) for m in models]
+        if names:
+            self.session.logger.info(
+                f"JSON save: left out {len(names)} {kind} outside CiliaBuilder2: " + ", ".join(names[:8])
+                + (" ..." if len(names) > 8 else "")
+            )
 
     def _is_generated_attached_model(self, model):
         cur = model
@@ -2344,7 +2603,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         for model in self._selector_attach_models():
             if self._is_selector_attach_source(model):
                 normalize_glb_name(model)
-        star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        try:
+            self._refresh_fixed_center_map_selector()
+        except Exception:
+            pass
+        star_current =self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         continue_outer_current = self.continue_outer_star_model.currentData() if hasattr(self, "continue_outer_star_model") else None
         export_star_current = self.export_star_model.currentData() if hasattr(self, "export_star_model") else None
@@ -6240,7 +6503,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
     def _generated_star_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_star_rows", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 rows = getattr(model, "_cb_star_rows", None)
                 if rows is None:
@@ -6262,11 +6529,16 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping STAR model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("STAR model(s)", skipped)
         return out
 
     def _generated_membrane_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_membrane_state", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 state = getattr(model, "_cb_membrane_state", None)
                 if not state:
@@ -6282,11 +6554,16 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping membrane model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("membrane(s)", skipped)
         return out
 
     def _generated_marker_path_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_marker_path_state", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 state = getattr(model, "_cb_marker_path_state", None)
                 if not state:
@@ -6304,18 +6581,29 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 self.session.logger.warning(
                     f"Skipping marker path model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})"
                 )
+        self._log_skipped_outside("marker path(s)", skipped)
         return out
 
     def _attach_source_models_state(self, save_dir, session_stem, export_cache):
         out = []
         seen_paths = set()
         seen_fetches = set()
-        for model in self.session.models.list():
+        skipped = []
+        for model in self._all_session_models():
             try:
-                if not self._is_selector_attach_source(model):
+                if self._is_cb_container(model) or not self._is_selector_attach_source(model):
+                    continue
+                if not self._is_inside_cb_root(model):
+                    skipped.append(model)
+                    continue
+                if self._has_attach_source_ancestor(model):
+                    # sub-layer of a multi-layer source (e.g. "emdb 2132" inside a .glb):
+                    # it is restored together with its parent, not as a source of its own.
                     continue
                 path = self._session_model_path(model, save_dir=save_dir, session_stem=session_stem, export_cache=export_cache)
                 fetch_spec = self._fetch_spec_for_model(model)
+                if fetch_spec is not None and path and not (self._is_volume_like(model) or self._is_atomic_like(model)):
+                    fetch_spec = None  # a file-backed GLB/STL is reopened from its file, never fetched
                 fetch_key = None
                 if fetch_spec is not None:
                     fetch_key = (str(fetch_spec.get("fetch_type", "")).lower(), str(fetch_spec.get("fetch_id", "")).lower())
@@ -6341,6 +6629,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping attach source during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("map/model source(s)", skipped)
         return out
 
     def _attachment_models_state(self, save_dir, session_stem, export_cache):
@@ -6351,6 +6640,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 if out_root is None or id(out_root) in seen:
                     continue
                 seen.add(id(out_root))
+                if not self._is_inside_cb_root(out_root):
+                    self.session.logger.info(
+                        f"JSON save: left out attachment outside CiliaBuilder2: {getattr(out_root, 'name', '(unnamed)')}"
+                    )
+                    continue
                 map_model = None
                 source_ref = getattr(out_root, "_cb_attachment_source_ref", None)
                 if source_ref:
@@ -6379,6 +6673,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "fetch_id": fetch_spec.get("fetch_id") if fetch_spec else None,
                         "line_rotation": float(getattr(out_root, "_cb_attachment_line_rotation", 0.0) or 0.0),
                         "y_rotation": float(getattr(out_root, "_cb_attachment_y_rotation", 0.0) or 0.0),
+                        "fixed_anchor": getattr(out_root, "_cb_attachment_fixed_anchor", None),
                         "pre_rotate_y_90": bool(
                             getattr(
                                 out_root,
@@ -6530,6 +6825,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "attach_y_rotation": float(self.attach_y_rotation.value()),
             "attach_x_movement": 0.0,
             "attach_pre_rotate_y_90": bool(self.attach_pre_rotate_y_90.isChecked()) if hasattr(self, "attach_pre_rotate_y_90") else False,
+            "attach_fixed_center_enabled": bool(self.attach_fixed_center_check.isChecked()) if hasattr(self, "attach_fixed_center_check") else False,
+            "attach_fixed_center": (
+                [float(getattr(self, f"attach_fixed_center_{axis_name}").value()) for axis_name in ("x", "y", "z")]
+                if hasattr(self, "attach_fixed_center_check")
+                else [0.0, 0.0, 0.0]
+            ),
             "pixel_size": float(self.pixel_size.value()),
             "align_z_model": self._combo_state(self.align_z_model) if hasattr(self, "align_z_model") else {"id": None, "text": ""},
             "align_z_save_path": self.align_z_save_path.text().strip() if hasattr(self, "align_z_save_path") else "",
@@ -6629,6 +6930,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         ),
                     )
                 )
+            )
+        if hasattr(self, "attach_fixed_center_check"):
+            self._apply_attach_fixed_center_state(
+                state.get("attach_fixed_center_enabled", self.attach_fixed_center_check.isChecked()),
+                state.get("attach_fixed_center", None),
             )
         self.pixel_size.setValue(float(state.get("pixel_size", self.pixel_size.value())))
         if hasattr(self, "align_z_save_path"):
@@ -6802,11 +7108,23 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         want = os.path.abspath(os.path.expanduser(str(path or "")))
         if not want:
             return None
+        matches = []
         for model in self._all_session_models():
-            for source_path in self._candidate_model_paths(model):
-                if source_path and os.path.abspath(os.path.expanduser(source_path)) == want:
-                    return model
-        return None
+            # never a CiliaBuilder2 container (a recursive path scan would otherwise
+            # match the root/Maps group because one of its layers has this path)
+            if self._is_cb_container(model):
+                continue
+            if self._has_attach_source_ancestor(model):
+                continue
+            for source_path in self._own_model_paths(model):
+                if os.path.abspath(os.path.expanduser(source_path)) == want:
+                    matches.append(model)
+                    break
+        if not matches:
+            return None
+        sources = [m for m in matches if self._is_attach_source(m)]
+        pool = sources or matches
+        return min(pool, key=self._model_depth)
 
     def _restore_attach_source_models(self, models_state, base_dir=""):
         from .cmd import _add_to_cb_map_group
@@ -6814,20 +7132,36 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         for item in models_state or []:
             source_model = self._open_saved_source_item(item, base_dir=base_dir)
             if source_model is None:
+                self.session.logger.warning(
+                    f"Session load: could not restore source {item.get('name', '(unnamed)')}"
+                )
                 continue
+            if self._is_cb_container(source_model):
+                self.session.logger.warning(
+                    f"Session load: source {item.get('name', '(unnamed)')} resolved to a CiliaBuilder2 group; ignored"
+                )
+                continue
+            # Register first, so attachments can always find the source even if a
+            # cosmetic step below fails.
             try:
                 source_model._cb_attach_source = True
-                if bool(item.get("under_cb_map_group", False)):
-                    _add_to_cb_map_group(self.session, source_model)
-                source_model.display = bool(item.get("display", True))
-                self._zero_map_origin_index(source_model)
                 path = item.get("path", None)
                 if path:
                     self._store_model_saved_path(source_model, path)
                 self._remember_restored_session_source(source_model, item)
+            except Exception as err:
+                self.session.logger.warning(f"Session load: source bookkeeping failed for {item.get('name', '')}: {err}")
+            try:
+                if bool(item.get("under_cb_map_group", False)) and not self._is_under_cb_group(source_model, "maps"):
+                    _add_to_cb_map_group(self.session, source_model)
+            except Exception as err:
+                self.session.logger.warning(f"Session load: could not move {item.get('name', '')} into CiliaBuilder2: {err}")
+            try:
+                source_model.display = bool(item.get("display", True))
+                self._zero_map_origin_index(source_model)
                 self._apply_model_color_state(source_model, item.get("color_state", []))
-            except Exception:
-                pass
+            except Exception as err:
+                self.session.logger.warning(f"Session load: could not restore display of {item.get('name', '')}: {err}")
 
     def _restore_attachments(self, attachment_state, reset_runtime=True):
         from .map import cbsubmap_impl
@@ -6841,6 +7175,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if star_model is None:
                 star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
             if star_model is None:
+                self.session.logger.warning(
+                    f"Session load: attachment skipped, STAR model {item.get('star_name', '')} not found"
+                )
                 continue
             map_model = self._restored_session_source_model(item)
             fetch_type = item.get("fetch_type", None)
@@ -6854,7 +7191,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 map_model = self._find_model_by_path(map_path)
             if map_model is None:
                 map_model = self._find_model_by_name(item.get("map_name"), require_star=False)
-            if map_model is None or not self._is_attach_source(map_model):
+            if map_model is None or self._is_cb_container(map_model) or not self._is_attach_source(map_model):
+                self.session.logger.warning(
+                    f"Session load: attachment skipped, source {item.get('map_name', '')} not found"
+                )
                 continue
 
             existing_out_root = self._saved_attachment_item_model(item)
@@ -6872,6 +7212,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 try:
                     existing_out_root._cb_attachment_line_rotation = float(item.get("line_rotation", 0.0) or 0.0)
                     existing_out_root._cb_attachment_y_rotation = float(item.get("y_rotation", 0.0) or 0.0)
+                    existing_out_root._cb_attachment_fixed_anchor = item.get("fixed_anchor", None)
                     existing_out_root._cb_attachment_pre_rotate_y_90 = bool(
                         item.get(
                             "pre_rotate_y_90",
@@ -6922,6 +7263,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 y_deg=y_rotation,
                 pre_rotate_y_90=pre_rotate_y_90,
             ).tolist()
+            restored_fixed_anchor = item.get("fixed_anchor", None)
 
             out_root = cbsubmap_impl(
                 session=self.session,
@@ -6939,6 +7281,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 attach_axis_rot_z_deg=-90.0,
                 attach_x_movement=0.0,
                 attach_local_adjust_matrix=adjust_matrix,
+                attach_fixed_anchor=restored_fixed_anchor,
             )
             if out_root is None:
                 continue
@@ -6948,6 +7291,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 out_root._cb_attachment_y_rotation = y_rotation
                 out_root._cb_attachment_x_movement = 0.0
                 out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
+                out_root._cb_attachment_fixed_anchor = restored_fixed_anchor
                 out_root._cb_attachment_star_session_id = item.get("star_session_id", None)
                 out_root._cb_attachment_source_session_id = item.get("source_session_id", None)
                 out_root._cb_attachment_star_name = str(star_model.name)
@@ -7795,6 +8139,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         source_color_state = self._capture_model_color_state(map_model)
         self._zero_map_origin_index(map_model)
         pre_rotate_y_90 = self._attach_pre_rotate_y_90_enabled()
+        fixed_anchor = self._attach_fixed_anchor()
 
         star_id = str(star_id)
         map_id = str(map_id)
@@ -7827,6 +8172,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             attach_local_adjust_matrix=self._current_attach_adjust_matrix(
                 pre_rotate_y_90=pre_rotate_y_90,
             ).tolist(),
+            attach_fixed_anchor=fixed_anchor,
         )
         self._apply_source_color_state_to_attached_result(out_root, source_color_state)
         try:
@@ -7834,6 +8180,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             out_root._cb_attachment_y_rotation = float(self.attach_y_rotation.value())
             out_root._cb_attachment_x_movement = 0.0
             out_root._cb_attachment_pre_rotate_y_90 = pre_rotate_y_90
+            out_root._cb_attachment_fixed_anchor = fixed_anchor
             out_root._cb_attachment_star_name = str(star_model.name)
             out_root._cb_attachment_map_name = str(map_model.name)
             out_root._cb_attachment_map_path = self._model_source_path(map_model)
