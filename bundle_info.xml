@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <BundleInfo
     name="ChimeraX-CiliaBuilder2"
-    version="0.1.3"
+    version="0.2.0"
     package="ciliabuilder2"
     minSessionVersion="1"
     maxSessionVersion="999">
@@ -23,7 +23,7 @@
   </Categories>
 
   <Classifiers>
-    <PythonClassifier>Development Status :: 3 - Alpha</PythonClassifier>
+    <PythonClassifier>Development Status :: 4 - Beta</PythonClassifier>
     <PythonClassifier>License :: Freeware</PythonClassifier>
     <ChimeraXClassifier>ChimeraX :: Tool :: CiliaBuilder2 :: Higher-Order Structure :: Cilia Model Builder</ChimeraXClassifier>
     <ChimeraXClassifier>ChimeraX :: Command :: cbstraight :: General :: Build microtubule STAR models</ChimeraXClassifier>
