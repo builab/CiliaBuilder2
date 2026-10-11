@@ -1,0 +1,6130 @@
+{
+  "format": "ciliabuilder2_session",
+  "version": 5,
+  "ui": {
+    "angle_set": 0.0,
+    "length": 4000.0,
+    "n_doublet": 9,
+    "radius": 960.0,
+    "spacing": 1000.0,
+    "doublet_offset": 0.0,
+    "outer_z_offset": 0.0,
+    "outer_twist_per_layer": 0.0,
+    "random_enable": false,
+    "central_pair_length": 4000.0,
+    "central_pair_spacing": 333.0,
+    "central_pair_z_offset": 0.0,
+    "central_pair_mode": "singlet",
+    "central_pair_c1c2_distance": 100.0,
+    "membrane_length": 3000.0,
+    "membrane_radius": 1350.0,
+    "membrane_thickness": 40.0,
+    "membrane_offset": 0.0,
+    "membrane_distortion": 0.6,
+    "membrane_tip_dome": false,
+    "membrane_particle_receptors_pct": 8.0,
+    "membrane_particle_channels_pct": 7.0,
+    "membrane_particle_signaling_pct": 7.0,
+    "membrane_particle_scaffold_pct": 8.0,
+    "membrane_particle_lipids_pct": 70.0,
+    "marker_path_count": 4,
+    "geometric_draw_mode": "curve",
+    "marker_path_mode": "curve",
+    "marker_path_radius": 20.0,
+    "draw_marker_radius": 12.0,
+    "ift_distance": 1300.0,
+    "ift_mode": "train",
+    "ift_type": "retrograde",
+    "ift_anterograde_angle": -3.0,
+    "ift_retrograde_angle": 0.0,
+    "ift_train_star_model": {
+      "id": "1.1.1",
+      "text": "Microtubules STAR 38 (#1.1.1)"
+    },
+    "ift_train_doublet": "2",
+    "ift_train_angle": "0",
+    "ift_train_offset": "1700",
+    "ift_train_periodicity": "900",
+    "ift_train_repeat": "2",
+    "attach_line_rotation": 190.0,
+    "attach_y_rotation": 90.0,
+    "attach_x_movement": 0.0,
+    "attach_pre_rotate_y_90": false,
+    "attach_fixed_center_enabled": false,
+    "attach_fixed_center": [
+      614.688,
+      614.688,
+      614.688
+    ],
+    "pixel_size": 1.0,
+    "align_z_model": {
+      "id": null,
+      "text": ""
+    },
+    "align_z_save_path": "",
+    "tweak_source_path": "",
+    "tweak_template_path": "/Users/qs/Downloads/triplet.mrc",
+    "tweak_save_path": ""
+  },
+  "selected": {
+    "star_model": {
+      "id": "1.1.7",
+      "text": "IFT Retrograde Train STAR 46 (#1.1.7)"
+    },
+    "map_model": {
+      "id": "1.2.12",
+      "text": "retro_IFT_emd_19515.glb (#1.2.12)"
+    },
+    "ift_train_star_model": {
+      "id": "1.1.1",
+      "text": "Microtubules STAR 38 (#1.1.1)"
+    },
+    "continue_outer_star_model": {
+      "id": "1.1.1",
+      "text": "Microtubules STAR 38 (#1.1.1)"
+    }
+  },
+  "attach_sources": [
+    {
+      "session_source_id": "1.2.2",
+      "name": "96nm_emd_2132.glb",
+      "path": "./96nm_emd_2132.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "96nm_emd_2132.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "emdb 2132",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    },
+    {
+      "session_source_id": "1.2.4",
+      "name": "cp_emd_31143.glb",
+      "path": "./cp_emd_31143.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "cp_emd_31143.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "emdb 31143",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    },
+    {
+      "session_source_id": "1.2.6",
+      "name": "ant_IFT_B_emd_16014.glb",
+      "path": "./ant_IFT_B_emd_16014.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "ant_IFT_B_emd_16014.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "emdb 16014",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            255,
+            255,
+            178,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    },
+    {
+      "session_source_id": "1.2.8",
+      "name": "ant_IFT_A_emd_15980.glb",
+      "path": "./ant_IFT_A_emd_15980.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "ant_IFT_A_emd_15980.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "emd_15980_zaligned.mrc",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            30,
+            144,
+            255,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    },
+    {
+      "session_source_id": "1.2.12",
+      "name": "retro_IFT_emd_19515.glb",
+      "path": "./retro_IFT_emd_19515.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "retro_IFT_emd_19515.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "emd_19515_zaligned.mrc",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            250,
+            128,
+            114,
+            255
+          ]
+        }
+      ],
+      "under_cb_map_group": true
+    }
+  ],
+  "generated_star_models": [
+    {
+      "session_star_id": "1.1.1",
+      "name": "Microtubules STAR 38",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 960.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": 90.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942188,
+          "rlnCoordinateY": 617.0761052990777,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.7022505602532,
+          "rlnCoordinateY": 945.4154428917197,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": 10.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -479.99999999999983,
+          "rlnCoordinateY": 831.3843876330611,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -30.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 4,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.104915954472,
+          "rlnCoordinateY": 328.3393375926421,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -70.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 5,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -902.1049159544721,
+          "rlnCoordinateY": -328.3393375926419,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -110.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 6,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": -480.00000000000045,
+          "rlnCoordinateY": -831.3843876330609,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -150.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 7,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 166.70225056025276,
+          "rlnCoordinateY": -945.4154428917197,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -190.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 8,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 2000.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 3000.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 735.4026653942187,
+          "rlnCoordinateY": -617.076105299078,
+          "rlnCoordinateZ": 4000.0,
+          "rlnAngleRot": -230.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 9,
+          "rlnClassNumber": 38
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 960.000000 0.000000 0.000000 90.000000 0.000000 0.000000 1.000000 1 38\nTS_001 960.000000 0.000000 1000.000000 90.000000 0.000000 0.000000 1.000000 1 38\nTS_001 960.000000 0.000000 2000.000000 90.000000 0.000000 0.000000 1.000000 1 38\nTS_001 960.000000 0.000000 3000.000000 90.000000 0.000000 0.000000 1.000000 1 38\nTS_001 960.000000 0.000000 4000.000000 90.000000 0.000000 0.000000 1.000000 1 38\nTS_001 735.402665 617.076105 0.000000 50.000000 0.000000 0.000000 1.000000 2 38\nTS_001 735.402665 617.076105 1000.000000 50.000000 0.000000 0.000000 1.000000 2 38\nTS_001 735.402665 617.076105 2000.000000 50.000000 0.000000 0.000000 1.000000 2 38\nTS_001 735.402665 617.076105 3000.000000 50.000000 0.000000 0.000000 1.000000 2 38\nTS_001 735.402665 617.076105 4000.000000 50.000000 0.000000 0.000000 1.000000 2 38\nTS_001 166.702251 945.415443 0.000000 10.000000 0.000000 0.000000 1.000000 3 38\nTS_001 166.702251 945.415443 1000.000000 10.000000 0.000000 0.000000 1.000000 3 38\nTS_001 166.702251 945.415443 2000.000000 10.000000 0.000000 0.000000 1.000000 3 38\nTS_001 166.702251 945.415443 3000.000000 10.000000 0.000000 0.000000 1.000000 3 38\nTS_001 166.702251 945.415443 4000.000000 10.000000 0.000000 0.000000 1.000000 3 38\nTS_001 -480.000000 831.384388 0.000000 -30.000000 0.000000 0.000000 1.000000 4 38\nTS_001 -480.000000 831.384388 1000.000000 -30.000000 0.000000 0.000000 1.000000 4 38\nTS_001 -480.000000 831.384388 2000.000000 -30.000000 0.000000 0.000000 1.000000 4 38\nTS_001 -480.000000 831.384388 3000.000000 -30.000000 0.000000 0.000000 1.000000 4 38\nTS_001 -480.000000 831.384388 4000.000000 -30.000000 0.000000 0.000000 1.000000 4 38\nTS_001 -902.104916 328.339338 0.000000 -70.000000 0.000000 0.000000 1.000000 5 38\nTS_001 -902.104916 328.339338 1000.000000 -70.000000 0.000000 0.000000 1.000000 5 38\nTS_001 -902.104916 328.339338 2000.000000 -70.000000 0.000000 0.000000 1.000000 5 38\nTS_001 -902.104916 328.339338 3000.000000 -70.000000 0.000000 0.000000 1.000000 5 38\nTS_001 -902.104916 328.339338 4000.000000 -70.000000 0.000000 0.000000 1.000000 5 38\nTS_001 -902.104916 -328.339338 0.000000 -110.000000 0.000000 0.000000 1.000000 6 38\nTS_001 -902.104916 -328.339338 1000.000000 -110.000000 0.000000 0.000000 1.000000 6 38\nTS_001 -902.104916 -328.339338 2000.000000 -110.000000 0.000000 0.000000 1.000000 6 38\nTS_001 -902.104916 -328.339338 3000.000000 -110.000000 0.000000 0.000000 1.000000 6 38\nTS_001 -902.104916 -328.339338 4000.000000 -110.000000 0.000000 0.000000 1.000000 6 38\nTS_001 -480.000000 -831.384388 0.000000 -150.000000 0.000000 0.000000 1.000000 7 38\nTS_001 -480.000000 -831.384388 1000.000000 -150.000000 0.000000 0.000000 1.000000 7 38\nTS_001 -480.000000 -831.384388 2000.000000 -150.000000 0.000000 0.000000 1.000000 7 38\nTS_001 -480.000000 -831.384388 3000.000000 -150.000000 0.000000 0.000000 1.000000 7 38\nTS_001 -480.000000 -831.384388 4000.000000 -150.000000 0.000000 0.000000 1.000000 7 38\nTS_001 166.702251 -945.415443 0.000000 -190.000000 0.000000 0.000000 1.000000 8 38\nTS_001 166.702251 -945.415443 1000.000000 -190.000000 0.000000 0.000000 1.000000 8 38\nTS_001 166.702251 -945.415443 2000.000000 -190.000000 0.000000 0.000000 1.000000 8 38\nTS_001 166.702251 -945.415443 3000.000000 -190.000000 0.000000 0.000000 1.000000 8 38\nTS_001 166.702251 -945.415443 4000.000000 -190.000000 0.000000 0.000000 1.000000 8 38\nTS_001 735.402665 -617.076105 0.000000 -230.000000 0.000000 0.000000 1.000000 9 38\nTS_001 735.402665 -617.076105 1000.000000 -230.000000 0.000000 0.000000 1.000000 9 38\nTS_001 735.402665 -617.076105 2000.000000 -230.000000 0.000000 0.000000 1.000000 9 38\nTS_001 735.402665 -617.076105 3000.000000 -230.000000 0.000000 0.000000 1.000000 9 38\nTS_001 735.402665 -617.076105 4000.000000 -230.000000 0.000000 0.000000 1.000000 9 38\n",
+      "outer_z_offset_ang": 0.0,
+      "outer_continue_offset_ang": 5000.0,
+      "outer_spacing_ang": 1000.0,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Microtubules STAR 38",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.2",
+      "name": "Central pair STAR 39",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 0.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 333.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 666.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 999.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 1332.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 1665.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 1998.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 2331.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 2664.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 2997.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 3330.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 3663.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 0.0,
+          "rlnCoordinateY": 0.0,
+          "rlnCoordinateZ": 3996.0,
+          "rlnAngleRot": 0.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 100,
+          "rlnClassNumber": 39
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 333.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 666.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 999.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 1332.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 1665.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 1998.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 2331.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 2664.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 2997.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 3330.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 3663.000000 0.000000 0.000000 0.000000 1.000000 100 39\nTS_001 0.000000 0.000000 3996.000000 0.000000 0.000000 0.000000 1.000000 100 39\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Central pair STAR 39",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.3",
+      "name": "IFT Anterograde Train STAR 42",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1500.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1500.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 0
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1565.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1565.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 1
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1630.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1630.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1695.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1695.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1760.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1760.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 4
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1825.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1825.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 5
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1890.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1890.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 6
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 1955.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 1955.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 7
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2020.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2020.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 8
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2085.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2085.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 9
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2150.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2150.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 10
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2215.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2215.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 11
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2280.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2280.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 12
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2345.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2345.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 13
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2410.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2410.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 14
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2475.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2475.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 15
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2540.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2540.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 16
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2605.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2605.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 17
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2670.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2670.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 18
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2735.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2735.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 19
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2800.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2800.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 20
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2865.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2865.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 21
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2930.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2930.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 22
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 2995.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 2995.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 23
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 344.546694771249,
+          "rlnCoordinateY": 1201.5771199228984,
+          "rlnCoordinateZ": 3060.0,
+          "rlnAngleRot": 16.000000000000004,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 42,
+          "_cbWorldCoordinateX": 344.546694771249,
+          "_cbWorldCoordinateY": 1201.5771199228984,
+          "_cbWorldCoordinateZ": 3060.0,
+          "_cbAxisX": [
+            0.9612616959383188,
+            -0.27563735581699916,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.27563735581699916,
+            0.9612616959383188,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 24
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 344.546695 1201.577120 1500.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1565.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1630.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1695.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1760.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1825.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1890.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 1955.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2020.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2085.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2150.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2215.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2280.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2345.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2410.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2475.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2540.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2605.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2670.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2735.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2800.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2865.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2930.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 2995.000000 16.000000 0.000000 0.000000 1.000000 3 42\nTS_001 344.546695 1201.577120 3060.000000 16.000000 0.000000 0.000000 1.000000 3 42\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 42",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.4",
+      "name": "IFT Anterograde Train STAR 43",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 1500.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 1500.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 0
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 1615.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 1615.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 1
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 1730.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 1730.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 1845.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 1845.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 1960.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 1960.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 4
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2075.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2075.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 5
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2190.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2190.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 6
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2305.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2305.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 7
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2420.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2420.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 8
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2535.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2535.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 9
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2650.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2650.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 10
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2765.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2765.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 11
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2880.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2880.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 12
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 310.4324549945337,
+          "rlnCoordinateY": 1344.6306894036243,
+          "rlnCoordinateZ": 2995.0,
+          "rlnAngleRot": 13.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 3,
+          "rlnClassNumber": 43,
+          "_cbWorldCoordinateX": 310.4324549945337,
+          "_cbWorldCoordinateY": 1344.6306894036243,
+          "_cbWorldCoordinateZ": 2995.0,
+          "_cbAxisX": [
+            0.9743700647852351,
+            -0.22495105434386498,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.22495105434386498,
+            0.9743700647852351,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 13
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 310.432455 1344.630689 1500.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 1615.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 1730.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 1845.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 1960.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2075.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2190.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2305.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2420.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2535.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2650.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2765.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2880.000000 13.000000 0.000000 0.000000 1.000000 3 43\nTS_001 310.432455 1344.630689 2995.000000 13.000000 0.000000 0.000000 1.000000 3 43\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 43",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.5",
+      "name": "IFT Anterograde Train STAR 44",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1000.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 0
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1065.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1065.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 1
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1130.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1130.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1195.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1195.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1260.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1260.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 4
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1325.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1325.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 5
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1390.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1390.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 6
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1455.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1455.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 7
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1520.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1520.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 8
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1585.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1585.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 9
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1650.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1650.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 10
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1715.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1715.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 11
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1780.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1780.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 12
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1845.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1845.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 13
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1910.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1910.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 14
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 1975.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 1975.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 15
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2040.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2040.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 16
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2105.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2105.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 17
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2170.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2170.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 18
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2235.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2235.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 19
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2300.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2300.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 20
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2365.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2365.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 21
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2430.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2430.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 22
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2495.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2495.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 23
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2560.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2560.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 24
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2625.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2625.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 25
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2690.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2690.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 26
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2755.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2755.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 27
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2820.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2820.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 28
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2885.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2885.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 29
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 2950.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 2950.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 30
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3015.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3015.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 31
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3080.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3080.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 32
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3145.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3145.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 33
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3210.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3210.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 34
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3275.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3275.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 35
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3340.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3340.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 36
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3405.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3405.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 37
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3470.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3470.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 38
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3535.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3535.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 39
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3600.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3600.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 40
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3665.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3665.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 41
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3730.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3730.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 42
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3795.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3795.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 43
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3860.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3860.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 44
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3925.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3925.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 45
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 3990.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 3990.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 46
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 4055.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 4055.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 47
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 4120.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 4120.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 48
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1243.1523692103415,
+          "rlnCoordinateY": -130.66057908456685,
+          "rlnCoordinateZ": 4185.0,
+          "rlnAngleRot": 96.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 44,
+          "_cbWorldCoordinateX": 1243.1523692103415,
+          "_cbWorldCoordinateY": -130.66057908456685,
+          "_cbWorldCoordinateZ": 4185.0,
+          "_cbAxisX": [
+            -0.10452846326765342,
+            -0.9945218953682733,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9945218953682733,
+            -0.10452846326765342,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 49
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 1243.152369 -130.660579 1000.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1065.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1130.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1195.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1260.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1325.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1390.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1455.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1520.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1585.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1650.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1715.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1780.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1845.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1910.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 1975.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2040.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2105.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2170.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2235.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2300.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2365.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2430.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2495.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2560.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2625.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2690.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2755.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2820.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2885.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 2950.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3015.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3080.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3145.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3210.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3275.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3340.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3405.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3470.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3535.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3600.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3665.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3730.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3795.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3860.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3925.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 3990.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 4055.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 4120.000000 96.000000 0.000000 0.000000 1.000000 1 44\nTS_001 1243.152369 -130.660579 4185.000000 96.000000 0.000000 0.000000 1.000000 1 44\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 44",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.6",
+      "name": "IFT Anterograde Train STAR 45",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1000.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1000.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 0
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1115.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1115.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 1
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1230.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1230.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 2
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1345.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1345.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 3
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1460.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1460.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 4
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1575.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1575.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 5
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1690.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1690.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 6
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1805.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1805.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 7
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 1920.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 1920.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 8
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2035.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2035.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 9
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2150.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2150.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 10
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2265.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2265.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 11
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2380.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2380.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 12
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2495.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2495.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 13
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2610.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2610.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 14
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2725.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2725.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 15
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2840.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2840.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 16
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 2955.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 2955.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 17
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3070.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3070.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 18
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3185.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3185.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 19
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3300.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3300.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 20
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3415.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3415.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 21
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3530.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3530.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 22
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3645.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3645.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 23
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3760.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3760.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 24
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3875.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3875.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 25
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 3990.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 3990.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 26
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 1378.1087579613118,
+          "rlnCoordinateY": -72.22361961526249,
+          "rlnCoordinateZ": 4105.0,
+          "rlnAngleRot": 93.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 1,
+          "rlnClassNumber": 45,
+          "_cbWorldCoordinateX": 1378.1087579613118,
+          "_cbWorldCoordinateY": -72.22361961526249,
+          "_cbWorldCoordinateZ": 4105.0,
+          "_cbAxisX": [
+            -0.05233595624294377,
+            -0.9986295347545738,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.9986295347545738,
+            -0.05233595624294377,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "anterograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 27
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 1378.108758 -72.223620 1000.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1115.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1230.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1345.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1460.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1575.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1690.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1805.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 1920.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2035.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2150.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2265.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2380.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2495.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2610.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2725.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2840.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 2955.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3070.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3185.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3300.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3415.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3530.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3645.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3760.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3875.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 3990.000000 93.000000 0.000000 0.000000 1.000000 1 45\nTS_001 1378.108758 -72.223620 4105.000000 93.000000 0.000000 0.000000 1.000000 1 45\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 45",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    },
+    {
+      "session_star_id": "1.1.7",
+      "name": "IFT Retrograde Train STAR 46",
+      "rows": [
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 995.8577760546715,
+          "rlnCoordinateY": 835.6238925925011,
+          "rlnCoordinateZ": 1700.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 46,
+          "_cbWorldCoordinateX": 995.8577760546715,
+          "_cbWorldCoordinateY": 835.6238925925011,
+          "_cbWorldCoordinateZ": 1700.0,
+          "_cbAxisX": [
+            0.6427876096865394,
+            -0.766044443118978,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.766044443118978,
+            0.6427876096865394,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "retrograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 0
+        },
+        {
+          "rlnTomoName": "TS_001",
+          "rlnCoordinateX": 995.8577760546715,
+          "rlnCoordinateY": 835.6238925925011,
+          "rlnCoordinateZ": 2600.0,
+          "rlnAngleRot": 50.0,
+          "rlnAngleTilt": 0.0,
+          "rlnAnglePsi": 0.0,
+          "rlnImagePixelSize": 1.0,
+          "rlnHelicalTubeID": 2,
+          "rlnClassNumber": 46,
+          "_cbWorldCoordinateX": 995.8577760546715,
+          "_cbWorldCoordinateY": 835.6238925925011,
+          "_cbWorldCoordinateZ": 2600.0,
+          "_cbAxisX": [
+            0.6427876096865394,
+            -0.766044443118978,
+            0.0
+          ],
+          "_cbAxisY": [
+            0.766044443118978,
+            0.6427876096865394,
+            0.0
+          ],
+          "_cbAxisZ": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "_cb_ift_type": "retrograde",
+          "_cb_source_star_ref": "1.1.1",
+          "_cb_source_star_row_index": 1
+        }
+      ],
+      "star_text": "data_\n\nloop_\n_rlnTomoName #1\n_rlnCoordinateX #2\n_rlnCoordinateY #3\n_rlnCoordinateZ #4\n_rlnAngleRot #5\n_rlnAngleTilt #6\n_rlnAnglePsi #7\n_rlnImagePixelSize #8\n_rlnHelicalTubeID #9\n_rlnClassNumber #10\nTS_001 995.857776 835.623893 1700.000000 50.000000 0.000000 0.000000 1.000000 2 46\nTS_001 995.857776 835.623893 2600.000000 50.000000 0.000000 0.000000 1.000000 2 46\n",
+      "outer_z_offset_ang": null,
+      "outer_continue_offset_ang": null,
+      "outer_spacing_ang": null,
+      "display": false,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Retrograde Train STAR 46",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "Particles",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            1
+          ],
+          "name": "X axis arrows",
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            2
+          ],
+          "name": "Y axis arrows",
+          "rgba": [
+            255,
+            255,
+            0,
+            255
+          ]
+        },
+        {
+          "path": [
+            3
+          ],
+          "name": "Z axis arrows",
+          "rgba": [
+            0,
+            0,
+            255,
+            255
+          ]
+        }
+      ],
+      "clip_info": null,
+      "under_cb_star_group": true
+    }
+  ],
+  "generated_membranes": [],
+  "generated_marker_paths": [],
+  "attachments": [
+    {
+      "session_attachment_id": "1.2.1",
+      "name": "Microtubules STAR 38 <- 96nm_emd_2132.glb",
+      "star_session_id": "1.1.1",
+      "source_session_id": "1.2.2",
+      "star_name": "Microtubules STAR 38",
+      "map_name": "96nm_emd_2132.glb",
+      "map_path": "./96nm_emd_2132.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 255.0,
+      "y_rotation": 0.0,
+      "fixed_anchor": [
+        721.375,
+        721.375,
+        721.375
+      ],
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Microtubules STAR 38 <- 96nm_emd_2132.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "96nm_emd_2132.glb placed on Microtubules STAR 38",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emdb 2132",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.3",
+      "name": "Central pair STAR 39 <- cp_emd_31143.glb",
+      "star_session_id": "1.1.2",
+      "source_session_id": "1.2.4",
+      "star_name": "Central pair STAR 39",
+      "map_name": "cp_emd_31143.glb",
+      "map_path": "./cp_emd_31143.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 0.0,
+      "y_rotation": 90.0,
+      "fixed_anchor": [
+        614.688,
+        614.688,
+        614.688
+      ],
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "Central pair STAR 39 <- cp_emd_31143.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "cp_emd_31143.glb placed on Central pair STAR 39",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emdb 31143",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.5",
+      "name": "IFT Anterograde Train STAR 42 <- ant_IFT_B_emd_16014.glb",
+      "star_session_id": "1.1.3",
+      "source_session_id": "1.2.6",
+      "star_name": "IFT Anterograde Train STAR 42",
+      "map_name": "ant_IFT_B_emd_16014.glb",
+      "map_path": "./ant_IFT_B_emd_16014.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 0.0,
+      "y_rotation": 180.0,
+      "fixed_anchor": null,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 42 <- ant_IFT_B_emd_16014.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "ant_IFT_B_emd_16014.glb placed on IFT Anterograde Train STAR 42",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emdb 16014",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            255,
+            255,
+            178,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.7",
+      "name": "IFT Anterograde Train STAR 43 <- ant_IFT_A_emd_15980.glb",
+      "star_session_id": "1.1.4",
+      "source_session_id": "1.2.8",
+      "star_name": "IFT Anterograde Train STAR 43",
+      "map_name": "ant_IFT_A_emd_15980.glb",
+      "map_path": "./ant_IFT_A_emd_15980.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 0.0,
+      "y_rotation": 0.0,
+      "fixed_anchor": null,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 43 <- ant_IFT_A_emd_15980.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "ant_IFT_A_emd_15980.glb placed on IFT Anterograde Train STAR 43",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emd_15980_zaligned.mrc",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            30,
+            144,
+            255,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.9",
+      "name": "IFT Anterograde Train STAR 44 <- ant_IFT_B_emd_16014.glb",
+      "star_session_id": "1.1.5",
+      "source_session_id": "1.2.6",
+      "star_name": "IFT Anterograde Train STAR 44",
+      "map_name": "ant_IFT_B_emd_16014.glb",
+      "map_path": "./ant_IFT_B_emd_16014.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 0.0,
+      "y_rotation": 180.0,
+      "fixed_anchor": null,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 44 <- ant_IFT_B_emd_16014.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "ant_IFT_B_emd_16014.glb placed on IFT Anterograde Train STAR 44",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emdb 16014",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            255,
+            255,
+            178,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.10",
+      "name": "IFT Anterograde Train STAR 45 <- ant_IFT_A_emd_15980.glb",
+      "star_session_id": "1.1.6",
+      "source_session_id": "1.2.8",
+      "star_name": "IFT Anterograde Train STAR 45",
+      "map_name": "ant_IFT_A_emd_15980.glb",
+      "map_path": "./ant_IFT_A_emd_15980.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 0.0,
+      "y_rotation": 0.0,
+      "fixed_anchor": null,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Anterograde Train STAR 45 <- ant_IFT_A_emd_15980.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "ant_IFT_A_emd_15980.glb placed on IFT Anterograde Train STAR 45",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emd_15980_zaligned.mrc",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            30,
+            144,
+            255,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "session_attachment_id": "1.2.11",
+      "name": "IFT Retrograde Train STAR 46 <- retro_IFT_emd_19515.glb",
+      "star_session_id": "1.1.7",
+      "source_session_id": "1.2.12",
+      "star_name": "IFT Retrograde Train STAR 46",
+      "map_name": "retro_IFT_emd_19515.glb",
+      "map_path": "./retro_IFT_emd_19515.glb.gz",
+      "fetch_type": null,
+      "fetch_id": null,
+      "line_rotation": 190.0,
+      "y_rotation": 90.0,
+      "fixed_anchor": null,
+      "pre_rotate_y_90": false,
+      "display": true,
+      "color_state": [
+        {
+          "path": [],
+          "name": "IFT Retrograde Train STAR 46 <- retro_IFT_emd_19515.glb",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0
+          ],
+          "name": "retro_IFT_emd_19515.glb placed on IFT Retrograde Train STAR 46",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0
+          ],
+          "name": "emd_19515_zaligned.mrc",
+          "rgba": [
+            178,
+            178,
+            178,
+            255
+          ]
+        },
+        {
+          "path": [
+            0,
+            0,
+            0
+          ],
+          "name": "surface",
+          "rgba": [
+            250,
+            128,
+            114,
+            255
+          ]
+        }
+      ]
+    }
+  ],
+  "model_structure": {
+    "nodes": [
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.1",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 0
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.2",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 1
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.3",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 2
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.4",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 3
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.5",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 4
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.6",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 5
+      },
+      {
+        "node_kind": "model",
+        "model_type": "star",
+        "model_id": "1.1.7",
+        "parent": {
+          "kind": "group",
+          "tag": "star_models"
+        },
+        "order": 6
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.1",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 0
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "1.2.2",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 1
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.3",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 2
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "1.2.4",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 3
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "1.2.6",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 4
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.5",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 5
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.7",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 6
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "1.2.8",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 7
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.9",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 8
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.10",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 9
+      },
+      {
+        "node_kind": "model",
+        "model_type": "attachment",
+        "model_id": "1.2.11",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 10
+      },
+      {
+        "node_kind": "model",
+        "model_type": "source",
+        "model_id": "1.2.12",
+        "parent": {
+          "kind": "group",
+          "tag": "maps"
+        },
+        "order": 11
+      }
+    ]
+  }
+}
