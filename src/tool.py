@@ -1017,30 +1017,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_select_lay.addWidget(sel_btn_row)
 
         attach_controls_layout.addWidget(attach_select)
-        attach_advanced = QGroupBox("Advanced options", attach_controls_page)
-        attach_advanced.setCheckable(True)
-        attach_advanced.setChecked(False)
-        attach_advanced_lay = QVBoxLayout(attach_advanced)
-
-        attach_advanced_content = QWidget(attach_advanced)
-        attach_advanced_content_lay = QVBoxLayout(attach_advanced_content)
-        attach_advanced_content_lay.setContentsMargins(0, 0, 0, 0)
-
-        attach_y90_row = QWidget(main)
-        attach_y90_lay = QHBoxLayout(attach_y90_row)
-        attach_y90_lay.setContentsMargins(0, 0, 0, 0)
-        self.attach_pre_rotate_y_90 = QCheckBox("Rotate model 90 deg clockwise around Y before attach", attach_y90_row)
-        self.attach_pre_rotate_y_90.setChecked(False)
-        self.attach_pre_rotate_y_90.toggled.connect(self._reattach_with_current_settings)
-        attach_y90_lay.addWidget(self.attach_pre_rotate_y_90)
-        attach_y90_lay.addStretch(1)
-        attach_advanced_content_lay.addWidget(attach_y90_row)
-
-        attach_advanced_lay.addWidget(attach_advanced_content)
-        attach_advanced.toggled.connect(attach_advanced_content.setVisible)
-        attach_advanced_content.setVisible(False)
-
-        attach_controls_layout.addWidget(attach_advanced)
         attach_controls_layout.addStretch(1)
 
         marker_page = QWidget(attach_page)
