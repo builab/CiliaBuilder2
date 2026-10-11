@@ -14,8 +14,13 @@ roll z -16.96 1 models #2; wait;
 # Rotate around x
 roll x 4.9 1 models #2; wait;
 
+# Rotate around z
+roll x 90.5 1 models #2; wait;
+
+vop new dummy_grid size 346,346,346
+
 # Resample to keep the rotated volume
-volume resample #2 onGrid #1
+volume resample #2 onGrid #3
 
 # Save rotated volume
-save ~/Desktop/emd_19515_zaligned.mrc models #3
+save ~/Desktop/emd_19515_zaligned.mrc models #4
