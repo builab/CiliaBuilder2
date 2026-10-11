@@ -970,7 +970,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_fixed_row = QWidget(main)
         attach_fixed_lay = QHBoxLayout(attach_fixed_row)
         attach_fixed_lay.setContentsMargins(0, 0, 0, 0)
-        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB (model coordinates)", attach_fixed_row)
+        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB & PDB", attach_fixed_row)
         self.attach_fixed_center_check.setChecked(False)
         self.attach_fixed_center_check.toggled.connect(self._on_attach_fixed_center_toggled)
         attach_fixed_lay.addWidget(self.attach_fixed_center_check)
@@ -2272,13 +2272,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             for spin in spins:
                 spin.blockSignals(False)
         self.session.logger.info(
-            f"Fixed GLB center set from map #{ref}: ({center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f})"
+            f"Fixed center set from map #{ref}: ({center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f})"
         )
         # One re-attach for all three values (no-op when nothing is attached yet).
         self._reattach_with_current_settings(None)
 
     def _attach_fixed_anchor(self):
-        """(x, y, z) fixed center in the GLB's own coordinates, or None when unchecked."""
+        """(x, y, z) fixed center in the model's own coordinates, or None when unchecked."""
         check = getattr(self, "attach_fixed_center_check", None)
         if check is None or not check.isChecked():
             return None

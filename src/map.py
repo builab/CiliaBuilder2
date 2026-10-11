@@ -926,20 +926,21 @@ def cbsubmap_impl(
         except Exception:
             local_adjust = None
     calib_shift = np.array([CALIB_SHIFT_X, CALIB_SHIFT_Y, CALIB_SHIFT_Z], dtype=float)
-    # Optional user-chosen center (x, y, z in the source file's own coordinates).
-    # It replaces the computed bounding-box center, and is the point that lands
-    # on each STAR coordinate and the pivot for all rotations. GLB sources only,
-    # so maps and atomic models keep their existing anchors.
+    # Optional user-chosen center (x, y, z in the source file's own coordinates:
+    # the GLB/STL file's units, or Angstrom for a PDB/CIF). It replaces the
+    # computed bounding-box center, and is the point that lands on each STAR
+    # coordinate and the pivot for all rotations. It applies to every source
+    # except maps (GLB, PDB/CIF, STL); maps keep their own grid center.
     fixed_anchor = _parse_fixed_anchor(attach_fixed_anchor)
-    if fixed_anchor is not None and _is_glb_like_model(src_map):
+    if fixed_anchor is not None and not source_is_volume:
         shared_anchor = fixed_anchor
         session.logger.info(
-            "cbsubmap using fixed GLB center "
+            f"cbsubmap using fixed center for {source_name} "
             f"({fixed_anchor[0]:.3f}, {fixed_anchor[1]:.3f}, {fixed_anchor[2]:.3f})"
         )
     else:
         if fixed_anchor is not None:
-            session.logger.info("cbsubmap ignored the fixed center because the source is not a GLB model")
+            session.logger.info("cbsubmap ignored the fixed center because the source is a map")
         shared_anchor = _shared_source_anchor_local(session, src_map)
     source_long_axis = _source_long_axis_local(session, src_map) if bool(attach_auto_align_long_axis) else None
 
