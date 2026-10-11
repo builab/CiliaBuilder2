@@ -970,7 +970,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_fixed_row = QWidget(main)
         attach_fixed_lay = QHBoxLayout(attach_fixed_row)
         attach_fixed_lay.setContentsMargins(0, 0, 0, 0)
-        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB & PDB", attach_fixed_row)
+        self.attach_fixed_center_check = QCheckBox("Use fixed center for GLB && PDB", attach_fixed_row)
         self.attach_fixed_center_check.setChecked(False)
         self.attach_fixed_center_check.toggled.connect(self._on_attach_fixed_center_toggled)
         attach_fixed_lay.addWidget(self.attach_fixed_center_check)
@@ -1358,7 +1358,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         self._apply_model_color_state(child, source_color_state)
                         break
 
-    def _candidate_model_paths(self, model):
+    def _own_model_paths(self, model):
+        """Paths recorded on this model itself, not on its sub-layers."""
+        return self._candidate_model_paths(model, recursive=False)
+
+    def _candidate_model_paths(self, model, recursive=True):
         from .source_paths import original_glb_path
 
         paths = []
@@ -1377,7 +1381,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             paths.append(norm)
 
         try:
-            scan_models = list(self._iter_model_tree(model))
+            scan_models = list(self._iter_model_tree(model)) if recursive else [model]
         except Exception:
             scan_models = [model]
         for obj in scan_models:
@@ -2009,6 +2013,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         if not want_type or not want_id:
             return None
         for model in self._all_session_models():
+            if self._is_cb_container(model) or self._has_attach_source_ancestor(model):
+                continue
             spec = self._fetch_spec_for_model(model)
             if spec is None:
                 continue
@@ -2017,6 +2023,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         return None
 
     def _choose_opened_source_model(self, opened_models):
+        # session.models.list() is flat: keep only the top-most opened models so that
+        # multi-layer files (a .glb with sub-layers) resolve to the file's own model.
+        opened_ids = {id(m) for m in opened_models}
+        tops = [m for m in opened_models if id(self._model_parent(m)) not in opened_ids]
+        opened_models = tops or list(opened_models)
         for model in opened_models:
             if self._is_glb_like(model):
                 return model
@@ -2348,6 +2359,63 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 return True
             cur = self._model_parent(cur)
         return False
+
+    def _is_cb_container(self, model):
+        if model is None:
+            return False
+        if getattr(model, "_cb_root", False):
+            return True
+        return getattr(model, "_cb_group_tag", None) in ("star_models", "maps", "membrane")
+
+    def _is_inside_cb_root(self, model):
+        """True only for models that live below the CiliaBuilder2 root model."""
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if getattr(cur, "_cb_root", False):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
+    def _has_attach_source_ancestor(self, model):
+        """True for a sub-layer of a multi-layer source (e.g. a map or surface inside a GLB)."""
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            if not self._is_cb_container(cur) and self._is_attach_source(cur):
+                return True
+            cur = self._model_parent(cur)
+        return False
+
+    def _model_depth(self, model):
+        depth = 0
+        cur = self._model_parent(model)
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            seen.add(id(cur))
+            depth += 1
+            cur = self._model_parent(cur)
+        return depth
+
+    def _cb_scope_models(self, what="model"):
+        """All models inside the CiliaBuilder2 root; anything else is never saved."""
+        inside = []
+        outside = []
+        for model in self._all_session_models():
+            if self._is_cb_container(model):
+                continue
+            (inside if self._is_inside_cb_root(model) else outside).append(model)
+        return inside, outside
+
+    def _log_skipped_outside(self, kind, models):
+        names = [str(getattr(m, "name", "(unnamed)")) for m in models]
+        if names:
+            self.session.logger.info(
+                f"JSON save: left out {len(names)} {kind} outside CiliaBuilder2: " + ", ".join(names[:8])
+                + (" ..." if len(names) > 8 else "")
+            )
 
     def _is_generated_attached_model(self, model):
         cur = model
@@ -6435,7 +6503,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
     def _generated_star_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_star_rows", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 rows = getattr(model, "_cb_star_rows", None)
                 if rows is None:
@@ -6457,11 +6529,16 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping STAR model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("STAR model(s)", skipped)
         return out
 
     def _generated_membrane_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_membrane_state", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 state = getattr(model, "_cb_membrane_state", None)
                 if not state:
@@ -6477,11 +6554,16 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping membrane model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("membrane(s)", skipped)
         return out
 
     def _generated_marker_path_models(self):
         out = []
+        skipped = []
         for model in self._all_session_models():
+            if getattr(model, "_cb_marker_path_state", None) is not None and not self._is_inside_cb_root(model):
+                skipped.append(model)
+                continue
             try:
                 state = getattr(model, "_cb_marker_path_state", None)
                 if not state:
@@ -6499,18 +6581,29 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 self.session.logger.warning(
                     f"Skipping marker path model during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})"
                 )
+        self._log_skipped_outside("marker path(s)", skipped)
         return out
 
     def _attach_source_models_state(self, save_dir, session_stem, export_cache):
         out = []
         seen_paths = set()
         seen_fetches = set()
-        for model in self.session.models.list():
+        skipped = []
+        for model in self._all_session_models():
             try:
-                if not self._is_selector_attach_source(model):
+                if self._is_cb_container(model) or not self._is_selector_attach_source(model):
+                    continue
+                if not self._is_inside_cb_root(model):
+                    skipped.append(model)
+                    continue
+                if self._has_attach_source_ancestor(model):
+                    # sub-layer of a multi-layer source (e.g. "emdb 2132" inside a .glb):
+                    # it is restored together with its parent, not as a source of its own.
                     continue
                 path = self._session_model_path(model, save_dir=save_dir, session_stem=session_stem, export_cache=export_cache)
                 fetch_spec = self._fetch_spec_for_model(model)
+                if fetch_spec is not None and path and not (self._is_volume_like(model) or self._is_atomic_like(model)):
+                    fetch_spec = None  # a file-backed GLB/STL is reopened from its file, never fetched
                 fetch_key = None
                 if fetch_spec is not None:
                     fetch_key = (str(fetch_spec.get("fetch_type", "")).lower(), str(fetch_spec.get("fetch_id", "")).lower())
@@ -6536,6 +6629,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 )
             except Exception as e:
                 self.session.logger.warning(f"Skipping attach source during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
+        self._log_skipped_outside("map/model source(s)", skipped)
         return out
 
     def _attachment_models_state(self, save_dir, session_stem, export_cache):
@@ -6546,6 +6640,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 if out_root is None or id(out_root) in seen:
                     continue
                 seen.add(id(out_root))
+                if not self._is_inside_cb_root(out_root):
+                    self.session.logger.info(
+                        f"JSON save: left out attachment outside CiliaBuilder2: {getattr(out_root, 'name', '(unnamed)')}"
+                    )
+                    continue
                 map_model = None
                 source_ref = getattr(out_root, "_cb_attachment_source_ref", None)
                 if source_ref:
@@ -7009,11 +7108,23 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         want = os.path.abspath(os.path.expanduser(str(path or "")))
         if not want:
             return None
+        matches = []
         for model in self._all_session_models():
-            for source_path in self._candidate_model_paths(model):
-                if source_path and os.path.abspath(os.path.expanduser(source_path)) == want:
-                    return model
-        return None
+            # never a CiliaBuilder2 container (a recursive path scan would otherwise
+            # match the root/Maps group because one of its layers has this path)
+            if self._is_cb_container(model):
+                continue
+            if self._has_attach_source_ancestor(model):
+                continue
+            for source_path in self._own_model_paths(model):
+                if os.path.abspath(os.path.expanduser(source_path)) == want:
+                    matches.append(model)
+                    break
+        if not matches:
+            return None
+        sources = [m for m in matches if self._is_attach_source(m)]
+        pool = sources or matches
+        return min(pool, key=self._model_depth)
 
     def _restore_attach_source_models(self, models_state, base_dir=""):
         from .cmd import _add_to_cb_map_group
@@ -7021,20 +7132,36 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         for item in models_state or []:
             source_model = self._open_saved_source_item(item, base_dir=base_dir)
             if source_model is None:
+                self.session.logger.warning(
+                    f"Session load: could not restore source {item.get('name', '(unnamed)')}"
+                )
                 continue
+            if self._is_cb_container(source_model):
+                self.session.logger.warning(
+                    f"Session load: source {item.get('name', '(unnamed)')} resolved to a CiliaBuilder2 group; ignored"
+                )
+                continue
+            # Register first, so attachments can always find the source even if a
+            # cosmetic step below fails.
             try:
                 source_model._cb_attach_source = True
-                if bool(item.get("under_cb_map_group", False)):
-                    _add_to_cb_map_group(self.session, source_model)
-                source_model.display = bool(item.get("display", True))
-                self._zero_map_origin_index(source_model)
                 path = item.get("path", None)
                 if path:
                     self._store_model_saved_path(source_model, path)
                 self._remember_restored_session_source(source_model, item)
+            except Exception as err:
+                self.session.logger.warning(f"Session load: source bookkeeping failed for {item.get('name', '')}: {err}")
+            try:
+                if bool(item.get("under_cb_map_group", False)) and not self._is_under_cb_group(source_model, "maps"):
+                    _add_to_cb_map_group(self.session, source_model)
+            except Exception as err:
+                self.session.logger.warning(f"Session load: could not move {item.get('name', '')} into CiliaBuilder2: {err}")
+            try:
+                source_model.display = bool(item.get("display", True))
+                self._zero_map_origin_index(source_model)
                 self._apply_model_color_state(source_model, item.get("color_state", []))
-            except Exception:
-                pass
+            except Exception as err:
+                self.session.logger.warning(f"Session load: could not restore display of {item.get('name', '')}: {err}")
 
     def _restore_attachments(self, attachment_state, reset_runtime=True):
         from .map import cbsubmap_impl
@@ -7048,6 +7175,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if star_model is None:
                 star_model = self._find_model_by_name(item.get("star_name"), require_star=True)
             if star_model is None:
+                self.session.logger.warning(
+                    f"Session load: attachment skipped, STAR model {item.get('star_name', '')} not found"
+                )
                 continue
             map_model = self._restored_session_source_model(item)
             fetch_type = item.get("fetch_type", None)
@@ -7061,7 +7191,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 map_model = self._find_model_by_path(map_path)
             if map_model is None:
                 map_model = self._find_model_by_name(item.get("map_name"), require_star=False)
-            if map_model is None or not self._is_attach_source(map_model):
+            if map_model is None or self._is_cb_container(map_model) or not self._is_attach_source(map_model):
+                self.session.logger.warning(
+                    f"Session load: attachment skipped, source {item.get('map_name', '')} not found"
+                )
                 continue
 
             existing_out_root = self._saved_attachment_item_model(item)
