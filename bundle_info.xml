@@ -28,6 +28,7 @@
     <DataFile>docs/user/*.png</DataFile>
     <DataFile>docs/user/general/*.html</DataFile>
     <DataFile>docs/user/tools/*.html</DataFile>
+    <DataFile>docs/user/cmd/*.html</DataFile>
   </DataFiles>
 
   <Classifiers>
