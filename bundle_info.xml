@@ -2,25 +2,34 @@
 <BundleInfo
     name="ChimeraX-CiliaBuilder2"
     version="0.2.1"
-    package="ciliabuilder2"
+    package="chimerax.ciliabuilder2"
     minSessionVersion="1"
     maxSessionVersion="999">
 
   <Author>Bui lab@McGill</Author>
   <Email>huy.bui@mcgill.ca</Email>
-  <URL>https://github.com/builab/CiliaBuilder</URL>
+  <URL>https://github.com/builab/CiliaBuilder2</URL>
 
   <Synopsis>Cilia Model Builder</Synopsis>
 
   <Description>
-    Implements CiliaBuilder workflows in ChimeraX for STAR-guided cilia model
+    Implements CiliaBuilder2 workflows in ChimeraX for STAR-guided cilia model
     building, membrane generation, geometric drawing, attachment, and session
     restore.
   </Description>
 
   <Categories>
-    <Category name="Higher-Order Structure"/>
+    <Category name="EM, Structure Analysis, Visualization"/>
   </Categories>
+  
+  <!-- Dependencies on other ChimeraX/Python packages -->
+  <Dependencies>
+    <Dependency name="ChimeraX-Core" version=">=1.7"/>
+    <Dependency name="ChimeraX-UI" version=">=1.7"/>
+    <Dependency name="numpy" version=">=1.26.4"/>
+    <Dependency name="pandas" version=">=2.1.4"/>
+    <Dependency name="scipy" version=">1.14"/>
+  </Dependencies>
 
   <DataFiles>
     <DataFile>docs/user/*.html</DataFile>
