@@ -22,13 +22,29 @@
     <Category name="EM, Structure Analysis, Visualization"/>
   </Categories>
   
-  <!-- Dependencies on other ChimeraX/Python packages -->
+  <!-- Dependencies on other ChimeraX/Python packages.
+       Minimum ChimeraX is 1.7. All ChimeraX APIs used by CiliaBuilder2 exist in 1.7,
+       and the source compiles with Python 3.11 (shipped with 1.7). Each bundle is
+       pinned to the version it has in ChimeraX 1.7, so these are always satisfied
+       by the ChimeraX installation itself (bundle versions differ from the ChimeraX
+       version, e.g. ChimeraX-UI is 1.33 in ChimeraX 1.7).
+       numpy is the only third-party package used; ChimeraX 1.7 ships numpy 1.25.1.
+       Do not raise the numpy pin above what ChimeraX ships, or pip will try to
+       replace ChimeraX's own numpy on install. -->
   <Dependencies>
     <Dependency name="ChimeraX-Core" version=">=1.7"/>
-    <Dependency name="ChimeraX-UI" version=">=1.7"/>
-    <Dependency name="numpy" version=">=1.26.4"/>
-    <Dependency name="pandas" version=">=2.1.4"/>
-    <Dependency name="scipy" version=">1.14"/>
+    <Dependency name="ChimeraX-UI" version=">=1.33"/>
+    <Dependency name="ChimeraX-Atomic" version=">=1.49"/>
+    <Dependency name="ChimeraX-CellPack" version=">=1.0"/>
+    <Dependency name="ChimeraX-Geometry" version=">=1.3"/>
+    <Dependency name="ChimeraX-gltf" version=">=1.0"/>
+    <Dependency name="ChimeraX-Graphics" version=">=1.1"/>
+    <Dependency name="ChimeraX-Map" version=">=1.1"/>
+    <Dependency name="ChimeraX-Markers" version=">=1.0"/>
+    <Dependency name="ChimeraX-Shape" version=">=1.0"/>
+    <Dependency name="ChimeraX-STL" version=">=1.0"/>
+    <Dependency name="ChimeraX-Surface" version=">=1.0"/>
+    <Dependency name="numpy" version=">=1.25"/>
   </Dependencies>
 
   <DataFiles>
