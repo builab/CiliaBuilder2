@@ -442,7 +442,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.length.setRange(0.0, 1e9)
         self.length.setDecimals(2)
         self.length.setValue(3000.0)
-        outer_row_spin("Length", self.length)
+        outer_row_spin("Length (\u00c5)", self.length)
 
         self.n_doublet = TypedOnlySpinBox(main)
         self.n_doublet.setRange(1, 9)
@@ -453,13 +453,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.radius.setRange(0.0, 1e9)
         self.radius.setDecimals(2)
         self.radius.setValue(960.0)
-        outer_row_spin("Radius", self.radius)
+        outer_row_spin("Radius (\u00c5)", self.radius)
 
         self.spacing = TypedOnlyDoubleSpinBox(main)
         self.spacing.setRange(0.0, 1e9)
         self.spacing.setDecimals(2)
         self.spacing.setValue(1000.0)
-        outer_row_spin("Periodicity (spacing)", self.spacing)
+        outer_row_spin("Periodicity (\u00c5)", self.spacing)
 
         self.outer_twist_per_layer = TypedOnlyDoubleSpinBox(main)
         self.outer_twist_per_layer.setRange(-360.0, 360.0)
@@ -471,7 +471,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.doublet_offset.setRange(-1e9, 1e9)
         self.doublet_offset.setDecimals(2)
         self.doublet_offset.setValue(0.0)
-        outer_row_spin("Z offset", self.doublet_offset)
+        outer_row_spin("Z offset (\u00c5)", self.doublet_offset)
 
         rand_row = QWidget(main)
         rand_lay = QHBoxLayout(rand_row)
@@ -528,19 +528,19 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_length.setRange(0.0, 1e9)
         self.central_pair_length.setDecimals(2)
         self.central_pair_length.setValue(3000.0)
-        cent_row_spin("Length", self.central_pair_length)
+        cent_row_spin("Length (\u00c5)", self.central_pair_length)
 
         self.central_pair_spacing = TypedOnlyDoubleSpinBox(main)
         self.central_pair_spacing.setRange(0.0, 1e9)
         self.central_pair_spacing.setDecimals(2)
         self.central_pair_spacing.setValue(333.0)
-        cent_row_spin("Periodicity (spacing)", self.central_pair_spacing)
+        cent_row_spin("Periodicity (\u00c5)", self.central_pair_spacing)
 
         self.central_pair_z_offset = TypedOnlyDoubleSpinBox(main)
         self.central_pair_z_offset.setRange(-1e9, 1e9)
         self.central_pair_z_offset.setDecimals(2)
         self.central_pair_z_offset.setValue(0.0)
-        cent_row_spin("Z offset", self.central_pair_z_offset)
+        cent_row_spin("Z offset (\u00c5)", self.central_pair_z_offset)
 
         cent_mode_row = QWidget(main)
         cent_mode_lay = QHBoxLayout(cent_mode_row)
@@ -556,7 +556,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_c1c2_distance.setRange(0.0, 1e9)
         self.central_pair_c1c2_distance.setDecimals(2)
         self.central_pair_c1c2_distance.setValue(100.0)
-        cent_row_spin("C1/C2 distance", self.central_pair_c1c2_distance)
+        cent_row_spin("C1/C2 distance (\u00c5)", self.central_pair_c1c2_distance)
 
         cent_tab = QWidget(main)
         cent_tab_layout = QVBoxLayout(cent_tab)
@@ -590,31 +590,31 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_length.setRange(0.0, 1e9)
         self.membrane_length.setDecimals(2)
         self.membrane_length.setValue(3000.0)
-        mem_row_spin("Length", self.membrane_length)
+        mem_row_spin("Length (\u00c5)", self.membrane_length)
 
         self.membrane_radius = TypedOnlyDoubleSpinBox(main)
         self.membrane_radius.setRange(0.0, 1e9)
         self.membrane_radius.setDecimals(2)
         self.membrane_radius.setValue(1350.0)
-        mem_row_spin("Radius", self.membrane_radius)
+        mem_row_spin("Radius (\u00c5)", self.membrane_radius)
 
         self.membrane_thickness = TypedOnlyDoubleSpinBox(main)
         self.membrane_thickness.setRange(0.0, 1e9)
         self.membrane_thickness.setDecimals(2)
         self.membrane_thickness.setValue(40.0)
-        mem_row_spin("Thickness", self.membrane_thickness)
+        mem_row_spin("Thickness (\u00c5)", self.membrane_thickness)
 
         self.membrane_offset = TypedOnlyDoubleSpinBox(main)
         self.membrane_offset.setRange(-1e9, 1e9)
         self.membrane_offset.setDecimals(2)
         self.membrane_offset.setValue(0.0)
-        mem_row_spin("Offset", self.membrane_offset)
+        mem_row_spin("Z offset (\u00c5)", self.membrane_offset)
 
         self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
         self.membrane_distortion.setRange(0.0, 10.0)
         self.membrane_distortion.setDecimals(2)
         self.membrane_distortion.setValue(0.60)
-        mem_row_spin("Distortion level", self.membrane_distortion)
+        mem_row_spin("Distortion level (0-1)", self.membrane_distortion)
 
         membrane_tip_dome_row = QWidget(main)
         membrane_tip_dome_lay = QHBoxLayout(membrane_tip_dome_row)
@@ -740,7 +740,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_distance.setRange(-1e9, 1e9)
         self.ift_distance.setDecimals(2)
         self.ift_distance.setValue(1250.0)
-        ift_row_spin("Distance from STAR center", self.ift_distance)
+        ift_row_spin("Distance from STAR center (\u00c5)", self.ift_distance)
 
         self.ift_anterograde_angle = TypedOnlyDoubleSpinBox(main)
         self.ift_anterograde_angle.setRange(-360.0, 360.0)
@@ -790,13 +790,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_train_offset.setPlaceholderText("required")
         self.ift_train_offset.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_offset))
         self.ift_train_offset.setText("1500")
-        train_row_widget("Offset", self.ift_train_offset)
+        train_row_widget("Offset (\u00c5)", self.ift_train_offset)
 
         self.ift_train_periodicity = NumericLineEdit(train_page)
         self.ift_train_periodicity.setPlaceholderText("required")
         self.ift_train_periodicity.setValidator(QDoubleValidator(0.0, 1e9, 6, self.ift_train_periodicity))
         self.ift_train_periodicity.setText("65")
-        train_row_widget("Periodicity", self.ift_train_periodicity)
+        train_row_widget("Periodicity (\u00c5)", self.ift_train_periodicity)
 
         self.ift_train_repeat = NumericLineEdit(train_page)
         self.ift_train_repeat.setPlaceholderText("required")
@@ -942,7 +942,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_rot_row = QWidget(main)
         attach_rot_lay = QHBoxLayout(attach_rot_row)
         attach_rot_lay.setContentsMargins(0, 0, 0, 0)
-        attach_rot_lay.addWidget(QLabel("Attachment Z offset (deg)", attach_rot_row))
+        attach_rot_lay.addWidget(QLabel("Attachment Z rotation (deg)", attach_rot_row))
         self.attach_line_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_line_rotation.setRange(-360.0, 360.0)
         self.attach_line_rotation.setDecimals(2)
@@ -4052,13 +4052,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         form.addRow("Selected filament", selected_label)
 
         length_spin = _typed_spin(dialog, 0.0, 1e9, float(self.length.value()))
-        form.addRow("Length", length_spin)
+        form.addRow("Length (\u00c5)", length_spin)
 
         spacing_spin = _typed_spin(dialog, 0.01, 1e9, float(self.spacing.value()))
-        form.addRow("Periodicity (spacing)", spacing_spin)
+        form.addRow("Periodicity (\u00c5)", spacing_spin)
 
         z_offset_spin = _typed_spin(dialog, -1e9, 1e9, 0.0)
-        form.addRow("Z offset", z_offset_spin)
+        form.addRow("Z offset (\u00c5)", z_offset_spin)
 
         twist_spin = _typed_spin(
             dialog,
