@@ -800,10 +800,10 @@ def _log_local_cellpack_load(session, info):
 def cbstraight(
     session,
     angle_set=0.0,
-    length=9000.0,
+    length=3000.0,
     n_doublet=9,
-    radius=700.0,
-    spacing=960.0,
+    radius=960.0,
+    spacing=1000.0,
     z_offset=0.0,
     doublet_offset=0.0,
     twist_per_layer=0.0,
@@ -879,8 +879,8 @@ cbstraight_desc = CmdDesc(
 
 def buildcentralpair(
     session,
-    length=2000.0,
-    spacing=320.0,
+    length=3000.0,
+    spacing=333.0,
     z_offset=0.0,
     tube_id=100,
     x_offset=0.0,
@@ -952,9 +952,9 @@ buildcentralpair_desc = CmdDesc(
 def buildift(
     session,
     n_particles=100,
-    length=9000.0,
+    length=3000.0,
     n_doublet=9,
-    radius=700.0,
+    radius=960.0,
     radial_offset=0.0,
     angle_set=0.0,
     z_offset=0.0,
