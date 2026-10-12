@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="../userdocs.css">
+  <title>CiliaBuilder2 Commands</title>
+</head>
+<body>
+  <a name="top"></a>
+  <a href="../ciliabuilder2_index.html"><img src="../CiliaBuilder2-icon.svg"
+      alt="CiliaBuilder2 docs icon" class="clRight" title="User Guide Index" width="150px"></a>
+
+  <h3><a href="../ciliabuilder2_index.html#commands">Commands</a>: CiliaBuilder2</h3>
+
+  <p>
+    CiliaBuilder2 adds the following commands to ChimeraX. Most work is done in the
+    <a href="../tools/ciliabuilder2_tools.html">CiliaBuilder2 tool</a>; the commands are
+    useful in scripts (<code>.cxc</code> files) and for quickly building a STAR model
+    without opening the tool.
+  </p>
+  <ul>
+    <li><a href="#cbui"><b>cbui</b></a> &ndash; open the CiliaBuilder2 tool</li>
+    <li><a href="#cbstraight"><b>cbstraight</b></a> &ndash; build a ring of microtubules as a STAR model</li>
+    <li><a href="#buildcentralpair"><b>buildcentralpair</b></a> &ndash; build a central-pair STAR model</li>
+    <li><a href="#cbopenapr"><b>cbopenapr</b></a> &ndash; open a local cellPACK package (experimental)</li>
+  </ul>
+  <p>
+    All lengths are in &Aring;ngstr&ouml;m and all angles in degrees. Keywords are
+    optional and can be given in any order. STAR models made by commands appear in the
+    model panel and can be used on the
+    <a href="../tools/ciliabuilder2_tools.html#attachment">Attachment</a> page like
+    models built in the tool. Note that the command defaults are not the same as the
+    defaults in the tool.
+  </p>
+
+  <!-- ===================== cbui ===================== -->
+  <a name="cbui"></a>
+  <h3 class="usage"><a href="#top">Usage</a>: <b>cbui</b></h3>
+  <p>
+    Opens the <a href="../tools/ciliabuilder2_tools.html">CiliaBuilder2 tool</a>.
+    The tool can also be opened from <b>Tools &rarr; Higher-Order Structure &rarr; CiliaBuilder2</b>.
+  </p>
+
+  <!-- ===================== cbstraight ===================== -->
+  <a name="cbstraight"></a>
+  <h3 class="usage"><a href="#top">Usage</a>: <b>cbstraight</b>
+    [&nbsp;<b>length</b>&nbsp;<i>L</i>&nbsp;]
+    [&nbsp;<b>nDoublet</b>&nbsp;<i>N</i>&nbsp;]
+    [&nbsp;<b>radius</b>&nbsp;<i>r</i>&nbsp;]
+    [&nbsp;<b>spacing</b>&nbsp;<i>d</i>&nbsp;]
+    [&nbsp;<b>zOffset</b>&nbsp;<i>z</i>&nbsp;]
+    [&nbsp;<b>angleSet</b>&nbsp;<i>angle</i>&nbsp;]
+    [&nbsp;<b>doubletOffset</b>&nbsp;<i>angle</i>&nbsp;]
+    [&nbsp;<b>twistPerLayer</b>&nbsp;<i>angle</i>&nbsp;]
+    [&nbsp;<b>randomSpacing</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+    [&nbsp;<b>randomMaxDiff</b>&nbsp;<i>d</i>&nbsp;]
+    [&nbsp;<b>showArrows</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+    [&nbsp;<b>tomoName</b>&nbsp;<i>name</i>&nbsp;]
+    [&nbsp;<b>pixelSize</b>&nbsp;<i>size</i>&nbsp;]
+    [&nbsp;<b>openStar</b>&nbsp;<b>true</b>&nbsp;|&nbsp;false&nbsp;]
+    [&nbsp;<b>printStar</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+  </h3>
+  <p>
+    Builds <i>N</i> straight, parallel microtubules evenly spaced on a circle of radius
+    <i>r</i> around the Z axis, each running along +Z, and creates a STAR model named
+    <b>Microtubules STAR</b> <i>n</i>. This is the command equivalent of
+    <b>Build microtubules</b> on the
+    <a href="../tools/ciliabuilder2_tools.html#microtubules">Microtubules</a> tab.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr>
+      <td style="background-color:#cccccc" align="center"><b>keyword</b></td>
+      <td style="background-color:#cccccc" align="center"><b>default</b></td>
+      <td style="background-color:#cccccc" align="center"><b>description</b></td>
+    </tr>
+    <tr><td><b>length</b></td><td align="center">9000</td><td>Length of each microtubule along Z.</td></tr>
+    <tr><td><b>nDoublet</b></td><td align="center">9</td><td>Number of microtubules in the ring (1&ndash;9).</td></tr>
+    <tr><td><b>radius</b></td><td align="center">700</td><td>Distance from the Z axis to each microtubule.</td></tr>
+    <tr><td><b>spacing</b></td><td align="center">960</td><td>Distance between consecutive particles along a microtubule (the periodicity).</td></tr>
+    <tr><td><b>zOffset</b></td><td align="center">0</td><td>Z position of the first particle.</td></tr>
+    <tr><td><b>angleSet</b></td><td align="center">0</td><td>Angle around the Z axis at which the first microtubule is placed; rotates the whole ring.</td></tr>
+    <tr><td><b>doubletOffset</b></td><td align="center">0</td><td>Extra in-plane rotation applied to every microtubule about its own axis.</td></tr>
+    <tr><td><b>twistPerLayer</b></td><td align="center">0</td><td>Rotation added to each successive particle along a microtubule.</td></tr>
+    <tr><td><b>randomSpacing</b></td><td align="center">false</td><td>Shift each microtubule along Z by a random amount, so neighbouring repeats are not in register.</td></tr>
+    <tr><td><b>randomMaxDiff</b></td><td align="center">0</td><td>Largest random shift. 0 (or any value larger than the limit) uses the limit of 0.49&nbsp;&times;&nbsp;<b>spacing</b>.</td></tr>
+    <tr><td><b>showArrows</b></td><td align="center">false</td><td>Draw arrows showing the orientation of each particle.</td></tr>
+    <tr><td><b>tomoName</b></td><td align="center">TS_001</td><td>Value written to the <i>rlnTomoName</i> column.</td></tr>
+    <tr><td><b>pixelSize</b></td><td align="center">1</td><td>Pixel size (&Aring;) written to the STAR file; coordinates are divided by it.</td></tr>
+    <tr><td><b>openStar</b></td><td align="center">true</td><td>Display the particles in the graphics window.</td></tr>
+    <tr><td><b>printStar</b></td><td align="center">false</td><td>Also print the STAR file contents to the Log.</td></tr>
+  </table>
+  <p>Example &ndash; a 3&nbsp;&micro;m axoneme with a 96&nbsp;nm repeat:</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; cbstraight length 30000 nDoublet 9 radius 960 spacing 960 showArrows true</b></p>
+
+  <!-- ===================== buildcentralpair ===================== -->
+  <a name="buildcentralpair"></a>
+  <h3 class="usage"><a href="#top">Usage</a>: <b>buildcentralpair</b>
+    [&nbsp;<b>length</b>&nbsp;<i>L</i>&nbsp;]
+    [&nbsp;<b>spacing</b>&nbsp;<i>d</i>&nbsp;]
+    [&nbsp;<b>zOffset</b>&nbsp;<i>z</i>&nbsp;]
+    [&nbsp;<b>xOffset</b>&nbsp;<i>x</i>&nbsp;]
+    [&nbsp;<b>tubeId</b>&nbsp;<i>id</i>&nbsp;]
+    [&nbsp;<b>randomSpacing</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+    [&nbsp;<b>randomMaxDiff</b>&nbsp;<i>d</i>&nbsp;]
+    [&nbsp;<b>showArrows</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+    [&nbsp;<b>tomoName</b>&nbsp;<i>name</i>&nbsp;]
+    [&nbsp;<b>pixelSize</b>&nbsp;<i>size</i>&nbsp;]
+    [&nbsp;<b>openStar</b>&nbsp;<b>true</b>&nbsp;|&nbsp;false&nbsp;]
+    [&nbsp;<b>printStar</b>&nbsp;true&nbsp;|&nbsp;<b>false</b>&nbsp;]
+    [&nbsp;<b>namePrefix</b>&nbsp;<i>text</i>&nbsp;]
+  </h3>
+  <p>
+    Builds a single straight line of particles parallel to the Z axis for the
+    central pair and creates a STAR model named <b>Central pair STAR</b> <i>n</i>.
+    The <a href="../tools/ciliabuilder2_tools.html#centralpair">Central Pair</a> tab
+    uses the same builder; its <b>C1 + C2 lines</b> mode builds two such lines.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr>
+      <td style="background-color:#cccccc" align="center"><b>keyword</b></td>
+      <td style="background-color:#cccccc" align="center"><b>default</b></td>
+      <td style="background-color:#cccccc" align="center"><b>description</b></td>
+    </tr>
+    <tr><td><b>length</b></td><td align="center">2000</td><td>Length of the line along Z.</td></tr>
+    <tr><td><b>spacing</b></td><td align="center">320</td><td>Distance between consecutive particles (the periodicity).</td></tr>
+    <tr><td><b>zOffset</b></td><td align="center">0</td><td>Z position of the first particle.</td></tr>
+    <tr><td><b>xOffset</b></td><td align="center">0</td><td>Shift of the line along X, away from the cilium axis.</td></tr>
+    <tr><td><b>tubeId</b></td><td align="center">100</td><td>Value written to the <i>rlnHelicalTubeID</i> column.</td></tr>
+    <tr><td><b>randomSpacing</b></td><td align="center">false</td><td>Shift the whole line along Z by a random amount.</td></tr>
+    <tr><td><b>randomMaxDiff</b></td><td align="center">0</td><td>Largest random shift. 0 (or any value larger than the limit) uses the limit of 0.49&nbsp;&times;&nbsp;<b>spacing</b>.</td></tr>
+    <tr><td><b>showArrows</b></td><td align="center">false</td><td>Draw arrows showing the orientation of each particle.</td></tr>
+    <tr><td><b>tomoName</b></td><td align="center">TS_001</td><td>Value written to the <i>rlnTomoName</i> column.</td></tr>
+    <tr><td><b>pixelSize</b></td><td align="center">1</td><td>Pixel size (&Aring;) written to the STAR file; coordinates are divided by it.</td></tr>
+    <tr><td><b>openStar</b></td><td align="center">true</td><td>Display the particles in the graphics window.</td></tr>
+    <tr><td><b>printStar</b></td><td align="center">false</td><td>Also print the STAR file contents to the Log.</td></tr>
+    <tr><td><b>namePrefix</b></td><td align="center">Central pair STAR</td><td>Name given to the new STAR model (followed by a number).</td></tr>
+  </table>
+  <p>Example &ndash; a central pair matching the axoneme above:</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; buildcentralpair length 30000 spacing 320</b></p>
+
+  <!-- ===================== cbopenapr ===================== -->
+  <a name="cbopenapr"></a>
+  <h3 class="usage"><a href="#top">Usage</a>: <b>cbopenapr</b> <i>filename</i>
+    [&nbsp;<b>name</b>&nbsp;<i>text</i>&nbsp;]
+  </h3>
+  <p>
+    Opens a local cellPACK package (an <code>.apr.json</code> file, or an exported
+    <code>recipe.json</code> / <code>ciliabuilder_manifest.json</code>) and adds it to
+    the CiliaBuilder2 models. <b>name</b> sets the name of the opened model. cellPACK
+    support is experimental and is not shown in the tool at present.
+  </p>
+
+  <p>
+    Both <b>cbstraight</b> and <b>buildcentralpair</b> also accept a
+    <b>starFormat</b> keyword, which is currently ignored.
+  </p>
+
+  <hr>
+  <address>CiliaBuilder2 by BuiLab@McGill, Oct 2026</address>
+</body>
+</html>
