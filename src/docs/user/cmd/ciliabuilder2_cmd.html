@@ -73,10 +73,10 @@
       <td style="background-color:#cccccc" align="center"><b>default</b></td>
       <td style="background-color:#cccccc" align="center"><b>description</b></td>
     </tr>
-    <tr><td><b>length</b></td><td align="center">9000</td><td>Length of each microtubule along Z.</td></tr>
+    <tr><td><b>length</b></td><td align="center">3000</td><td>Length of each microtubule along Z.</td></tr>
     <tr><td><b>nDoublet</b></td><td align="center">9</td><td>Number of microtubules in the ring (1&ndash;9).</td></tr>
-    <tr><td><b>radius</b></td><td align="center">700</td><td>Distance from the Z axis to each microtubule.</td></tr>
-    <tr><td><b>spacing</b></td><td align="center">960</td><td>Distance between consecutive particles along a microtubule (the periodicity).</td></tr>
+    <tr><td><b>radius</b></td><td align="center">960</td><td>Distance from the Z axis to each microtubule.</td></tr>
+    <tr><td><b>spacing</b></td><td align="center">1000</td><td>Distance between consecutive particles along a microtubule (the periodicity).</td></tr>
     <tr><td><b>zOffset</b></td><td align="center">0</td><td>Z position of the first particle.</td></tr>
     <tr><td><b>angleSet</b></td><td align="center">0</td><td>Angle around the Z axis at which the first microtubule is placed; rotates the whole ring.</td></tr>
     <tr><td><b>doubletOffset</b></td><td align="center">0</td><td>Extra in-plane rotation applied to every microtubule about its own axis.</td></tr>
@@ -89,8 +89,8 @@
     <tr><td><b>openStar</b></td><td align="center">true</td><td>Display the particles in the graphics window.</td></tr>
     <tr><td><b>printStar</b></td><td align="center">false</td><td>Also print the STAR file contents to the Log.</td></tr>
   </table>
-  <p>Example &ndash; a 3&nbsp;&micro;m axoneme with a 96&nbsp;nm repeat:</p>
-  <p class="usage"><b>&nbsp;&nbsp;&nbsp; cbstraight length 30000 nDoublet 9 radius 960 spacing 960 showArrows true</b></p>
+  <p>Example &ndash; a 3&nbsp;&micro;m axoneme with a 96&nbsp;nm repeat (actual repeat = 1000 &Aring;):</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; cbstraight length 30000 nDoublet 9 radius 960 spacing 1000 showArrows true</b></p>
 
   <!-- ===================== buildcentralpair ===================== -->
   <a name="buildcentralpair"></a>
@@ -121,8 +121,8 @@
       <td style="background-color:#cccccc" align="center"><b>default</b></td>
       <td style="background-color:#cccccc" align="center"><b>description</b></td>
     </tr>
-    <tr><td><b>length</b></td><td align="center">2000</td><td>Length of the line along Z.</td></tr>
-    <tr><td><b>spacing</b></td><td align="center">320</td><td>Distance between consecutive particles (the periodicity).</td></tr>
+    <tr><td><b>length</b></td><td align="center">3000</td><td>Length of the line along Z.</td></tr>
+    <tr><td><b>spacing</b></td><td align="center">333</td><td>Distance between consecutive particles (the periodicity).</td></tr>
     <tr><td><b>zOffset</b></td><td align="center">0</td><td>Z position of the first particle.</td></tr>
     <tr><td><b>xOffset</b></td><td align="center">0</td><td>Shift of the line along X, away from the cilium axis.</td></tr>
     <tr><td><b>tubeId</b></td><td align="center">100</td><td>Value written to the <i>rlnHelicalTubeID</i> column.</td></tr>
@@ -135,8 +135,8 @@
     <tr><td><b>printStar</b></td><td align="center">false</td><td>Also print the STAR file contents to the Log.</td></tr>
     <tr><td><b>namePrefix</b></td><td align="center">Central pair STAR</td><td>Name given to the new STAR model (followed by a number).</td></tr>
   </table>
-  <p>Example &ndash; a central pair matching the axoneme above:</p>
-  <p class="usage"><b>&nbsp;&nbsp;&nbsp; buildcentralpair length 30000 spacing 320</b></p>
+  <p>Example &ndash; a central pair matching the axoneme above with 32 nm repeat (actual repeat = 333 &Aring;):</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; buildcentralpair length 30000 spacing 333</b></p>
 
   <!-- ===================== cbopenapr ===================== -->
   <a name="cbopenapr"></a>
