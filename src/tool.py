@@ -263,7 +263,7 @@ class EmbeddedModelsBrowser:
 
 class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     SESSION_ENDURING = True
-    help = "help:user/tools/ciliabuilder2.html"
+    help = "help:user/tools/ciliabuilder2_tools.html"
 
     def __init__(self, session, tool_name):
         super().__init__(session, tool_name)

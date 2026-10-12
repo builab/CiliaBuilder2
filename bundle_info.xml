@@ -22,6 +22,14 @@
     <Category name="Higher-Order Structure"/>
   </Categories>
 
+  <DataFiles>
+    <DataFile>docs/user/*.html</DataFile>
+    <DataFile>docs/user/*.svg</DataFile>
+    <DataFile>docs/user/*.png</DataFile>
+    <DataFile>docs/user/general/*.html</DataFile>
+    <DataFile>docs/user/tools/*.html</DataFile>
+  </DataFiles>
+
   <Classifiers>
     <PythonClassifier>Development Status :: 4 - Beta</PythonClassifier>
     <PythonClassifier>License :: Freeware</PythonClassifier>
