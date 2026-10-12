@@ -1,138 +1,221 @@
-<html>
-  <!--
-=== UCSF ChimeraX Copyright ===Copyright 2018 Regents of the University of California.All rights reserved.  This software provided pursuant to alicense agreement containing restrictions on its disclosure,
-duplication and use.  For details see:http://www.rbvi.ucsf.edu/chimerax/docs/licensing.htmlThis notice must be embedded in or attached to all copies,including partial copies, of the software or any revisions
-or derivations thereof.=== UCSF ChimeraX Copyright ===-->
-  <head>
-    <meta http-equiv="content-type" content="text/html; charset=windows-1252">
-    <link rel="stylesheet" type="text/css" href="../userdocs.css">
-    <title>Artiax Options</title>
-  </head>
-  <body> <a name="top"></a> <a href="../artiax_index.html"> <img src="../ArtiaX-docs-icon.svg"
-        alt="ArtiaX docs icon" class="clRight" title="User Guide Index" width="60px"></a>
-    <h3><a href="../artiax_index.html#general">General</a>: ArtiaX</h3>
-    <p> <b>Artiax</b> supports several common cryoET particle list file
-      formats. Files can be opened and saved using the default ChimeraX <strong><a
-          href="help:user/commands/open.html">open</a></strong> and <strong><a
-          href="help:user/commands/save.html">save</a></strong> commands with
-      some additional parameters. </p>
-    <h3 class="usage"><a href="usageconventions.html">Usage</a>: <br>
-      <a href="help:user/commands/open.html"><b>open</b></a> <i>filename</i> <strong>format</strong>
-      <span class="nowrap"><i>format-name </i>[<strong>csvpath</strong><i>
-          filename | </i><strong>csvsuffix</strong><i> string</i>]<i><br>
-        </i></span></h3>
-    <h3 class="usage"><a href="usageconventions.html">Usage</a>: <br>
-      <a href="help:user/commands/save.html"><b>save</b></a> <i>filename</i> <strong>partlist</strong>
-      <a href="atomspec.html#hierarchy"><i>model-spec</i></a><span class="nowrap"></span><span
-        class="nowrap"> [<strong>csvpath</strong><i> filename | </i><strong>csvsuffix</strong><i>
-          string</i>]</span>
-    </h3>
-    <p class="usage">Examples:<b><br>
-      </b></p>
-    <p class="usage"><b>&nbsp;&nbsp;&nbsp; open example.em format motl<br>
-        &nbsp;&nbsp;&nbsp; open example.star format star</b></p>
-    <p class="usage"><b> &nbsp;&nbsp;&nbsp; save example.mod partlist #1.2.3
-        csvsuffix iter1<br>
-        &nbsp;&nbsp;&nbsp; save example.tbl partlist #1.2.1<br>
-      </b></p>
-    <p></p>
-    <p></p>
-    <a name="file-table"></a><a name="file-table"></a>
-    <div style="text-align: left;">
-      <div style="text-align: left;">
-        <h3><a name="file-table"><b>File Types</b></a></h3>
-      </div>
-    </div>
-    <table cellspacing="0" cellpadding="4" border="">
-      <tbody>
-        <tr>
-          <td style="background-color:#cccccc" align="center"><b>format</b></td>
-          <td style="background-color:#cccccc" align="center"><span class="nowrap"><b><i>format-name</i></b></span></td>
-          <td style="background-color:#cccccc" align="center"><b>suffix</b></td>
-          <td style="background-color:#cccccc" align="center"><b>description</b></td>
-        </tr>
-        <tr>
-          <td colspan="4" style="background-color:#eaeaea" align="center"> <a name="tomograms"></a>
-            <b>Particle lists</b> </td>
-        </tr>
-        <tr>
-          <td align="center"> <strong>Artiatomi/TOM/AV3</strong> motivelists</td>
-          <td align="center">motl</td>
-          <td align="center">.em</td>
-          <td style="text-align: left;">Binary file in EM format containing
-            matrix of size 20xN. Positions in file[7:10, :], shifts in
-            file[10:13, :], euler angles in file[16:19, :].</td>
-        </tr>
-        <tr>
-          <td align="center"><strong>IMOD</strong> model2point output</td>
-          <td align="center">coords</td>
-          <td align="center">.coords</td>
-          <td style="text-align: left;">Three column (x, y, z), space delimited
-            text file. One particle per line. No header line.</td>
-        </tr>
-        <tr>
-          <td align="center"><strong>Dynamo</strong> table</td>
-          <td align="center">dynamo</td>
-          <td align="center">.tbl</td>
-          <td style="text-align: left;">See <a href="https://wiki.dynamo.biozentrum.unibas.ch/w/index.php/Table">dynamo
-              documentation</a>. Accepts any table with more than 26 columns.</td>
-        </tr>
-        <tr>
-          <td align="center">TSV particle lists</td>
-          <td align="center">generic</td>
-          <td align="center">.tsv</td>
-          <td style="text-align: left;">Tab-delimited generic input format with
-            one line per particle and unlimited number of columns.<br>
-            <br>
-            9 Expected Columns:<br>
-            pos_x, pos_y, pos_z, shift_x, shift_y, shift_z, phi, the, psi<br>
-            <br>
-            A header line must be present. Any additional named columns will be
-            imported as metadata values.</td>
-        </tr>
-        <tr>
-          <td align="center"><strong>PEET</strong> motivelist model/csv</td>
-          <td align="center">peet</td>
-          <td align="center">.mod</td>
-          <td style="text-align: left;">IMOD model and optionally associated
-            CSV-based motivelist. Use <strong>csvpath </strong>or<strong>
-              csvsuffix </strong>for specifying the optional CSV input or
-            output</td>
-        </tr>
-        <tr>
-          <td align="center"><strong>Relion</strong> star files</td>
-          <td align="center">star</td>
-          <td align="center">.star</td>
-          <td style="text-align: left;">
-            <div>RELION 2, 3 and 4 STAR files. For multi-section star files, the
-              first loop containing rlnCoordinateZ will be read. If rlnTomoName
-              is present, names are expected to contain 1 underscore, and follow
-              the RELION 4 tutorial <a href="https://relion.readthedocs.io/en/release-4.0/Reference/STA/Programs/import_tomograms.html#program-tomo-import-tomograms">guidelines</a>.
-            </div>
-            <br>
-            rlnCoordinateX/Y/Z must be present. ArtiaX first looks for
-            rlnOriginX/Y/Z and then for the rlnOriginX/Y/ZAngst equivalent if
-            not found. Angles (rlnAngleRot/Tilt/Psi) are optional and read if
-            present.</td>
-        </tr>
-        <tr>
-          <td align="center"><strong>Relion5</strong> star files</td>
-          <td align="center">star</td>
-          <td align="center">.star</td>
-          <td style="text-align: left;">
-            <div>RELION 5 STAR files. For multi-section star files, the
-              first loop containing rlnCoordinateZ will be read. If rlnTomoName
-              is present, the correct reading of the names requires the input of the prefix that precedes the tomogram number.
-            </div>
-            <br>
-            rlnCenteredCoordinateX/Y/ZAngst must be present. Angles (rlnAngleRot/Tilt/Psi and rlnTomoSubtomogramRot/Tilt/Psi) are optional and read if
-            present.</td>
-        </tr>
-      </tbody>
-    </table>
-    <p><br>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="../userdocs.css">
+  <title>CiliaBuilder2 File Types</title>
+</head>
+<body>
+  <a name="top"></a>
+  <a href="../ciliabuilder2_index.html"><img src="../CiliaBuilder2-icon.svg"
+      alt="CiliaBuilder2 docs icon" class="clRight" title="User Guide Index" width="150px"></a>
+
+  <h3><a href="../ciliabuilder2_index.html#general">General</a>: File Types</h3>
+
+  <p>
+    CiliaBuilder2 works with two kinds of files: <b>repeating units</b> (maps,
+    atomic models and 3D objects) that are attached to particles, and
+    <b>particle lists and sessions</b> (STAR and JSON) that describe the model.
+    Repeating units are opened with the standard ChimeraX
+    <a href="help:user/commands/open.html"><b>open</b></a> command and then chosen
+    on the <a href="../tools/ciliabuilder2_tools.html#attachment">Attachment</a> page.
+    STAR and JSON files are loaded and saved from the
+    <a href="../tools/ciliabuilder2_tools.html#saveload">Save/Load</a> page.
+  </p>
+
+  <h3><a name="file-table">Summary</a></h3>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr>
+      <td style="background-color:#cccccc" align="center"><b>type</b></td>
+      <td style="background-color:#cccccc" align="center"><b>suffix</b></td>
+      <td style="background-color:#cccccc" align="center"><b>used for</b></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="background-color:#eaeaea" align="center"><b>Repeating units (attached to particles)</b></td>
+    </tr>
+    <tr>
+      <td align="center"><a href="#map"><b>Map</b></a></td>
+      <td align="center">.mrc, .map, .ccp4, or fetched from EMDB</td>
+      <td>Density map of one repeating unit (e.g. a 96&nbsp;nm doublet repeat).</td>
+    </tr>
+    <tr>
+      <td align="center"><a href="#pdb"><b>Atomic model</b></a></td>
+      <td align="center">.pdb, .cif, .mmcif, or fetched from the PDB</td>
+      <td>Atomic model of one repeating unit.</td>
+    </tr>
+    <tr>
+      <td align="center"><a href="#glb"><b>GLB</b></a></td>
+      <td align="center">.glb, .glb.gz (also .gltf)</td>
+      <td>Lightweight 3D surface of one repeating unit, usually exported from a map.</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="background-color:#eaeaea" align="center"><b>Particle lists and sessions</b></td>
+    </tr>
+    <tr>
+      <td align="center"><a href="#star"><b>STAR</b></a></td>
+      <td align="center">.star</td>
+      <td>RELION-style particle list: the position and orientation of every repeating unit.</td>
+    </tr>
+    <tr>
+      <td align="center"><a href="#json"><b>Session JSON</b></a></td>
+      <td align="center">.json</td>
+      <td>A complete CiliaBuilder2 model: STAR models, attachments, membranes and tool settings.</td>
+    </tr>
+  </table>
+
+  <h3><a name="orientation">Preparing a repeating unit</a></h3>
+  <p>
+    Every map, atomic model or GLB should be oriented with the long axis of the
+    filament parallel to the Z axis before it is attached. The
+    <code>z_align_*.cxc</code> scripts in the
+    <a href="https://github.com/builab/CiliaBuilder2/tree/main/example" target="_blank">example</a>
+    folder show how to do this for an EMDB map: copy the map, rotate the copy
+    with <a href="help:user/commands/turn.html"><b>roll</b></a>, resample it onto
+    the original grid with <a href="help:user/commands/volume.html#resample"><b>volume resample</b></a>,
+    and save the result as a new .mrc file. Any remaining rotation about Z can be
+    set with <b>Attachment Z rotation</b> on the Attachment page.
+  </p>
+
+  <!-- ===================== MAP ===================== -->
+  <h3><a name="map">Map (.mrc, .map, .ccp4, EMDB)</a></h3>
+  <p>
+    A density map of one repeating unit. Open a local file or fetch directly
+    from the EMDB:
+  </p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; open emd_2132_zaligned.mrc<br>
+    &nbsp;&nbsp;&nbsp; open emdb:2132</b></p>
+  <ul>
+    <li>Each copy is placed by the centre of the map box, so the repeating unit should sit
+      at the centre of its box.</li>
+    <li>The map's origin is ignored when attaching; only the grid size and voxel size matter.</li>
+    <li>Maps fetched from EMDB are stored in the session JSON by their EMDB ID and are fetched
+      again when the session is loaded.</li>
+    <li>Maps are the most faithful but heaviest option. For a full-length cilium with
+      hundreds of copies, consider a <a href="#glb">GLB</a> surface instead.</li>
+  </ul>
+
+  <!-- ===================== PDB ===================== -->
+  <h3><a name="pdb">Atomic model (.pdb, .cif, .mmcif)</a></h3>
+  <p>An atomic model of one repeating unit, opened from a file or fetched from the PDB:</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; open mymodel.cif<br>
+    &nbsp;&nbsp;&nbsp; open pdb:9fqr</b></p>
+  <ul>
+    <li>By default each copy is placed by the centre of the model's bounding box.</li>
+    <li>If the model was fitted into a map and should be placed exactly where that map would
+      be, open the map as well, enable <b>Use fixed center for GLB &amp; PDB</b> and press
+      <b>Read center coordinate from map</b>.</li>
+    <li>Models fetched from the PDB are stored in the session JSON by their PDB ID.</li>
+  </ul>
+
+  <!-- ===================== GLB ===================== -->
+  <h3><a name="glb">GLB (.glb, .glb.gz)</a></h3>
+  <p>
+    A GLB file (binary glTF) holds a coloured triangle surface. It is much
+    lighter than a map or atomic model and is the recommended format for large
+    models. A GLB is usually made in ChimeraX from a map: display the map
+    surface at the desired threshold and colouring, then save it with
+    <a href="help:user/commands/save.html"><b>save</b></a>.
+    A <b>.glb.gz</b> file is simply a gzip-compressed GLB (<code>gzip mymap.glb</code>);
+    it is much smaller and opens like a normal GLB.
+  </p>
+
+  <div style="border: 2px solid #c0392b; background-color: #fdf2f0; padding: 6px 12px; margin: 12px 0;">
+    <p><b>Guideline: always save map GLB files with <code>center false</code></b></p>
+    <p class="usage"><b>&nbsp;&nbsp;&nbsp; save mymap.glb models #1 center false</b></p>
+    <p>
+      By default ChimeraX moves the scene to the origin when it writes a GLB file,
+      so the surface no longer has the same coordinates as the map it came from.
+      With <b>center false</b> the GLB keeps the map's coordinates. You can then
+      enable <b>Use fixed center for GLB &amp; PDB</b>, press
+      <b>Read center coordinate from map</b> with the source map selected, and the
+      GLB is placed exactly where the map would be. Several GLB files made from the
+      same map (for example, one per protein colour) then also stay aligned with
+      each other.
     </p>
-    <hr>
-    <address>BMLS Frangakis Group / June 2022</address>
-  </body>
+  </div>
+
+  <ul>
+    <li>Without a fixed centre, each copy is placed by the centre of the GLB's bounding box.</li>
+    <li>When a session is saved, GLB files are exported next to the JSON file with their
+      current colouring, so the session folder can be moved to another computer.</li>
+    <li>Drawings made on the <a href="../tools/ciliabuilder2_tools.html#drawing">Geometric
+      drawing</a> page are saved in the same way (<b>Save drawing as GLB</b>).</li>
+    <li>STL surfaces (.stl) can be attached in the same way.</li>
+  </ul>
+
+  <!-- ===================== STAR ===================== -->
+  <h3><a name="star">STAR (.star)</a></h3>
+  <p>
+    A RELION-style particle list. CiliaBuilder2 writes one STAR model per build
+    (microtubules, central pair, IFT train) and can import STAR files made by
+    other programs with <b>Load STAR file</b>, to build custom geometries such
+    as curved cilia or transition zones.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr>
+      <td style="background-color:#cccccc" align="center"><b>column</b></td>
+      <td style="background-color:#cccccc" align="center"><b>required on import</b></td>
+      <td style="background-color:#cccccc" align="center"><b>description</b></td>
+    </tr>
+    <tr><td>rlnCoordinateX / Y / Z</td><td align="center">yes</td><td>Particle position, in pixels.</td></tr>
+    <tr><td>rlnAngleRot / Tilt / Psi</td><td align="center">no (default 0)</td><td>RELION Euler angles giving the particle orientation, in degrees.</td></tr>
+    <tr><td>rlnImagePixelSize</td><td align="center">no (default 1)</td><td>Pixel size in &Aring;. Coordinates are multiplied by it on import.</td></tr>
+    <tr><td>rlnHelicalTubeID</td><td align="center">no (default 1)</td><td>Filament number. Each microtubule has its own ID (1&ndash;9 for the outer ring).</td></tr>
+    <tr><td>rlnTomoName</td><td align="center">no (default TS_001)</td><td>Tomogram name; carried through but not used for placement.</td></tr>
+    <tr><td>rlnClassNumber</td><td align="center">no (default 1)</td><td>Build number; each new STAR model gets its own class number.</td></tr>
+  </table>
+  <p>
+    Files written by CiliaBuilder2 use a pixel size of 1&nbsp;&Aring;, so their
+    coordinates are directly in &Aring;ngstr&ouml;m. For STAR files with
+    several data blocks, the first loop that contains the coordinate columns is read.
+    The first lines of an exported microtubule STAR file (default settings: radius 960&nbsp;&Aring;, periodicity 1000&nbsp;&Aring;) look like this:
+  </p>
+  <pre>
+data_
+
+loop_
+_rlnTomoName #1
+_rlnCoordinateX #2
+_rlnCoordinateY #3
+_rlnCoordinateZ #4
+_rlnAngleRot #5
+_rlnAngleTilt #6
+_rlnAnglePsi #7
+_rlnImagePixelSize #8
+_rlnHelicalTubeID #9
+_rlnClassNumber #10
+TS_001 960.000000 0.000000 0.000000 90.000000 0.000000 0.000000 1.000000 1 1
+TS_001 960.000000 0.000000 1000.000000 90.000000 0.000000 0.000000 1.000000 1 1
+TS_001 735.402665 617.076105 0.000000 50.000000 0.000000 0.000000 1.000000 2 1
+</pre>
+
+  <!-- ===================== JSON ===================== -->
+  <h3><a name="json">Session JSON (.json)</a></h3>
+  <p>
+    <b>Save session JSON</b> writes the whole CiliaBuilder2 model to a single
+    JSON file, and <b>Load session JSON</b> rebuilds it. A session file stores:
+  </p>
+  <ul>
+    <li>the tool settings shown in the CiliaBuilder2 window;</li>
+    <li>every generated STAR model, including its particle rows;</li>
+    <li>generated membranes and geometric drawings;</li>
+    <li>the attachment sources (maps, atomic models, GLB files), recorded by EMDB/PDB ID
+      when fetched, or by file path otherwise;</li>
+    <li>each attachment, with its rotation and fixed-centre settings, display state and colours;</li>
+    <li>the arrangement of the models in the ChimeraX model panel.</li>
+  </ul>
+  <p>
+    Keep local maps and atomic models at the same path when moving a session. If a file cannot be found when loading, CiliaBuilder2
+    asks you to locate it. A CiliaBuilder2 session JSON is separate from a
+    ChimeraX session (.cxs).
+  </p>
+  <p>
+    Example sessions are in the
+    <a href="https://github.com/builab/CiliaBuilder2/tree/main/example" target="_blank">example</a>
+    folder; see <a href="ciliabuilder2_tutorials.html#examples">Tutorials</a>.
+  </p>
+
+  <hr>
+  <address>CiliaBuilder2 by BuiLab@McGill, Oct 2026</address>
+</body>
 </html>

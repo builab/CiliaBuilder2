@@ -1,20 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Ciliabuilder2 Tutorial</title>
-<link rel="stylesheet" type="text/css" href="../userdocs.css" /></head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="../userdocs.css">
+  <title>CiliaBuilder2 Tutorials</title>
+</head>
 <body>
+  <a name="top"></a>
+  <a href="../ciliabuilder2_index.html"><img src="../CiliaBuilder2-icon.svg"
+      alt="CiliaBuilder2 docs icon" class="clRight" title="User Guide Index" width="150px"></a>
 
-<h1>Ciliabuilder2 Tutorial</h1>
+  <h3><a href="../ciliabuilder2_index.html#general">General</a>: Tutorials</h3>
 
-    <ul>
-        <li><a href="https://github.com/builab/CiliaBuilder2" target="_blank">Installation</a></li>
-        <li>Build Cilia (TO COME)</li>
-        <li>Build Centriole (TO COME)</li>
-        <li>Advanced - Build Cilia from Import Star Files (TO COME)</li>
-    </ul>
-    
-<hr>
-<address>CiliaBuilder2 by BuiLab@McGill, Oct 2026</address>
+  <p>
+    Written and video tutorials for CiliaBuilder2. This page is a work in
+    progress; tutorials marked <i>coming soon</i> will be added.
+  </p>
+  <ul>
+    <li><a href="#install"><b>Installation</b></a></li>
+    <li><a href="#quickstart"><b>Quick start</b></a> &ndash; build and decorate a simple axoneme</li>
+    <li><a href="#examples"><b>Example data</b></a></li>
+    <li><b>Build a cilium</b> &ndash; <i>coming soon</i></li>
+    <li><b>Build a centriole</b> &ndash; <i>coming soon</i></li>
+    <li><b>Advanced: build a cilium from imported STAR files</b> &ndash; <i>coming soon</i></li>
+  </ul>
+
+  <h3><a name="install">Installation</a></h3>
+  <p>
+    Download or clone the source from the
+    <a href="https://github.com/builab/CiliaBuilder2" target="_blank">CiliaBuilder2 GitHub page</a>,
+    then install it from the ChimeraX command line, giving the path of the
+    downloaded folder:
+  </p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; devel install /path/to/CiliaBuilder2</b></p>
+  <p>If you were given a wheel (<code>.whl</code>) file instead, install it with:</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; toolshed install /path/to/ChimeraX_CiliaBuilder2-<i>version</i>-py3-none-any.whl</b></p>
+  <p>To replace an older version, uninstall it first:</p>
+  <p class="usage"><b>&nbsp;&nbsp;&nbsp; toolshed uninstall CiliaBuilder2</b></p>
+  <p>
+    Restart ChimeraX, then open the tool from <b>Tools &rarr; Higher-Order
+    Structure &rarr; CiliaBuilder2</b> or with the command <b>cbui</b>.
+  </p>
+
+  <h3><a name="quickstart">Quick start</a></h3>
+  <ol>
+    <li>In <b>Build &rarr; Microtubules</b>, keep the default values and press
+      <b>Build microtubules</b>. A STAR model of nine microtubules appears.</li>
+    <li>Open a repeating unit aligned along Z, for example a map
+      (<b>open emdb:2132</b>) or a <a href="ciliabuilder2_file_formats.html#glb">GLB</a> file.</li>
+    <li>In <b>Attach &rarr; Attachment</b>, choose the STAR model and the map, then press
+      <b>Attach selected STAR + map</b>.</li>
+    <li>Adjust <b>Attachment Z rotation</b> until the repeating units face the cilium centre.</li>
+    <li>In <b>Save/Load</b>, press <b>Save session JSON</b> to keep your work.</li>
+  </ol>
+  <p>
+    See the <a href="../tools/ciliabuilder2_tools.html">CiliaBuilder2 tool</a> page for
+    a description of every option.
+  </p>
+
+  <h3><a name="examples">Example data</a></h3>
+  <p>
+    The <a href="https://github.com/builab/CiliaBuilder2/tree/main/example" target="_blank">example</a>
+    folder on GitHub contains ready-to-load sessions and inputs. Load a
+    <code>.json</code> file with <b>Save/Load &rarr; Load session JSON</b>.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr>
+      <td style="background-color:#cccccc" align="center"><b>folder</b></td>
+      <td style="background-color:#cccccc" align="center"><b>contents</b></td>
+    </tr>
+    <tr><td><code>1_chlamy</code></td><td>Session JSON of a <i>Chlamydomonas</i> cilium (doublets and central pair) built from maps fetched from the EMDB.</td></tr>
+    <tr><td><code>2_chlamy_glb</code></td><td>Session JSON of the same cilium with anterograde and retrograde IFT trains, built from GLB surfaces (<code>.glb.gz</code>), plus the scripts used to Z-align the IFT maps.</td></tr>
+    <tr><td><code>3_sperm_pdb</code></td><td>Session JSON of a sperm axoneme built from atomic models fetched from the PDB.</td></tr>
+    <tr><td><code>4_centriole</code></td><td>Session JSON of a centriole with proximal, core and distal triplet regions, with the Z-aligned maps, their GLB surfaces and the alignment scripts.</td></tr>
+    <tr><td><code>extra_transitionzone</code></td><td>A STAR file describing a transition zone, for use with <b>Load STAR file</b>.</td></tr>
+  </table>
+
+  <hr>
+  <address>CiliaBuilder2 by BuiLab@McGill, Oct 2026</address>
 </body>
 </html>

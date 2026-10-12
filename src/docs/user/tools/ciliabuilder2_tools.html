@@ -1,42 +1,216 @@
-<html>
-    <head>
-    <link rel="stylesheet" type="text/css" href="../userdocs.css">
-    <title>CiliaBuilder2 Tool</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="../userdocs.css">
+  <title>Tool: CiliaBuilder2</title>
 </head>
-<body> 
-    <a name="top"></a> 
-    <a href="../ciliabuilder2_index.html"> <img src="../CiliaBuilder2-icon.svg"
-        alt="CiliaBuilder2 docs icon" class="clRight" title="User Guide Index" width="150px"></a>
-    <h3><a href="../ciliabuilder_index.html#tools">Tool</a>: CiliaBuilder2</h3>
+<body>
+  <a name="top"></a>
+  <a href="../ciliabuilder2_index.html"><img src="../CiliaBuilder2-icon.svg"
+      alt="CiliaBuilder2 docs icon" class="clRight" title="User Guide Index" width="150px"></a>
 
-    <p> The <b>CiliaBuilder2 Tool</b> is a ChimeraX package used to build parametric cilia and centriole model from maps, PDB and GLB files.
-    </p>
-    
+  <h3><a href="../ciliabuilder2_index.html#tools">Tool</a>: CiliaBuilder2</h3>
 
-    <p>The primary functions of the tool are based on 3 action:</p>
+  <p>
+    The <b>CiliaBuilder2</b> tool builds parametric models of cilia and
+    centrioles in ChimeraX. A model is assembled in two stages: first a STAR
+    particle list describes where each repeating unit sits and how it is
+    oriented; then a map, atomic model or 3D object is <i>attached</i>, i.e.
+    copied onto every particle in that list.
+  </p>
+  <p>
+    Open the tool from <b>Tools &rarr; Higher-Order Structure &rarr;
+    CiliaBuilder2</b> or with the command <b>cbui</b>.
+  </p>
 
-    <ul>
-        <li>
-            <b>Build:</b>
-            <p>
-                Generates a parametric particle list (STAR format) of a cilium or centriole. This tab allows the user to build doublet/triplet, central pair, membrane and intraflagellar transport (IFT) trains.
-            </p>
-        </li>
-        <li>
-            <b>Attachment:</b>
-            <p>
-                Attaches a map, a PDB or a 3D object to the parametric particle list. It is possible to tune the rotation of the map and center of rotation.
-            </p>
-        </li>
-        <li>
-            <b>Save/Load:</b>
-            <p>
-                Provides a way to export the session into JSON format and load the JSON file to restore the session. Also, it allows export the particle list into a STAR file. In addition, CiliaBuilder2 can also import STAR file generated from other programs to build custom geometries.
-            </p>
-        </li>
-    </ul>
+  <p>The window has three sections, selected with the tabs on its left side:</p>
+  <ul>
+    <li><a href="#build"><b>Build</b></a> &ndash; generate STAR particle lists for
+      microtubules (doublets/triplets), the central pair, the ciliary membrane and IFT trains</li>
+    <li><a href="#attach"><b>Attach</b></a> &ndash; place maps, PDB/mmCIF models or GLB objects
+      on a STAR particle list, and draw simple guide geometry</li>
+    <li><a href="#saveload"><b>Save/Load</b></a> &ndash; save and restore the whole model as a
+      session JSON file, and import or export STAR files</li>
+  </ul>
+  <p>
+    <b>Undo</b> and <b>Redo</b> buttons at the top of the window step backward and
+    forward through build and attach actions.
+  </p>
 
-    <hr>
-CiliaBuilder2 by BuiLab@McGill, Oct 2026
+  <h3><a name="conventions">Coordinate conventions</a></h3>
+  <ul>
+    <li>All lengths, radii, offsets and periodicities are in &Aring;ngstr&ouml;m.</li>
+    <li>The cilium axis is the Z axis. Microtubules are placed on a circle in the XY plane
+      and run along +Z from the given Z offset.</li>
+    <li>Each repeating unit (map, PDB or GLB) should be prepared with its long axis
+      parallel to Z. The <code>z_align_*.cxc</code> scripts in the
+      <a href="https://github.com/builab/CiliaBuilder2/tree/main/example" target="_blank">example</a>
+      folder show how to rotate and resample an EMDB map for this.</li>
+    <li>Each microtubule (or central-pair line) receives its own
+      <i>rlnHelicalTubeID</i> in the STAR file, numbered from 1.</li>
+  </ul>
+
+  <!-- ===================== BUILD ===================== -->
+  <h3><a name="build">Build</a></h3>
+  <p>
+    The Build section has four tabs. Each build creates a new STAR model in the
+    ChimeraX model panel, shown as markers with arrows indicating particle
+    orientation. A STAR model can then be used on the
+    <a href="#attach">Attach</a> page.
+  </p>
+
+  <h4><a name="microtubules">Microtubules</a></h4>
+  <p>Builds the outer ring of doublet (cilium) or triplet (centriole) microtubules.</p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Length (&Aring;)</b></td><td>Length of each microtubule along Z.</td></tr>
+    <tr><td><b>No. of doublets</b></td><td>Number of microtubules in the ring (1&ndash;9), evenly spaced around the circle.</td></tr>
+    <tr><td><b>Radius (&Aring;)</b></td><td>Distance from the cilium axis to each microtubule.</td></tr>
+    <tr><td><b>Periodicity (&Aring;)</b></td><td>Spacing between consecutive particles along a microtubule, typically the repeat length of the map you will attach (e.g. 96&nbsp;nm repeat = 960&nbsp;&Aring;).</td></tr>
+    <tr><td><b>Twist per layer (deg)</b></td><td>Extra in-plane rotation added to each successive particle along a microtubule, for twisted or tapering geometries. Leave at 0 for a straight axoneme.</td></tr>
+    <tr><td><b>Z offset (&Aring;)</b></td><td>Z position of the first particle.</td></tr>
+    <tr><td><b>Random</b></td><td>When enabled, each microtubule is shifted along Z by a random amount (up to about half of the periodicity), so the repeats of neighbouring microtubules are not in register.</td></tr>
+    <tr><td><b>Continue from STAR</b></td><td>An existing microtubule STAR model to extend; used by <b>Continue microtubules</b>.</td></tr>
+  </table>
+  <p>Buttons:</p>
+  <ul>
+    <li><b>Build microtubules</b> &ndash; create a new STAR model from the values above.</li>
+    <li><b>Continue microtubules</b> &ndash; append a new segment of the given length to the
+      end of the STAR model selected in <b>Continue from STAR</b>, keeping its spacing. This is
+      how a cilium with segments of different composition (for example proximal and distal
+      regions with different maps) is built.</li>
+    <li><b>Substitute filament</b> &ndash; open a dialog to rebuild a single microtubule
+      within an existing STAR model with its own <b>Length</b>, <b>Periodicity</b>,
+      <b>Z offset</b> and <b>Twist per layer</b> (for example, a microtubule that is shorter
+      than the others). Press <b>Pick filament from STAR point</b>, click one STAR marker of
+      that microtubule in the graphics window, edit the values, then press
+      <b>Apply substitution</b>.</li>
+  </ul>
+
+  <h4><a name="centralpair">Central Pair</a></h4>
+  <p>Builds the central apparatus along the cilium axis.</p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Length (&Aring;)</b></td><td>Length of the central pair along Z.</td></tr>
+    <tr><td><b>Periodicity (&Aring;)</b></td><td>Spacing between consecutive particles (e.g. 32&nbsp;nm repeat = 320&ndash;333&nbsp;&Aring;).</td></tr>
+    <tr><td><b>Z offset (&Aring;)</b></td><td>Z position of the first particle.</td></tr>
+    <tr><td><b>Central pair mode</b></td><td><b>Single line</b>: one line of particles on the axis, for a map containing the whole central pair. <b>C1 + C2 lines</b>: two parallel lines, one for each central microtubule.</td></tr>
+    <tr><td><b>C1/C2 distance (&Aring;)</b></td><td>Separation of the C1 and C2 lines in <b>C1 + C2 lines</b> mode.</td></tr>
+  </table>
+  <p>Press <b>Build central pair</b> to create the STAR model.</p>
+
+  <h4><a name="membrane">Membrane</a></h4>
+  <p>Builds a surface representing the ciliary membrane around the axoneme.</p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Length (&Aring;)</b></td><td>Length of the membrane along Z.</td></tr>
+    <tr><td><b>Radius (&Aring;)</b></td><td>Radius of the membrane tube.</td></tr>
+    <tr><td><b>Thickness (&Aring;)</b></td><td>Thickness of the bilayer.</td></tr>
+    <tr><td><b>Z offset (&Aring;)</b></td><td>Z position where the membrane starts.</td></tr>
+    <tr><td><b>Distortion level (0&ndash;1)</b></td><td>How far the surface departs from a perfect cylinder; 0 gives a smooth tube, larger values give a more irregular membrane.</td></tr>
+    <tr><td><b>Tip dome cap</b></td><td>Close the distal end of the membrane with a dome.</td></tr>
+  </table>
+  <p>Press <b>Build membrane</b> to create the surface.</p>
+
+  <h4><a name="ift">IFT</a></h4>
+  <p>
+    Places intraflagellar transport (IFT) particles next to a microtubule. Choose
+    the <b>IFT type</b> (<b>Anterograde</b> or <b>Retrograde</b>); the matching
+    angle field is used.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>IFT mode</b></td><td><b>Train</b>: build a row of IFT particles along one microtubule. <b>Pick STAR point</b>: place a single IFT particle at a STAR marker you click.</td></tr>
+    <tr><td><b>Distance from STAR center (&Aring;)</b></td><td>Radial distance of the IFT particles from the cilium axis.</td></tr>
+    <tr><td><b>Anterograde / Retrograde angle (deg)</b></td><td>Rotation about the microtubule axis applied to anterograde or retrograde trains, respectively.</td></tr>
+  </table>
+  <p>In <b>Train</b> mode:</p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Target STAR model</b></td><td>The microtubule STAR model the train runs along.</td></tr>
+    <tr><td><b>Microtubule number</b></td><td>Which microtubule (its <i>rlnHelicalTubeID</i>) to follow.</td></tr>
+    <tr><td><b>Angle (deg)</b></td><td>Additional rotation about the microtubule axis, added to the anterograde/retrograde angle.</td></tr>
+    <tr><td><b>Offset (&Aring;)</b></td><td>Distance from the start of the microtubule to the first IFT particle.</td></tr>
+    <tr><td><b>Periodicity (&Aring;)</b></td><td>Spacing between IFT particles in the train.</td></tr>
+    <tr><td><b>Repeating number</b></td><td>Number of particles in the train.</td></tr>
+  </table>
+  <p>
+    Press <b>Build IFT train STAR</b>. In <b>Pick STAR point</b> mode, press
+    <b>Select STAR point for IFT</b> and then click a STAR marker in the graphics window.
+  </p>
+
+  <!-- ===================== ATTACH ===================== -->
+  <h3><a name="attach">Attach</a></h3>
+  <p>The Attach section has two tabs: <b>Attachment</b> and <b>Geometric drawing</b>.</p>
+
+  <h4><a name="attachment">Attachment</a></h4>
+  <p>
+    Copies a map, PDB/mmCIF model or GLB object onto every particle of a STAR
+    model. Open the map or model in ChimeraX first (for example
+    <b>open emdb:2132</b> or <b>open mymodel.glb</b>), then:
+  </p>
+  <ol>
+    <li>Choose the <b>STAR model</b> to attach to.</li>
+    <li>Choose the <b>Map model</b> &ndash; the map, PDB/mmCIF or GLB to place.</li>
+    <li>Press <b>Attach selected STAR + map</b>.</li>
+  </ol>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Attachment Z rotation (deg)</b></td><td>Rotates every copy about its own long (Z) axis, to set which face of the repeating unit points toward the cilium centre. Changes are applied to the current attachment immediately.</td></tr>
+    <tr><td><b>Attachment Y rotation (deg)</b></td><td>Rotates every copy about the Y axis, e.g. to flip the polarity of the repeat.</td></tr>
+    <tr><td><b>Use fixed center for GLB &amp; PDB</b></td><td>By default each map is placed by its box centre and each GLB/PDB by the centre of its bounding box. A GLB or PDB usually covers only part of the map box, so its bounding-box centre differs from the map centre and the copies end up shifted. Enable this option to give the centre explicitly, in the model's own coordinates, with the X/Y/Z fields.</td></tr>
+    <tr><td><b>Read center coordinate from map</b></td><td>Fill the X/Y/Z fields with the box centre of the map chosen in the list next to the button. Use the map the GLB or PDB was made from (or fitted into) so it is placed exactly where that map would be.</td></tr>
+  </table>
+  <p>
+    To place a GLB at the same position as its source map, the GLB must be saved
+    in the map's coordinates; see
+    <a href="../general/ciliabuilder2_file_formats.html#glb">GLB files</a>.
+  </p>
+
+  <h4><a name="drawing">Geometric drawing</a></h4>
+  <p>
+    Draws simple guide geometry (for example a curved path or a reference
+    sphere) that can be saved as GLB and attached like any other object.
+  </p>
+  <table cellspacing="0" cellpadding="4" border="1">
+    <tr><th style="background-color:#cccccc">Field</th><th style="background-color:#cccccc">Description</th></tr>
+    <tr><td><b>Draw type</b></td><td><b>Point</b>, <b>Sphere</b>, <b>Cylinder</b>, <b>Curve</b> or <b>Line</b>.</td></tr>
+    <tr><td><b>No. of markers</b></td><td>Number of points to click for a curve or line.</td></tr>
+    <tr><td><b>Draw on model</b></td><td>Model whose surface the clicked points are placed on.</td></tr>
+    <tr><td><b>Primitive radius</b></td><td>Radius of a point, sphere or cylinder.</td></tr>
+    <tr><td><b>Tube radius</b></td><td>Radius of the tube drawn through a curve or line.</td></tr>
+    <tr><td><b>Drawing model</b></td><td>The drawing to save with <b>Save drawing as GLB</b>.</td></tr>
+  </table>
+  <p>
+    Press the place button (e.g. <b>Place curve markers</b>), click in the
+    graphics window, then <b>Save drawing as GLB</b>.
+  </p>
+
+  <!-- ===================== SAVE/LOAD ===================== -->
+  <h3><a name="saveload">Save/Load</a></h3>
+  <ul>
+    <li><b>Save session JSON</b> &ndash; save the whole CiliaBuilder2 model (STAR models,
+      membranes, drawings, attachment sources, attachments and the tool settings) to a
+      <a href="../general/ciliabuilder2_file_formats.html#json">session JSON file</a>.</li>
+    <li><b>Load session JSON</b> &ndash; restore a saved session. Maps fetched from EMDB are
+      fetched again; if a local file has moved, you are asked to locate it.</li>
+    <li><b>Load STAR file</b> &ndash; import a STAR file made by another program (for example
+      RELION or a custom script) as a STAR model, to build custom geometries such as curved
+      cilia or transition zones.</li>
+    <li><b>Export STAR model</b> / <b>Export STAR file</b> &ndash; choose a STAR model and write
+      it to a <a href="../general/ciliabuilder2_file_formats.html#star">.star file</a>.</li>
+  </ul>
+
+  <h3><a name="commands">Commands</a></h3>
+  <p>The bundle also adds these ChimeraX commands:</p>
+  <ul>
+    <li><b>cbui</b> &ndash; open the CiliaBuilder2 tool.</li>
+    <li><b>cbstraight</b> &ndash; build a microtubule STAR model from the command line.</li>
+    <li><b>buildcentriole</b> &ndash; build a central-pair STAR model from the command line.</li>
+  </ul>
+
+  <hr>
+  <address>CiliaBuilder2 by BuiLab@McGill, Oct 2026</address>
 </body>
 </html>
