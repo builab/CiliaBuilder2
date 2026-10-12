@@ -1,11 +1,4 @@
-<div>
-  <table border="0" style="border: none;">
-    <tr>
-      <td style="border: none;"><img src="src/docs/user/CiliaBuilder2-icon.png" width="75" alt="Logo"></td>
-      <td style="border: none;"><h1>CiliaBuilder2</h1></td>
-    </tr>
-  </table>
-</div>
+# <img src="src/docs/user/CiliaBuilder2-icon.png" width="50" align="left" alt="CiliaBuilder2 logo"> CiliaBuilder2
 
 ![Ciliabuilder Banner](images/ciliabuilder_banner.jpg)
 
