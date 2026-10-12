@@ -169,11 +169,6 @@ def build_central_pair_star_rows(
     return rows
 
 
-def buildcentriole_star_rows(*args, **kwargs):
-    # Legacy compatibility alias.
-    return build_central_pair_star_rows(*args, **kwargs)
-
-
 def build_ift_star_rows(
     n_lines,
     n_particles,
