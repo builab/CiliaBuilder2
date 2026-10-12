@@ -1,4 +1,4 @@
-# <img src="src/docs/user/CiliaBuilder2-icon.png" width="150" alt="Logo"> CiliaBuilder2
+# <img src="src/docs/user/CiliaBuilder2-icon.png" width="75" alt="Logo"> CiliaBuilder2
 ![Ciliabuilder Banner](images/ciliabuilder_banner.jpg)
 
 CiliaBuilder2 is a UCSF ChimeraX bundle for building and placing cilia-related models.
