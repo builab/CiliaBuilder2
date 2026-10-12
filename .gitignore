@@ -1,4 +1,19 @@
-*DS_Store
+*.DS_Store
+*ChimeraX_CiliaBuilder.egg-info
+*build
+*dist
+*legacy
+src/*.DS_Store
+src/__pycache__
+example/*.DS_Store
+example/1_chlamy/.DS_Store
+example/2_chlamy_glb/.DS_Store
+example/3_sperm_pdb/.DS_Store
+example/4_centriole/.DS_Store
+example/extra_transitionzone/.DS_Store
+extrascripts/.DS_Store
+TODO.md
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
