@@ -949,11 +949,6 @@ buildcentralpair_desc = CmdDesc(
 )
 
 
-# Keep the real signature: ChimeraX inspects it when registering the command.
-buildcentriole = buildcentralpair
-buildcentriole_desc = buildcentralpair_desc
-
-
 def buildift(
     session,
     n_particles=100,

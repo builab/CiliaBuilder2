@@ -74,7 +74,7 @@ cbui
 The bundle also exposes these command entry points:
 
 - `cbstraight`
-- `buildcentriole`
+- `buildcentralpair`
 - `cbui`
 - `cbopenapr`
 

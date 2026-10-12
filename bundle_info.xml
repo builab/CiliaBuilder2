@@ -35,7 +35,7 @@
     <PythonClassifier>License :: Freeware</PythonClassifier>
     <ChimeraXClassifier>ChimeraX :: Tool :: CiliaBuilder2 :: Higher-Order Structure :: Cilia Model Builder</ChimeraXClassifier>
     <ChimeraXClassifier>ChimeraX :: Command :: cbstraight :: General :: Build microtubule STAR models</ChimeraXClassifier>
-    <ChimeraXClassifier>ChimeraX :: Command :: buildcentriole :: General :: Build central-pair STAR models</ChimeraXClassifier>
+    <ChimeraXClassifier>ChimeraX :: Command :: buildcentralpair :: General :: Build central-pair STAR models</ChimeraXClassifier>
     <ChimeraXClassifier>ChimeraX :: Command :: cbui :: General :: Open the CiliaBuilder2 tool</ChimeraXClassifier>
     <ChimeraXClassifier>ChimeraX :: Command :: cbopenapr :: General :: Open a local cellPACK/APR package</ChimeraXClassifier>
   </Classifiers>
