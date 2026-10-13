@@ -1221,6 +1221,17 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         ref = getattr(model, "id_string", "")
         return str(ref) if ref else None
 
+    def _live_model(self, model):
+        """Return model if it is still open in the session, else None."""
+        if model is None:
+            return None
+        try:
+            if getattr(model, "deleted", False) or getattr(model, "id", None) is None:
+                return None
+        except Exception:
+            return None
+        return model
+
     def _normalize_rgba(self, rgba):
         if rgba is None:
             return None
@@ -4976,6 +4987,15 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if self._find_model_by_name(name, require_star=False) is None:
                 return name
 
+    def _next_membrane_name(self):
+        # Skip names already in use (e.g. membranes restored from a session JSON),
+        # so every membrane saved to JSON has its own name.
+        while True:
+            self._membrane_counter = getattr(self, "_membrane_counter", 0) + 1
+            name = f"Membrane {self._membrane_counter}"
+            if self._find_model_by_name(name, require_star=False) is None:
+                return name
+
     def _next_marker_pattern_group_name(self, star_model_name):
         base = f"{str(star_model_name or '').strip() or 'Marker Applied STAR'} Paths"
         name = base
@@ -6621,12 +6641,31 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         f"JSON save: left out attachment outside CiliaBuilder2: {getattr(out_root, 'name', '(unnamed)')}"
                     )
                     continue
-                map_model = None
+                # Resolve the live STAR/map objects first: their current model IDs are
+                # the ones written for session_star_id / session_source_id in this
+                # same payload. Stored ID strings can be stale (models renumbered by a
+                # previous JSON load or moved in the model tree) and could then point
+                # at a different model on the next load.
+                star_live = self._live_model(getattr(out_root, "_cb_attachment_star_model", None))
+                map_live = self._live_model(getattr(out_root, "_cb_attachment_source_model", None))
+                map_model = map_live
                 source_ref = getattr(out_root, "_cb_attachment_source_ref", None)
-                if source_ref:
+                if map_model is None and source_ref:
                     map_model = self._model_by_ref(source_ref)
                 if map_model is None:
                     map_model = self._find_model_by_name(getattr(out_root, "_cb_attachment_map_name", None), require_star=False)
+                if star_live is not None:
+                    star_session_id = self._model_ref(star_live)
+                else:
+                    star_session_id = (
+                        getattr(out_root, "_cb_attachment_star_ref", None)
+                        or getattr(out_root, "_cb_attachment_star_session_id", None)
+                    )
+                source_session_id = (
+                    (self._model_ref(map_live) if map_live is not None else None)
+                    or source_ref
+                    or getattr(out_root, "_cb_attachment_source_session_id", None)
+                )
                 map_path = self._session_model_path(map_model, save_dir=save_dir, session_stem=session_stem, export_cache=export_cache)
                 fetch_spec = self._fetch_spec_for_model(map_model)
                 if map_path is None:
@@ -6640,8 +6679,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     {
                         "session_attachment_id": self._model_ref(out_root) or f"attachment_{len(items)+1}",
                         "name": str(getattr(out_root, "name", "") or ""),
-                        "star_session_id": getattr(out_root, "_cb_attachment_star_session_id", None) or getattr(out_root, "_cb_attachment_star_ref", None),
-                        "source_session_id": getattr(out_root, "_cb_attachment_source_session_id", None) or source_ref,
+                        "star_session_id": star_session_id,
+                        "source_session_id": source_session_id,
                         "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
                         "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
                         "map_path": map_path,
@@ -6714,9 +6753,33 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             payload["history_selected"] = self._history_selected_state()
         return payload
 
+    def _remap_saved_combo(self, saved):
+        """Translate a combo selection saved with old model IDs to the restored model.
+
+        Model IDs in the JSON are the IDs at save time. After loading, models get
+        new IDs, so the old ID may belong to a different model (or none).
+        """
+        if not isinstance(saved, dict):
+            return saved
+        want = saved.get("id", None)
+        if want is None:
+            return saved
+        want = str(want).strip()
+        store = getattr(self, "_restored_session_layout_models", None) or {}
+        for (_model_type, model_id), model in store.items():
+            if model_id != want or self._live_model(model) is None:
+                continue
+            ref = self._model_ref(model)
+            if ref:
+                return {"id": ref, "text": f"{model.name} (#{ref})"}
+        # Unknown in the restored scene: never select by the stale ID.
+        return {"id": None, "text": ""}
+
     def _restore_session_combo_state(self, payload):
         selected = payload.get("selected", {}) if isinstance(payload, dict) else {}
         history_selected = payload.get("history_selected", {}) if isinstance(payload, dict) else {}
+        selected = {k: self._remap_saved_combo(v) for k, v in (selected or {}).items()}
+        history_selected = {k: self._remap_saved_combo(v) for k, v in (history_selected or {}).items()}
         self._select_combo_saved(self.sel_star_model, selected.get("star_model"))
         self._select_combo_saved(self.sel_map_model, selected.get("map_model"))
         if hasattr(self, "ift_train_star_model"):
@@ -6729,7 +6792,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             self._select_combo_saved(self.geometric_draw_model, history_selected.get("geometric_draw_model"))
         if hasattr(self, "align_z_model"):
             if not self._select_combo_saved(self.align_z_model, history_selected.get("align_z_model")):
-                self._select_combo_saved(self.align_z_model, payload.get("ui", {}).get("align_z_model"))
+                self._select_combo_saved(
+                    self.align_z_model,
+                    self._remap_saved_combo(payload.get("ui", {}).get("align_z_model")),
+                )
 
     def _apply_session_payload_to_scene(self, payload, base_dir=""):
         self._restored_session_sources = {}
@@ -6743,6 +6809,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._apply_ui_state(payload.get("ui", {}))
         self._restore_attach_source_models(source_items, base_dir=base_dir)
         self._restore_generated_star_models(payload.get("generated_star_models", []))
+        try:
+            from . import cmd as _cb_cmd
+            _cb_cmd._sync_class_counter(self.session)
+        except Exception:
+            pass
         self._restore_generated_membranes(payload.get("generated_membranes", []))
         self._restore_generated_marker_paths(payload.get("generated_marker_paths", []))
         self._restore_attachments(payload.get("attachments", []))
@@ -6925,6 +6996,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
     def _restore_generated_star_models(self, models_state):
         from . import cmd
+        # Models already filled from an earlier item in this call. Two saved STAR
+        # models can share a name, and each must get its own model instead of the
+        # second overwriting the first.
+        claimed = set()
         for item in models_state or []:
             name = str(item.get("name", "") or "").strip()
             rows = item.get("rows", None)
@@ -6932,12 +7007,15 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 continue
             created = None
             for model in self._all_session_models():
+                if id(model) in claimed:
+                    continue
                 if hasattr(model, "_cb_star_rows") and str(model.name) == name:
                     created = model
                     break
             if created is None:
                 created = Model(name, self.session)
                 cmd._add_to_cb_star_group(self.session, created)
+            claimed.add(id(created))
             created._cb_star_rows = rows
             created._cb_star_text = item.get("star_text", None)
             created._cb_random_clip_info = item.get("clip_info", None)
@@ -6961,6 +7039,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
     def _restore_generated_membranes(self, models_state):
         from . import cmd
+        # Membranes matched or created earlier in this call; two saved membranes
+        # with the same name must both be restored.
+        claimed = set()
         for item in models_state or []:
             state = item.get("state", None) or {}
             name = str(item.get("name", "") or "").strip() or "Membrane"
@@ -6969,10 +7050,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 continue
             existing = None
             for model in self._all_session_models():
+                if id(model) in claimed:
+                    continue
                 if getattr(model, "_cb_generated_membrane", False) and str(getattr(model, "name", "") or "") == name:
                     existing = model
                     break
             if existing is not None:
+                claimed.add(id(existing))
                 self._remember_restored_session_layout_model("membrane", session_membrane_id, existing)
                 self._apply_model_color_state(existing, item.get("color_state", []))
                 try:
@@ -7001,6 +7085,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     created._cb_membrane_state = created_state
                 except Exception:
                     pass
+                claimed.add(id(created))
                 self._remember_restored_session_layout_model("membrane", session_membrane_id, created)
                 self._apply_model_color_state(created, item.get("color_state", []))
                 created.display = bool(item.get("display", True))
@@ -7200,6 +7285,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     existing_out_root._cb_attachment_map_path = self._model_source_path(map_model)
                     existing_out_root._cb_attachment_source_ref = self._model_ref(map_model)
                     existing_out_root._cb_attachment_star_ref = self._model_ref(star_model)
+                    existing_out_root._cb_attachment_star_model = star_model
+                    existing_out_root._cb_attachment_source_model = map_model
                     existing_out_root._cb_attachment_fetch_type = fetch_type
                     existing_out_root._cb_attachment_fetch_id = fetch_id
                 except Exception:
@@ -7275,6 +7362,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 out_root._cb_attachment_map_path = self._model_source_path(map_model)
                 out_root._cb_attachment_source_ref = self._model_ref(map_model)
                 out_root._cb_attachment_star_ref = self._model_ref(star_model)
+                out_root._cb_attachment_star_model = star_model
+                out_root._cb_attachment_source_model = map_model
                 out_root._cb_attachment_fetch_type = fetch_type
                 out_root._cb_attachment_fetch_id = fetch_id
                 out_root.display = bool(item.get("display", True))
@@ -8035,7 +8124,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
             model = cmd.buildmembrane_surface(
                 self.session,
-                name=f"Membrane {getattr(self, '_membrane_counter', 0) + 1}",
+                name=self._next_membrane_name(),
                 center=membrane_center,
                 axis=axis,
                 length=length,
@@ -8046,7 +8135,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 tip_dome_outer_height=tip_dome_outer_height,
                 tip_dome_inner_height=tip_dome_inner_height,
             )
-            self._membrane_counter = getattr(self, "_membrane_counter", 0) + 1
             try:
                 state = getattr(model, "_cb_membrane_state", None) or {}
                 state["offset"] = float(offset)
@@ -8251,6 +8339,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         try:
             out_root._cb_attachment_source_ref = current_map_id
             out_root._cb_attachment_star_ref = current_star_id
+            out_root._cb_attachment_star_model = star_model
+            out_root._cb_attachment_source_model = map_model
         except Exception:
             pass
         try:

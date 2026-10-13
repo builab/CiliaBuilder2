@@ -24,6 +24,28 @@ def _next_class_number():
     return _CB_CLASS_COUNTER
 
 
+def _sync_class_counter(session):
+    """Move the class counter past the numbers used by open STAR models.
+
+    STAR model names end with their class number ("Microtubules STAR 3"). After a
+    session JSON is loaded into a fresh ChimeraX the counter starts at 0 again, so
+    without this the next build would reuse a loaded model's name.
+    """
+    global _CB_CLASS_COUNTER
+    highest = 0
+    try:
+        models = session.models.list()
+    except Exception:
+        models = []
+    for model in models:
+        if not hasattr(model, "_cb_star_rows"):
+            continue
+        tail = str(getattr(model, "name", "") or "").rsplit(" ", 1)[-1]
+        if tail.isdigit():
+            highest = max(highest, int(tail))
+    _CB_CLASS_COUNTER = max(_CB_CLASS_COUNTER, highest)
+
+
 def _safe_unit(v):
     n = math.sqrt(sum(float(c) * float(c) for c in v))
     if n < 1e-12:
