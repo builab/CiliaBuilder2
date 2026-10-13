@@ -611,7 +611,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         mem_row_spin("Z offset (\u00c5)", self.membrane_offset)
 
         self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
-        self.membrane_distortion.setRange(0.0, 10.0)
+        self.membrane_distortion.setRange(0.0, 1.0)
         self.membrane_distortion.setDecimals(2)
         self.membrane_distortion.setValue(0.60)
         mem_row_spin("Distortion level (0-1)", self.membrane_distortion)

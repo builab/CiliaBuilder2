@@ -500,8 +500,6 @@ def buildmembrane_surface(
             axis=0,
         )
     rng = np.random.default_rng(distortion_seed)
-    radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
-    axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
     distortion_modes = [
         (
             mode,
@@ -511,6 +509,13 @@ def buildmembrane_surface(
         )
         for mode in range(1, 10)
     ]
+    # Normalise the random mode sums to unit RMS so the level maps to a real size.
+    radial_norm = math.sqrt(0.5 * sum(rw * rw for _, _, rw, _ in distortion_modes)) or 1.0
+    axial_norm = math.sqrt(0.5 * sum(aw * aw for _, _, _, aw in distortion_modes)) or 1.0
+    # Scale by membrane size, not thickness: inner and outer surfaces share the same
+    # displacement field, so the bilayer thickness is preserved at any amplitude.
+    radial_amp = distortion_level * 0.05 * outer_radius
+    axial_amp = distortion_level * 0.01 * length
 
     def field(verts):
         xy = verts[:, :2]
@@ -528,8 +533,8 @@ def buildmembrane_surface(
                 axial_weight
                 * np.sin((mode * theta) + phase - (0.35 * mode + 0.65) * math.pi * zn)
             ).astype(np.float32)
-        radial_wave /= float(len(distortion_modes))
-        axial_wave /= float(len(distortion_modes))
+        radial_wave /= radial_norm
+        axial_wave /= axial_norm
         return radial_wave.astype(np.float32), axial_wave.astype(np.float32)
 
     def distort(verts, cap_height=None):
