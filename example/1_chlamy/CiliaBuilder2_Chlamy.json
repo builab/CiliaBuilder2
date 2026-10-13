@@ -864,7 +864,7 @@
         "length": 4000.0,
         "diameter": 2700.0,
         "thickness": 40.0,
-        "distortion_level": 0.6,
+        "distortion_level": 0.2,
         "distortion_seed": 2048508679,
         "tip_dome_enabled": true,
         "tip_dome_outer_height": 1350.0,
