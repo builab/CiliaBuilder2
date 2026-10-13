@@ -297,6 +297,8 @@ def _copy_source_instance(session, src):
                 fd, temp_path = tempfile.mkstemp(prefix="cb_attach_glb_", suffix=".glb")
                 os.close(fd)
                 write_gltf(session, filename=temp_path, models=[src], center=False)
+                from .glb_anchor import preserve_export_anchor
+                preserve_export_anchor(session, temp_path, src)
                 before = set(session.models.list())
                 _run(session, f'open "{temp_path}"')
                 opened = [m for m in session.models.list() if m not in before]
@@ -786,6 +788,12 @@ def _shared_map_anchor_local(session, src_map):
 def _shared_source_anchor_local(session, src_model):
     if _is_volume_like(src_model):
         return _shared_map_anchor_local(session, src_model)
+
+    if _is_glb_like_model(src_model):
+        from .glb_anchor import volume_glb_anchor
+        anchor = volume_glb_anchor(session, src_model)
+        if anchor is not None:
+            return anchor
 
     if _is_surface_like(src_model):
         probe = _copy_source_instance(session, src_model)

@@ -24,28 +24,6 @@ def _next_class_number():
     return _CB_CLASS_COUNTER
 
 
-def _sync_class_counter(session):
-    """Move the class counter past the numbers used by open STAR models.
-
-    STAR model names end with their class number ("Microtubules STAR 3"). After a
-    session JSON is loaded into a fresh ChimeraX the counter starts at 0 again, so
-    without this the next build would reuse a loaded model's name.
-    """
-    global _CB_CLASS_COUNTER
-    highest = 0
-    try:
-        models = session.models.list()
-    except Exception:
-        models = []
-    for model in models:
-        if not hasattr(model, "_cb_star_rows"):
-            continue
-        tail = str(getattr(model, "name", "") or "").rsplit(" ", 1)[-1]
-        if tail.isdigit():
-            highest = max(highest, int(tail))
-    _CB_CLASS_COUNTER = max(_CB_CLASS_COUNTER, highest)
-
-
 def _safe_unit(v):
     n = math.sqrt(sum(float(c) * float(c) for c in v))
     if n < 1e-12:
@@ -403,6 +381,7 @@ def buildmembrane_surface(
     tip_dome_outer_height=None,
     tip_dome_inner_height=None,
     color=(180, 180, 190, 180),
+    existing_surface=None,
 ):
     from chimerax.core.models import Surface
     from chimerax.shape.shape import cylinder_geometry
@@ -522,6 +501,8 @@ def buildmembrane_surface(
             axis=0,
         )
     rng = np.random.default_rng(distortion_seed)
+    radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
+    axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
     distortion_modes = [
         (
             mode,
@@ -531,13 +512,6 @@ def buildmembrane_surface(
         )
         for mode in range(1, 10)
     ]
-    # Normalise the random mode sums to unit RMS so the level maps to a real size.
-    radial_norm = math.sqrt(0.5 * sum(rw * rw for _, _, rw, _ in distortion_modes)) or 1.0
-    axial_norm = math.sqrt(0.5 * sum(aw * aw for _, _, _, aw in distortion_modes)) or 1.0
-    # Scale by membrane size, not thickness: inner and outer surfaces share the same
-    # displacement field, so the bilayer thickness is preserved at any amplitude.
-    radial_amp = distortion_level * 0.05 * outer_radius
-    axial_amp = distortion_level * 0.01 * length
 
     def field(verts):
         xy = verts[:, :2]
@@ -555,8 +529,8 @@ def buildmembrane_surface(
                 axial_weight
                 * np.sin((mode * theta) + phase - (0.35 * mode + 0.65) * math.pi * zn)
             ).astype(np.float32)
-        radial_wave /= radial_norm
-        axial_wave /= axial_norm
+        radial_wave /= float(len(distortion_modes))
+        axial_wave /= float(len(distortion_modes))
         return radial_wave.astype(np.float32), axial_wave.astype(np.float32)
 
     def distort(verts, cap_height=None):
@@ -609,15 +583,25 @@ def buildmembrane_surface(
     vertices = (vertices @ R.T) + np.array(center, dtype=float)
     normals = normals @ R.T
 
-    surface = Surface(name, session)
-    surface.set_geometry(vertices.astype(np.float32), normals.astype(np.float32), triangles.astype(np.int32))
-    try:
-        surface.color = color
-    except Exception:
-        pass
+    surface = Surface(name, session) if existing_surface is None else existing_surface
+    # Distortion edits keep topology, so retain per-vertex colors and masks.
+    same_topology = existing_surface is not None and np.array_equal(surface.triangles, triangles)
+    vertex_colors = surface.vertex_colors if same_topology else None
+    edge_mask = surface.edge_mask if same_topology else None
+    triangle_mask = surface.triangle_mask if same_topology else None
+    surface.set_geometry(vertices.astype(np.float32), normals.astype(np.float32), triangles.astype(np.int32),
+                         edge_mask=edge_mask, triangle_mask=triangle_mask)
+    if vertex_colors is not None:
+        surface.vertex_colors = vertex_colors
+    if existing_surface is None:
+        try:
+            surface.color = color
+        except Exception:
+            pass
     surface._cb_generated_membrane = True
     surface._cb_attach_source = False
-    surface._cb_membrane_state = {
+    state = dict(getattr(surface, "_cb_membrane_state", {}) or {})
+    state.update({
         "center": [float(v) for v in center],
         "axis": [float(v) for v in axis],
         "length": float(length),
@@ -628,8 +612,10 @@ def buildmembrane_surface(
         "tip_dome_enabled": bool(tip_dome_enabled),
         "tip_dome_outer_height": float(outer_cap_height) if tip_dome_enabled else None,
         "tip_dome_inner_height": float(inner_cap_height) if tip_dome_enabled else None,
-    }
-    _add_to_cb_membrane_group(session, surface)
+    })
+    surface._cb_membrane_state = state
+    if existing_surface is None:
+        _add_to_cb_membrane_group(session, surface)
     return surface
 
 
@@ -974,6 +960,11 @@ buildcentralpair_desc = CmdDesc(
     ],
     synopsis="Build central pair STAR only (single center line).",
 )
+
+
+# Keep the real signature: ChimeraX inspects it when registering the command.
+buildcentriole = buildcentralpair
+buildcentriole_desc = buildcentralpair_desc
 
 
 def buildift(

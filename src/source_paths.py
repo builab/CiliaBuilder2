@@ -59,6 +59,7 @@ class _GlbSourceTracker:
 
         self.session = session
         self.pending = []
+        self.pending_saves = {}
         self.handlers = [
             session.triggers.add_handler("command started", self._command_started),
             session.triggers.add_handler("command finished", self._command_finished),
@@ -76,6 +77,12 @@ class _GlbSourceTracker:
         from chimerax.core.commands import StringArg
 
         command, _, remaining = StringArg.parse(text, self.session)
+        if command.lower() in ("save", "sav") and remaining.strip():
+            value, _, _ = StringArg.parse(remaining.lstrip(), self.session)
+            # No file dialogs and no changes to non-GLB saves.
+            if value.lower().endswith((".glb", ".gltf")):
+                self.pending_saves[text] = os.path.abspath(os.path.expanduser(value))
+            return
         if command.lower() not in ("open", "ope", "op", "o"):
             return
         # Only parse literal path tokens. Reusing a file-dialog argument parser
@@ -99,8 +106,16 @@ class _GlbSourceTracker:
 
     def _command_failed(self, _trigger, text):
         self._take_pending(text)
+        self.pending_saves.pop(text, None)
 
     def _command_finished(self, _trigger, text):
+        saved_path = self.pending_saves.pop(text, None)
+        if saved_path is not None:
+            from .glb_anchor import preserve_command_export_anchor
+            try:
+                preserve_command_export_anchor(self.session, saved_path)
+            except Exception as error:
+                self.session.logger.warning(f"GLB saved, but its volume attachment center could not be recorded: {error}")
         pending = self._take_pending(text)
         if pending is None:
             return
