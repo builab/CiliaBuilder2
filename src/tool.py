@@ -613,7 +613,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
         self.membrane_distortion.setRange(0.0, 1.0)
         self.membrane_distortion.setDecimals(2)
-        self.membrane_distortion.setValue(0.60)
+        self.membrane_distortion.setValue(0.20)
         mem_row_spin("Distortion level (0-1)", self.membrane_distortion)
 
         membrane_tip_dome_row = QWidget(main)
