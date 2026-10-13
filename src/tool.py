@@ -7330,6 +7330,76 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             self._refresh_model_selectors()
             self._keep_tool_visible()
 
+    def _confirm_close_session_before_load(self):
+        """Ask to close the current ChimeraX session when models are open.
+
+        Loading a session JSON on top of existing models (e.g. a built microtubule
+        STAR or a membrane) can drop the first attached map/model, so the scene
+        must be empty first. Returns True if loading should continue.
+        """
+        from Qt.QtWidgets import QMessageBox
+
+        if not self.session.models.list():
+            return True
+
+        reply = QMessageBox.question(
+            self.tool_window.ui_area,
+            "CiliaBuilder2",
+            "Loading a session JSON needs an empty scene.\n\n"
+            "Close the current session (all open models will be closed) and load?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return False
+
+        try:
+            self._cancel_active_tool_interactions_for_history()
+        except Exception:
+            pass
+        try:
+            self._close_manual_tweak_models()
+        except Exception:
+            pass
+        try:
+            self._close_marker_path_temp_root()
+        except Exception:
+            pass
+        _run(self.session, "close session")
+        self._reset_runtime_state_after_session_close()
+        return True
+
+    def _reset_runtime_state_after_session_close(self):
+        """Drop references to models that no longer exist after 'close session'."""
+        self._last_outer_end_z_ang = None
+        self._last_cent_end_z_ang = None
+        self._last_outer_star_model = None
+        self._last_cent_star_model = None
+        self._manual_tweak_hidden = []
+        self._last_attached_result = None
+        self._attached_results = {}
+        self._last_attach_star_id = None
+        self._last_attach_map_id = None
+        self._attach_rebuild_in_progress = False
+        self._cb_attachment_clip_states = None
+        self._cb_active_attachment_clip = None
+        self._known_star_models = []
+        self._membrane_counter = 0
+        self._ift_target_snapshot = None
+        self._ift_pick_hidden_models = []
+        self._filament_sub_hidden_models = []
+        self._filament_sub_target = None
+        self._marker_path_counter = 0
+        self._marker_path_temp_root = None
+        self._marker_path_temp_set = None
+        self._marker_path_pick_hidden_models = []
+        self._marker_path_template_ref = None
+        self._marker_path_source_star_ref = None
+        self._geometric_draw_counter = 0
+        self._restored_session_sources = {}
+        self._restored_session_stars = {}
+        self._restored_session_layout_models = {}
+
     def _load_session_json(self):
         from Qt.QtWidgets import QMessageBox, QFileDialog
 
@@ -7344,6 +7414,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 return
             with open(path, "r", encoding="utf-8") as f:
                 payload = json.load(f)
+
+            if not self._confirm_close_session_before_load():
+                return
 
             base_dir = os.path.dirname(os.path.abspath(path))
             self._apply_session_payload_to_scene(payload, base_dir=base_dir)
