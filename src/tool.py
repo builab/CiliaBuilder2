@@ -267,7 +267,7 @@ class EmbeddedModelsBrowser:
 
 class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     SESSION_ENDURING = True
-    help = "help:user/tools/ciliabuilder2_tools.html"
+    help = "help:user/ciliabuilder2_index.html"
 
     def __init__(self, session, tool_name):
         super().__init__(session, tool_name)
@@ -411,6 +411,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.redo_action_btn.clicked.connect(self._redo_last_action)
         self.redo_action_btn.setEnabled(False)
         top_row_layout.addWidget(self.redo_action_btn)
+        self.help_btn = QPushButton("Help", top_row)
+        self.help_btn.setToolTip("Open the CiliaBuilder2 User Guide")
+        # Same handler the tool window's context-menu "Help" entry uses;
+        # it opens self.help in the ChimeraX Help Viewer.
+        self.help_btn.clicked.connect(self.display_help)
+        top_row_layout.addWidget(self.help_btn)
         main_layout.addWidget(top_row)
 
         sidebar_tabs = QTabWidget(main)
