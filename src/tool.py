@@ -7371,6 +7371,60 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             self._refresh_model_selectors()
             self._keep_tool_visible()
 
+    def _ask_session_load_mode(self):
+        """Ask how to load a session when models are already open.
+
+        Returns "replace" (close the current models first), "add" (load on
+        top of them) or None (cancel). Skips the question if nothing is open.
+        """
+        from Qt.QtWidgets import QMessageBox
+
+        if not self.session.models.list():
+            return "add"
+        box = QMessageBox(self.tool_window.ui_area)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle("Load CiliaBuilder2 session")
+        box.setText("Models are already open in ChimeraX.")
+        box.setInformativeText(
+            "Close the current session before loading the new one, "
+            "or load the new session on top of it?"
+        )
+        replace_btn = box.addButton("Close current and load", QMessageBox.AcceptRole)
+        add_btn = box.addButton("Load on top", QMessageBox.ActionRole)
+        box.addButton(QMessageBox.Cancel)
+        box.setDefaultButton(replace_btn)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is replace_btn:
+            return "replace"
+        if clicked is add_btn:
+            return "add"
+        return None
+
+    def _close_current_scene_for_session_load(self):
+        """Close all open models and reset the tool's per-scene state."""
+        try:
+            self._cancel_active_tool_interactions_for_history()
+        except Exception:
+            pass
+        _run(self.session, "close", log=False)
+        self._clear_active_attachment_runtime_state()
+        self._attached_results = {}
+        self._known_star_models = []
+        self._last_outer_star_model = None
+        self._last_cent_star_model = None
+        self._last_outer_end_z_ang = None
+        self._last_cent_end_z_ang = None
+        self._last_membrane_model = None
+        self._membrane_counter = 0
+        self._marker_path_counter = 0
+        self._geometric_draw_counter = 0
+        self._cb_active_attachment_clip = None
+        self._cb_attachment_clip_states = None
+        self._reset_history()
+        self._refresh_model_selectors()
+        self.session.logger.info("Closed current models before loading CiliaBuilder2 session.")
+
     def _load_session_json(self):
         from Qt.QtWidgets import QMessageBox, QFileDialog
 
@@ -7385,6 +7439,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 return
             with open(path, "r", encoding="utf-8") as f:
                 payload = json.load(f)
+
+            load_mode = self._ask_session_load_mode()
+            if load_mode is None:
+                return
+            if load_mode == "replace":
+                self._close_current_scene_for_session_load()
 
             base_dir = os.path.dirname(os.path.abspath(path))
             self._apply_session_payload_to_scene(payload, base_dir=base_dir)
