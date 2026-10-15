@@ -814,7 +814,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_train_offset.setPlaceholderText("required")
         self.ift_train_offset.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_offset))
         self.ift_train_offset.setText("1500")
-        train_row_widget("Offset (\u00c5)", self.ift_train_offset)
+        train_row_widget("Z offset (\u00c5)", self.ift_train_offset)
 
         self.ift_train_periodicity = NumericLineEdit(train_page)
         self.ift_train_periodicity.setPlaceholderText("required")
@@ -2942,24 +2942,27 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         if idx >= 0:
             self.continue_outer_star_model.setCurrentIndex(idx)
 
-    _DEFAULT_OUTER_NAME = "Microtubules STAR"
-    _DEFAULT_CENTRAL_PAIR_NAME = "Central pair STAR"
+    _DEFAULT_OUTER_NAME = "Microtubules"
+    _DEFAULT_CENTRAL_PAIR_NAME = "Central pair"
     _DEFAULT_MEMBRANE_NAME = "Membrane"
     _CUSTOM_NAME_TOOLTIP = (
-        "Name for the new STAR model, e.g. 'Centriole Proximal' gives 'Centriole Proximal STAR'. "
+        "Name for the new STAR model; ' STAR' is added automatically, "
+        "e.g. 'Centriole Proximal' gives 'Centriole Proximal STAR'. "
         "Leave as the default to get the usual numbered name."
     )
 
     @staticmethod
     def _default_ift_train_name(ift_type):
-        return f"IFT {str(ift_type or 'anterograde').capitalize()} Train STAR"
+        return f"IFT {str(ift_type or 'anterograde').capitalize()} Train"
 
     def _update_ift_train_default_name(self, *_args):
         # Follow the IFT type only while the field still holds a default name.
         edit = getattr(self, "ift_train_custom_name", None)
         if edit is None:
             return
-        defaults = {self._default_ift_train_name(t) for t in ("anterograde", "retrograde")}
+        defaults = set()
+        for t in ("anterograde", "retrograde"):
+            defaults.update({self._default_ift_train_name(t), f"{self._default_ift_train_name(t)} STAR"})
         if edit.text().strip() in defaults or not edit.text().strip():
             edit.setText(self._default_ift_train_name(self.ift_type.currentData()))
 
@@ -2970,7 +2973,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         STAR model names get a trailing ' STAR' if the user did not type one.
         """
         text = " ".join(str(edit.text() if edit is not None else "").split())
-        if not text or text == default_name:
+        # The default name (with or without a typed " STAR") keeps the numbered default.
+        if not text or text in (default_name, f"{default_name} STAR"):
             return None
         if star and not text.upper().endswith("STAR"):
             text = f"{text} STAR"
@@ -4797,7 +4801,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
             tube_id = self._required_int_edit(self.ift_train_doublet, "Microtubule number")
             base_angle_deg = self._required_float_edit(self.ift_train_angle, "Angle")
-            offset_ang = self._required_float_edit(self.ift_train_offset, "Offset")
+            offset_ang = self._required_float_edit(self.ift_train_offset, "Z offset")
             periodicity_ang = self._required_float_edit(self.ift_train_periodicity, "Periodicity")
             repeat_count = self._required_int_edit(self.ift_train_repeat, "Repeating number")
             if periodicity_ang <= 0.0:
@@ -4833,7 +4837,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             train_name = (
                 self._next_loaded_star_name(custom_name)
                 if custom_name
-                else f"{self._default_ift_train_name(ift_type)} {class_num}"
+                else f"{self._default_ift_train_name(ift_type)} STAR {class_num}"
             )
 
             try:
@@ -6269,7 +6273,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         ):
             edit = getattr(self, attr, None)
             if edit is not None:
-                edit.setText(str(state.get(attr, "") or "").strip() or default)
+                saved = str(state.get(attr, "") or "").strip()
+                if not saved or saved == f"{default} STAR":
+                    saved = default
+                edit.setText(saved)
         self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
         if hasattr(self, "attach_pre_rotate_y_90"):
