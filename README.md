@@ -112,7 +112,6 @@ Current STAR-related features include:
 - continuing a microtubule build from an existing STAR model
 - importing external `.star` files
 - exporting the current STAR model back to `.star`
-- substituting a selected filament through the temporary substitution window
 
 ## Geometric Drawing (Experimental)
 
