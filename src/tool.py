@@ -3719,14 +3719,49 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         except Exception:
             pass
 
-    def _star_model_has_attachments(self, star_model):
+    def _attachments_for_star_model(self, star_model):
         ref = self._model_ref(star_model)
         if ref is None:
-            return False
-        for model in self._all_session_models():
+            return []
+        roots = []
+        for out_root in list(getattr(self, "_attached_results", {}).values()):
+            if out_root is None or self._model_ref(out_root) is None or out_root in roots:
+                continue
             for attr in ("_cb_attachment_star_ref", "_cb_attached_star_ref"):
-                if str(getattr(model, attr, "") or "") == str(ref):
-                    return True
+                if str(getattr(out_root, attr, "") or "") == str(ref):
+                    roots.append(out_root)
+                    break
+        return roots
+
+    def _remove_attached_copies_at_rows(self, out_root, drop, old_row_count):
+        """Remove the attached copies that sit on deleted STAR rows.
+
+        Attachments place one copy per STAR row, in row order: either one
+        instanced model with one position per row, or one child model per row.
+        Returns True if the copies were matched to rows and removed.
+        """
+        from chimerax.geometry import Places
+
+        children = [child for child in out_root.child_models() if child is not None]
+        if len(children) == 1:
+            child = children[0]
+            positions = list(child.positions)
+            if len(positions) != int(old_row_count):
+                return False
+            kept = [place for i, place in enumerate(positions) if i not in drop]
+            if not kept:
+                self._hide_and_close_model_tree(out_root)
+            else:
+                child.positions = Places(kept)
+            return True
+        if len(children) == int(old_row_count):
+            closing = [child for i, child in enumerate(children) if i in drop]
+            if len(closing) == len(children):
+                self._hide_and_close_model_tree(out_root)
+            else:
+                for child in closing:
+                    self._hide_and_close_model_tree(child)
+            return True
         return False
 
     def _delete_selected_star_points(self):
@@ -3743,14 +3778,19 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         history_before = self._begin_history_action()
         try:
             summary = []
-            with_attachments = []
+            unmatched_attachments = []
+            removed_copies = 0
             for star_model, indices in targets:
                 name = str(getattr(star_model, "name", "") or "STAR model")
                 rows = list(getattr(star_model, "_cb_star_rows", None) or [])
                 drop = set(indices)
                 kept = [row for i, row in enumerate(rows) if i not in drop]
-                if self._star_model_has_attachments(star_model):
-                    with_attachments.append(name)
+                for out_root in self._attachments_for_star_model(star_model):
+                    if self._remove_attached_copies_at_rows(out_root, drop, len(rows)):
+                        removed_copies += len(drop)
+                    else:
+                        unmatched_attachments.append(str(getattr(out_root, "name", "") or name))
+                self._prune_attached_results_state()
                 if kept:
                     self._update_star_model_rows_in_place(star_model, kept)
                     summary.append(f"{len(drop)} from {name} ({len(kept)} left)")
@@ -3763,9 +3803,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         self._last_cent_star_model = None
             total = sum(len(indices) for _model, indices in targets)
             self.session.logger.info(f"Deleted {total} STAR point(s): " + "; ".join(summary) + ".")
-            if with_attachments:
+            if removed_copies:
+                self.session.logger.info(f"Removed {removed_copies} attached copies at the deleted points.")
+            if unmatched_attachments:
                 self.session.logger.warning(
-                    "Attached copies were not changed for: " + ", ".join(with_attachments)
+                    "Could not match attached copies to STAR points for: " + ", ".join(unmatched_attachments)
                     + ". Attach again to match the remaining points."
                 )
         except Exception as e:
@@ -6139,6 +6181,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._log_skipped_outside("map/model source(s)", skipped)
         return out
 
+    def _attachment_star_point_count(self, out_root):
+        star_ref = getattr(out_root, "_cb_attachment_star_ref", None) or getattr(out_root, "_cb_attached_star_ref", None)
+        star_model = self._model_by_ref(star_ref) if star_ref is not None else None
+        rows = getattr(star_model, "_cb_star_rows", None) if star_model is not None else None
+        return len(rows) if rows is not None else None
+
     def _attachment_models_state(self, save_dir, session_stem, export_cache):
         items = []
         seen = set()
@@ -6174,6 +6222,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "star_session_id": getattr(out_root, "_cb_attachment_star_session_id", None) or getattr(out_root, "_cb_attachment_star_ref", None),
                         "source_session_id": getattr(out_root, "_cb_attachment_source_session_id", None) or source_ref,
                         "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
+                        "star_point_count": self._attachment_star_point_count(out_root),
                         "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
                         "map_path": map_path,
                         "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,

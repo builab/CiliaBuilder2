@@ -228,6 +228,9 @@ class HistoryMixin:
                 {
                     "name": item.get("name", ""),
                     "star_name": item.get("star_name", ""),
+                    # Points deleted from the STAR model change this, so undo/redo
+                    # rebuild the attached copies from the restored STAR rows.
+                    "star_point_count": item.get("star_point_count", None),
                     "map_name": item.get("map_name", ""),
                     "map_path": item.get("map_path", None),
                     "fetch_type": item.get("fetch_type", None),
