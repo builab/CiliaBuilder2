@@ -80,6 +80,10 @@ The bundle also exposes these command entry points:
 5. Click `Attach selected STAR + map`.
 6. Save your scene later with `Save session JSON`.
 
+## Tutorial
+
+Look at the [Tutorial file](https://github.com/builab/CiliaBuilder2/blob/main/CiliaBuilder_Tutorial.pdf) to recreate all the examples below
+
 ## Example Files
 
 Example inputs in this repo include all examples in the manuscript:
