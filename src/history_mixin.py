@@ -140,25 +140,6 @@ class HistoryMixin:
         except Exception:
             pass
         try:
-            self._cancel_filament_sub_pick_mode(log_message=False)
-        except Exception:
-            pass
-        self._filament_sub_target = None
-        self._filament_sub_edit_pending = False
-        dialog = getattr(self, "_filament_sub_dialog", None)
-        if dialog is not None:
-            try:
-                dialog._filament_sub_selected_label.setText("None")
-                dialog._filament_sub_status_label.setText(
-                    "Press 'Pick filament from STAR point', then click one displayed STAR marker in ChimeraX."
-                )
-            except Exception:
-                pass
-            try:
-                self._update_filament_sub_buttons()
-            except Exception:
-                pass
-        try:
             self._ift_pick_pending = False
             self._restore_ift_pick_hidden_models()
             self._restore_ift_mouse_mode()
