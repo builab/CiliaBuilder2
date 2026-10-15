@@ -117,16 +117,20 @@ def build_central_pair_star_rows(
     random_spacing=False,
     random_max_diff=0.0,
     rng_seed=None,
+    twist_per_layer_deg=0.0,
 ):
     """
     One single center line.
     Pixel size is stored in STAR and coordinates are converted to pixels.
+    Twist is applied in place per axial layer (same convention as the
+    microtubule lines), without changing the coordinates.
     """
 
     length_ang = float(length_ang)
     bead_spacing_ang = float(bead_spacing_ang)
     pixel_size_ang = float(pixel_size_ang)
     x_offset_ang = float(x_offset_ang)
+    twist_per_layer_deg = float(twist_per_layer_deg)
 
     if pixel_size_ang <= 0.0:
         raise ValueError("pixel_size_ang must be > 0")
@@ -149,14 +153,19 @@ def build_central_pair_star_rows(
     line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
     rows = []
 
-    for z_ang in _axial_positions(z_offset_ang, length_ang, bead_spacing_ang, line_offset):
+    for layer_index, z_ang in enumerate(
+        _axial_positions(z_offset_ang, length_ang, bead_spacing_ang, line_offset)
+    ):
+        rot_deg = -(layer_index * twist_per_layer_deg)
+        if rot_deg == 0.0:
+            rot_deg = 0.0  # avoid writing -0.0
         rows.append(
             {
                 "rlnTomoName": str(tomo_name),
                 "rlnCoordinateX": float(x_offset_ang) / pixel_size_ang,
                 "rlnCoordinateY": 0.0,
                 "rlnCoordinateZ": float(z_ang) / pixel_size_ang,
-                "rlnAngleRot": 0.0,
+                "rlnAngleRot": float(rot_deg),
                 "rlnAngleTilt": 0.0,
                 "rlnAnglePsi": 0.0,
                 # store the real pixel size from UI

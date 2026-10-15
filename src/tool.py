@@ -553,6 +553,16 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_spacing.setValue(333.0)
         cent_row_spin("Periodicity (\u00c5)", self.central_pair_spacing)
 
+        self.central_pair_twist_per_layer = TypedOnlyDoubleSpinBox(main)
+        self.central_pair_twist_per_layer.setRange(-360.0, 360.0)
+        self.central_pair_twist_per_layer.setDecimals(2)
+        self.central_pair_twist_per_layer.setValue(0.0)
+        self.central_pair_twist_per_layer.setToolTip(
+            "Extra in-place rotation added at each point along the central pair, "
+            "cumulative per layer (layer n is rotated n x this value). Positions do not move."
+        )
+        cent_row_spin("Twist per layer (deg)", self.central_pair_twist_per_layer)
+
         self.central_pair_z_offset = TypedOnlyDoubleSpinBox(main)
         self.central_pair_z_offset.setRange(-1e9, 1e9)
         self.central_pair_z_offset.setDecimals(2)
@@ -6353,6 +6363,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "central_pair_z_offset": float(self.central_pair_z_offset.value()),
             "central_pair_mode": str(self.central_pair_mode.currentData() or "singlet"),
             "central_pair_c1c2_distance": float(self.central_pair_c1c2_distance.value()),
+            "central_pair_twist_per_layer": float(self.central_pair_twist_per_layer.value()),
             "membrane_length": float(self.membrane_length.value()),
             "membrane_radius": float(self.membrane_radius.value()),
             "membrane_thickness": float(self.membrane_thickness.value()),
@@ -6415,6 +6426,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_length.setValue(float(state.get("central_pair_length", state.get("centriole_length", self.central_pair_length.value()))))
         self.central_pair_spacing.setValue(float(state.get("central_pair_spacing", state.get("centriole_spacing", self.central_pair_spacing.value()))))
         self.central_pair_z_offset.setValue(float(state.get("central_pair_z_offset", state.get("centriole_z_offset", self.central_pair_z_offset.value()))))
+        self.central_pair_twist_per_layer.setValue(
+            float(state.get("central_pair_twist_per_layer", self.central_pair_twist_per_layer.value()))
+        )
         self.central_pair_c1c2_distance.setValue(
             float(state.get("central_pair_c1c2_distance", state.get("centriole_c1c2_distance", self.central_pair_c1c2_distance.value())))
         )
@@ -7540,6 +7554,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             z_offset = float(self.central_pair_z_offset.value())
             mode = str(self.central_pair_mode.currentData() or "singlet")
             c1c2_distance = float(self.central_pair_c1c2_distance.value())
+            twist_per_layer = float(self.central_pair_twist_per_layer.value())
 
             pixel_size = float(self.pixel_size.value())
             built_models = []
@@ -7563,6 +7578,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     open_star=True,
                     print_star=False,
                     name_prefix=name_prefix,
+                    twist_per_layer=twist_per_layer,
                 )
                 if custom_name:
                     suffix = {100: " C1", 101: " C2"}.get(tube_id, "") if mode == "doublet" else ""

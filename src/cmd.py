@@ -906,6 +906,7 @@ def buildcentralpair(
     star_format="relion",
     print_star=False,
     name_prefix="Central pair STAR",
+    twist_per_layer=0.0,
 ):
     class_num = _next_class_number()
 
@@ -921,6 +922,7 @@ def buildcentralpair(
         random_spacing=bool(random_spacing),
         random_max_diff=float(random_max_diff),
         rng_seed=None,
+        twist_per_layer_deg=float(twist_per_layer),
     )
 
     star_text = rows_to_star_text(rows)
@@ -957,6 +959,7 @@ buildcentralpair_desc = CmdDesc(
         ("star_format", StringArg),
         ("print_star", BoolArg),
         ("name_prefix", StringArg),
+        ("twist_per_layer", FloatArg),
     ],
     synopsis="Build central pair STAR only (single center line).",
 )
