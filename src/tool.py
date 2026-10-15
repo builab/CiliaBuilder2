@@ -495,6 +495,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         cont_star_lay.addWidget(self.continue_outer_star_model, 1)
         outer_layout.addWidget(cont_star_row)
 
+        self.outer_custom_name = QLineEdit(main)
+        self.outer_custom_name.setText(self._DEFAULT_OUTER_NAME)
+        self.outer_custom_name.setToolTip(self._CUSTOM_NAME_TOOLTIP)
+        outer_row_spin("Customized name", self.outer_custom_name)
+
         outer_tab = QWidget(main)
         outer_tab_layout = QVBoxLayout(outer_tab)
         outer_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -558,6 +563,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.central_pair_c1c2_distance.setDecimals(2)
         self.central_pair_c1c2_distance.setValue(100.0)
         cent_row_spin("C1/C2 distance (\u00c5)", self.central_pair_c1c2_distance)
+
+        self.central_pair_custom_name = QLineEdit(main)
+        self.central_pair_custom_name.setText(self._DEFAULT_CENTRAL_PAIR_NAME)
+        self.central_pair_custom_name.setToolTip(self._CUSTOM_NAME_TOOLTIP)
+        cent_row_spin("Customized name", self.central_pair_custom_name)
 
         cent_tab = QWidget(main)
         cent_tab_layout = QVBoxLayout(cent_tab)
@@ -686,6 +696,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         )
         self._membrane_particle_lipids_pct_row.hide()
 
+        self.membrane_custom_name = QLineEdit(main)
+        self.membrane_custom_name.setText(self._DEFAULT_MEMBRANE_NAME)
+        self.membrane_custom_name.setToolTip(
+            "Name for the new membrane. Leave as the default to get the usual numbered name."
+        )
+        mem_row_spin("Customized name", self.membrane_custom_name)
+
         mem_tab = QWidget(main)
         mem_tab_layout = QVBoxLayout(mem_tab)
         mem_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -760,6 +777,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_retrograde_angle.setValue(-3.0)
         self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (deg)", self.ift_retrograde_angle)
         self.ift_type.currentIndexChanged.connect(self._update_ift_type_visibility)
+        self.ift_type.currentIndexChanged.connect(self._update_ift_train_default_name)
 
         self.ift_mode_stack = QStackedWidget(main)
 
@@ -796,7 +814,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_train_offset.setPlaceholderText("required")
         self.ift_train_offset.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_offset))
         self.ift_train_offset.setText("1500")
-        train_row_widget("Offset (\u00c5)", self.ift_train_offset)
+        train_row_widget("Z offset (\u00c5)", self.ift_train_offset)
 
         self.ift_train_periodicity = NumericLineEdit(train_page)
         self.ift_train_periodicity.setPlaceholderText("required")
@@ -809,6 +827,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_train_repeat.setValidator(QIntValidator(1, 10**9, self.ift_train_repeat))
         self.ift_train_repeat.setText("10")
         train_row_widget("Repeating number", self.ift_train_repeat)
+
+        self.ift_train_custom_name = QLineEdit(train_page)
+        self.ift_train_custom_name.setText(self._default_ift_train_name("anterograde"))
+        self.ift_train_custom_name.setToolTip(self._CUSTOM_NAME_TOOLTIP)
+        train_row_widget("Customized name", self.ift_train_custom_name)
 
         train_layout.addStretch(1)
 
@@ -2919,6 +2942,54 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         if idx >= 0:
             self.continue_outer_star_model.setCurrentIndex(idx)
 
+    _DEFAULT_OUTER_NAME = "Microtubules"
+    _DEFAULT_CENTRAL_PAIR_NAME = "Central pair"
+    _DEFAULT_MEMBRANE_NAME = "Membrane"
+    _CUSTOM_NAME_TOOLTIP = (
+        "Name for the new STAR model; ' STAR' is added automatically, "
+        "e.g. 'Centriole Proximal' gives 'Centriole Proximal STAR'. "
+        "Leave as the default to get the usual numbered name."
+    )
+
+    @staticmethod
+    def _default_ift_train_name(ift_type):
+        return f"IFT {str(ift_type or 'anterograde').capitalize()} Train"
+
+    def _update_ift_train_default_name(self, *_args):
+        # Follow the IFT type only while the field still holds a default name.
+        edit = getattr(self, "ift_train_custom_name", None)
+        if edit is None:
+            return
+        defaults = set()
+        for t in ("anterograde", "retrograde"):
+            defaults.update({self._default_ift_train_name(t), f"{self._default_ift_train_name(t)} STAR"})
+        if edit.text().strip() in defaults or not edit.text().strip():
+            edit.setText(self._default_ift_train_name(self.ift_type.currentData()))
+
+    @staticmethod
+    def _custom_name_from_edit(edit, default_name, star=True):
+        """Return the user's custom name, or None when the field holds the default.
+
+        STAR model names get a trailing ' STAR' if the user did not type one.
+        """
+        text = " ".join(str(edit.text() if edit is not None else "").split())
+        # The default name (with or without a typed " STAR") keeps the numbered default.
+        if not text or text in (default_name, f"{default_name} STAR"):
+            return None
+        if star and not text.upper().endswith("STAR"):
+            text = f"{text} STAR"
+        return text
+
+    def _next_unique_model_name(self, base_name):
+        base = str(base_name or "").strip() or "Model"
+        used = {str(getattr(model, "name", "") or "") for model in self._all_session_models()}
+        if base not in used:
+            return base
+        index = 2
+        while f"{base} {index}" in used:
+            index += 1
+        return f"{base} {index}"
+
     def _next_loaded_star_name(self, base_name):
         base = str(base_name or "").strip() or "Loaded STAR"
         used = {
@@ -4730,7 +4801,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
             tube_id = self._required_int_edit(self.ift_train_doublet, "Microtubule number")
             base_angle_deg = self._required_float_edit(self.ift_train_angle, "Angle")
-            offset_ang = self._required_float_edit(self.ift_train_offset, "Offset")
+            offset_ang = self._required_float_edit(self.ift_train_offset, "Z offset")
             periodicity_ang = self._required_float_edit(self.ift_train_periodicity, "Periodicity")
             repeat_count = self._required_int_edit(self.ift_train_repeat, "Repeating number")
             if periodicity_ang <= 0.0:
@@ -4760,6 +4831,14 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             spin_rot = _rotation_about_axis(line_axis, angle_deg)
             rotated_radial = spin_rot @ radial_dir
             class_num = cmd._next_class_number()
+            custom_name = self._custom_name_from_edit(
+                getattr(self, "ift_train_custom_name", None), self._default_ift_train_name(ift_type)
+            )
+            train_name = (
+                self._next_loaded_star_name(custom_name)
+                if custom_name
+                else f"{self._default_ift_train_name(ift_type)} STAR {class_num}"
+            )
 
             try:
                 pixel_size = float(source_rows[0].get("rlnImagePixelSize", 1.0) or 1.0)
@@ -4809,7 +4888,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             star_text = rows_to_star_text(star_rows)
             created = cmd._create_star_model(
                 self.session,
-                f"IFT {ift_type.capitalize()} Train STAR {class_num}",
+                train_name,
                 star_rows,
                 star_text,
                 True,
@@ -5768,6 +5847,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "outer_z_offset_ang": getattr(model, "_cb_outer_z_offset_ang", None),
                         "outer_continue_offset_ang": getattr(model, "_cb_outer_continue_offset_ang", None),
                         "outer_spacing_ang": getattr(model, "_cb_outer_spacing_ang", None),
+                        "build_kind": getattr(model, "_cb_build_kind", None),
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
                         "clip_info": getattr(model, "_cb_random_clip_info", None),
@@ -6081,6 +6161,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "ift_train_offset": self.ift_train_offset.text().strip(),
             "ift_train_periodicity": self.ift_train_periodicity.text().strip(),
             "ift_train_repeat": self.ift_train_repeat.text().strip(),
+            "outer_custom_name": self.outer_custom_name.text().strip(),
+            "central_pair_custom_name": self.central_pair_custom_name.text().strip(),
+            "membrane_custom_name": self.membrane_custom_name.text().strip(),
+            "ift_train_custom_name": self.ift_train_custom_name.text().strip(),
             "attach_line_rotation": float(self.attach_line_rotation.value()),
             "attach_y_rotation": float(self.attach_y_rotation.value()),
             "attach_x_movement": 0.0,
@@ -6181,6 +6265,18 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             self.ift_train_offset.setText(str(state.get("ift_train_offset", "") or ""))
             self.ift_train_periodicity.setText(str(state.get("ift_train_periodicity", "") or ""))
             self.ift_train_repeat.setText(str(state.get("ift_train_repeat", "") or ""))
+        for attr, default in (
+            ("outer_custom_name", self._DEFAULT_OUTER_NAME),
+            ("central_pair_custom_name", self._DEFAULT_CENTRAL_PAIR_NAME),
+            ("membrane_custom_name", self._DEFAULT_MEMBRANE_NAME),
+            ("ift_train_custom_name", self._default_ift_train_name(self.ift_type.currentData())),
+        ):
+            edit = getattr(self, attr, None)
+            if edit is not None:
+                saved = str(state.get(attr, "") or "").strip()
+                if not saved or saved == f"{default} STAR":
+                    saved = default
+                edit.setText(saved)
         self.attach_line_rotation.setValue(float(state.get("attach_line_rotation", self.attach_line_rotation.value())))
         self.attach_y_rotation.setValue(float(state.get("attach_y_rotation", self.attach_y_rotation.value())))
         if hasattr(self, "attach_pre_rotate_y_90"):
@@ -6232,6 +6328,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             created._cb_outer_z_offset_ang = item.get("outer_z_offset_ang", None)
             created._cb_outer_continue_offset_ang = item.get("outer_continue_offset_ang", None)
             created._cb_outer_spacing_ang = item.get("outer_spacing_ang", None)
+            build_kind = item.get("build_kind", None)
+            if build_kind:
+                created._cb_build_kind = build_kind
             cmd._render_star_model(self.session, created, rows, True)
             self._remember_restored_session_star(created, item)
             self._apply_model_color_state(created, item.get("color_state", []))
@@ -6241,9 +6340,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             except Exception:
                 pass
             try:
-                if str(name).startswith("Microtubules STAR"):
+                if build_kind == "microtubules" or str(name).startswith("Microtubules STAR"):
                     self._last_outer_star_model = created
-                elif str(name).startswith("Central pair"):
+                elif build_kind == "central_pair" or str(name).startswith("Central pair"):
                     self._last_cent_star_model = created
             except Exception:
                 pass
@@ -6796,7 +6895,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if not rows:
                 raise RuntimeError("STAR file contains no particle rows")
 
-            base_name = os.path.splitext(os.path.basename(str(path)))[0]
+            base_name = os.path.splitext(os.path.basename(str(path)))[0].strip()
+            if base_name and not base_name.upper().endswith("STAR"):
+                base_name = f"{base_name} STAR"
             created = Model(self._next_loaded_star_name(base_name), self.session)
             cmd._add_to_cb_star_group(self.session, created)
             created._cb_star_rows = rows
@@ -7111,6 +7212,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
             random_spacing = bool(self.random_enable.isChecked())
             random_max_diff = max(0.0, 0.49 * spacing)
+            custom_name = self._custom_name_from_edit(
+                getattr(self, "outer_custom_name", None), self._DEFAULT_OUTER_NAME
+            )
 
             if continue_mode:
                 source_model = self._selected_continue_outer_star_model()
@@ -7118,7 +7222,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     raise RuntimeError("Select a STAR model in Continue from STAR first")
                 continued_rows, continued_z_offset, next_continue_offset = self._continue_outer_star_rows(source_model, length, spacing)
                 star_text = rows_to_star_text(continued_rows)
-                continued_name = self._next_loaded_star_name(f"{getattr(source_model, 'name', 'Microtubules STAR')} continued")
+                continued_name = self._next_loaded_star_name(
+                    custom_name or f"{getattr(source_model, 'name', 'Microtubules STAR')} continued"
+                )
                 model = cmd._create_star_model(
                     self.session,
                     continued_name,
@@ -7174,7 +7280,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 model._cb_outer_z_offset_ang = float(z_offset)
                 model._cb_outer_continue_offset_ang = float(z_offset) + float(length) + float(spacing)
                 model._cb_outer_spacing_ang = float(spacing)
+                if custom_name:
+                    model.name = self._next_loaded_star_name(custom_name)
 
+            model._cb_build_kind = "microtubules"
             self._last_outer_star_model = model
             self._select_star_model(model)
             if continue_mode:
@@ -7216,6 +7325,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             pixel_size = float(self.pixel_size.value())
             built_models = []
             cp_half_sep = 0.5 * float(c1c2_distance)
+            custom_name = self._custom_name_from_edit(
+                getattr(self, "central_pair_custom_name", None), self._DEFAULT_CENTRAL_PAIR_NAME
+            )
+            # "X STAR" -> "X C1 STAR" / "X C2 STAR" in C1 + C2 mode.
+            custom_base = custom_name[: -len("STAR")].rstrip() if custom_name else None
 
             def build_one(name_prefix, tube_id, x_offset):
                 model = cmd.buildcentralpair(
@@ -7231,6 +7345,10 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     print_star=False,
                     name_prefix=name_prefix,
                 )
+                if custom_name:
+                    suffix = {100: " C1", 101: " C2"}.get(tube_id, "") if mode == "doublet" else ""
+                    model.name = self._next_loaded_star_name(f"{custom_base}{suffix} STAR")
+                model._cb_build_kind = "central_pair"
                 built_models.append((model, tube_id))
                 try:
                     if self._last_outer_star_model is not None:
@@ -7337,6 +7455,15 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if thickness >= radius:
                 raise RuntimeError("Membrane thickness must be smaller than the radius")
 
+            custom_membrane_name = self._custom_name_from_edit(
+                getattr(self, "membrane_custom_name", None), self._DEFAULT_MEMBRANE_NAME, star=False
+            )
+            membrane_name = (
+                self._next_unique_model_name(custom_membrane_name)
+                if custom_membrane_name
+                else f"Membrane {getattr(self, '_membrane_counter', 0) + 1}"
+            )
+
             anchor = self._membrane_anchor_info()
             axis = np.array(anchor["axis"], dtype=float)
             axis_norm = float(np.linalg.norm(axis))
@@ -7360,7 +7487,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
             model = cmd.buildmembrane_surface(
                 self.session,
-                name=f"Membrane {getattr(self, '_membrane_counter', 0) + 1}",
+                name=membrane_name,
                 center=membrane_center,
                 axis=axis,
                 length=length,
