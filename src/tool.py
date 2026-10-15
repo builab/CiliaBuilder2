@@ -395,6 +395,15 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         top_row = QWidget(main)
         top_row_layout = QHBoxLayout(top_row)
         top_row_layout.setContentsMargins(0, 0, 0, 0)
+        self.delete_selected_btn = QPushButton("Delete Selected", top_row)
+        self.delete_selected_btn.setToolTip(
+            "Delete the selected STAR points (Ctrl + click or Ctrl + drag in the graphics window), "
+            "including their arrows and coordinates. Undo restores them."
+        )
+        self.delete_selected_btn.setStyleSheet(self._DELETE_BUTTON_STYLE)
+        self.delete_selected_btn.clicked.connect(self._delete_selected_star_points)
+        self.delete_selected_btn.setEnabled(False)
+        top_row_layout.addWidget(self.delete_selected_btn)
         top_row_layout.addStretch(1)
         self.undo_action_btn = QPushButton("Undo", top_row)
         self.undo_action_btn.clicked.connect(self._undo_last_action)
@@ -406,11 +415,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         top_row_layout.addWidget(self.redo_action_btn)
         self.help_btn = QPushButton("Help", top_row)
         self.help_btn.setToolTip("Open the CiliaBuilder2 User Guide")
+        self.help_btn.setStyleSheet(self._HELP_BUTTON_STYLE)
         # Same handler the tool window's context-menu "Help" entry uses;
         # it opens self.help in the ChimeraX Help Viewer.
         self.help_btn.clicked.connect(self.display_help)
         top_row_layout.addWidget(self.help_btn)
         main_layout.addWidget(top_row)
+        self._ensure_delete_selection_handler()
 
         sidebar_tabs = QTabWidget(main)
         sidebar_tabs.setTabPosition(QTabWidget.West)
@@ -3607,6 +3618,207 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             out.append(model)
         return out
 
+    _DELETE_BUTTON_STYLE = (
+        "QPushButton { background-color: #c62828; color: white; font-weight: bold;"
+        " border: 1px solid #8e0000; border-radius: 4px; padding: 3px 10px; }"
+        "QPushButton:hover { background-color: #e53935; }"
+        "QPushButton:pressed { background-color: #8e0000; }"
+        "QPushButton:disabled { background-color: #e6b8b8; color: #fbeaea; border-color: #d9a3a3; }"
+    )
+    _HELP_BUTTON_STYLE = (
+        "QPushButton { background-color: #2e7d32; color: white; font-weight: bold;"
+        " border: 1px solid #1b5e20; border-radius: 4px; padding: 3px 10px; }"
+        "QPushButton:hover { background-color: #388e3c; }"
+        "QPushButton:pressed { background-color: #1b5e20; }"
+    )
+
+    def _ensure_delete_selection_handler(self):
+        if getattr(self, "_delete_selection_handlers", None):
+            return
+        from chimerax.core.selection import SELECTION_CHANGED
+        from chimerax.core.models import MODEL_SELECTION_CHANGED, REMOVE_MODELS
+
+        self._delete_selection_handlers = [
+            self.session.triggers.add_handler(SELECTION_CHANGED, self._update_delete_selected_button),
+            self.session.triggers.add_handler(MODEL_SELECTION_CHANGED, self._update_delete_selected_button),
+            self.session.triggers.add_handler(REMOVE_MODELS, self._update_delete_selected_button),
+        ]
+
+    def delete(self):
+        for handler in getattr(self, "_delete_selection_handlers", None) or []:
+            try:
+                self.session.triggers.remove_handler(handler)
+            except Exception:
+                pass
+        self._delete_selection_handlers = []
+        super().delete()
+
+    def _selected_star_points_by_model(self):
+        """Group the selected STAR particle markers by their STAR model.
+
+        Returns a list of (star_model, sorted row indices). Only markers in a
+        STAR model's rendered "Particles" set count; other marker sets are ignored.
+        """
+        from chimerax.markers.markers import MarkerSet
+
+        groups = {}
+        for star_model in self._all_session_models():
+            rows = getattr(star_model, "_cb_star_rows", None)
+            if not rows:
+                continue
+            for child in list(star_model.child_models()):
+                if not getattr(child, "_cb_rendered_particles", False) or not isinstance(child, MarkerSet):
+                    continue
+                try:
+                    atoms = child.atoms
+                    selected_atoms = atoms.filter(atoms.selected)
+                except Exception:
+                    continue
+                for atom in selected_atoms:
+                    row_index = getattr(atom, "_cb_star_row_index", None)
+                    if row_index is None:
+                        try:
+                            row_index = int(atom.residue.number) - 1
+                        except Exception:
+                            continue
+                    if 0 <= int(row_index) < len(rows):
+                        groups.setdefault(id(star_model), (star_model, set()))[1].add(int(row_index))
+        return [(model, sorted(indices)) for model, indices in groups.values() if indices]
+
+    def _update_delete_selected_button(self, *_args):
+        btn = getattr(self, "delete_selected_btn", None)
+        if btn is None:
+            return
+        try:
+            count = sum(len(indices) for _model, indices in self._selected_star_points_by_model())
+        except Exception:
+            count = 0
+        try:
+            btn.setEnabled(count > 0)
+            btn.setText(f"Delete Selected ({count})" if count > 0 else "Delete Selected")
+        except Exception:
+            # The Qt widget is gone (tool closed); stop listening.
+            return "delete handler"
+
+    def _update_star_model_rows_in_place(self, star_model, rows):
+        from . import cmd
+        from .io import rows_to_star_text
+
+        display_state = True
+        try:
+            display_state = bool(getattr(star_model, "display", True))
+        except Exception:
+            pass
+        color_state = self._capture_model_color_state(star_model)
+        star_model._cb_star_rows = rows
+        star_model._cb_star_text = rows_to_star_text(rows)
+        cmd._render_star_model(self.session, star_model, rows, True)
+        self._apply_model_color_state(star_model, color_state)
+        try:
+            star_model.display = bool(display_state)
+        except Exception:
+            pass
+
+    def _attachments_for_star_model(self, star_model):
+        ref = self._model_ref(star_model)
+        if ref is None:
+            return []
+        roots = []
+        for out_root in list(getattr(self, "_attached_results", {}).values()):
+            if out_root is None or self._model_ref(out_root) is None or out_root in roots:
+                continue
+            for attr in ("_cb_attachment_star_ref", "_cb_attached_star_ref"):
+                if str(getattr(out_root, attr, "") or "") == str(ref):
+                    roots.append(out_root)
+                    break
+        return roots
+
+    def _remove_attached_copies_at_rows(self, out_root, drop, old_row_count):
+        """Remove the attached copies that sit on deleted STAR rows.
+
+        Attachments place one copy per STAR row, in row order: either one
+        instanced model with one position per row, or one child model per row.
+        Returns True if the copies were matched to rows and removed.
+        """
+        from chimerax.geometry import Places
+
+        children = [child for child in out_root.child_models() if child is not None]
+        if len(children) == 1:
+            child = children[0]
+            positions = list(child.positions)
+            if len(positions) != int(old_row_count):
+                return False
+            kept = [place for i, place in enumerate(positions) if i not in drop]
+            if not kept:
+                self._hide_and_close_model_tree(out_root)
+            else:
+                child.positions = Places(kept)
+            return True
+        if len(children) == int(old_row_count):
+            closing = [child for i, child in enumerate(children) if i in drop]
+            if len(closing) == len(children):
+                self._hide_and_close_model_tree(out_root)
+            else:
+                for child in closing:
+                    self._hide_and_close_model_tree(child)
+            return True
+        return False
+
+    def _delete_selected_star_points(self):
+        from Qt.QtWidgets import QMessageBox
+
+        targets = self._selected_star_points_by_model()
+        if not targets:
+            self.session.logger.warning(
+                "No STAR points selected. Ctrl + click or Ctrl + drag over points in the graphics window first."
+            )
+            self._update_delete_selected_button()
+            return
+
+        history_before = self._begin_history_action()
+        try:
+            summary = []
+            unmatched_attachments = []
+            removed_copies = 0
+            for star_model, indices in targets:
+                name = str(getattr(star_model, "name", "") or "STAR model")
+                rows = list(getattr(star_model, "_cb_star_rows", None) or [])
+                drop = set(indices)
+                kept = [row for i, row in enumerate(rows) if i not in drop]
+                for out_root in self._attachments_for_star_model(star_model):
+                    if self._remove_attached_copies_at_rows(out_root, drop, len(rows)):
+                        removed_copies += len(drop)
+                    else:
+                        unmatched_attachments.append(str(getattr(out_root, "name", "") or name))
+                self._prune_attached_results_state()
+                if kept:
+                    self._update_star_model_rows_in_place(star_model, kept)
+                    summary.append(f"{len(drop)} from {name} ({len(kept)} left)")
+                else:
+                    self._hide_and_close_model_tree(star_model)
+                    summary.append(f"all {len(drop)} from {name} (model closed)")
+                    if self._last_outer_star_model is star_model:
+                        self._last_outer_star_model = None
+                    if self._last_cent_star_model is star_model:
+                        self._last_cent_star_model = None
+            total = sum(len(indices) for _model, indices in targets)
+            self.session.logger.info(f"Deleted {total} STAR point(s): " + "; ".join(summary) + ".")
+            if removed_copies:
+                self.session.logger.info(f"Removed {removed_copies} attached copies at the deleted points.")
+            if unmatched_attachments:
+                self.session.logger.warning(
+                    "Could not match attached copies to STAR points for: " + ", ".join(unmatched_attachments)
+                    + ". Attach again to match the remaining points."
+                )
+        except Exception as e:
+            self.session.logger.error(str(e))
+            QMessageBox.critical(self.tool_window.ui_area, "CiliaBuilder2", str(e))
+        finally:
+            self._refresh_model_selectors()
+            self._commit_history_action(history_before)
+            self._update_delete_selected_button()
+            self._keep_tool_visible()
+
     def _selected_star_marker_target(self):
         from chimerax.markers.markers import selected_markers, MarkerSet
 
@@ -5969,6 +6181,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._log_skipped_outside("map/model source(s)", skipped)
         return out
 
+    def _attachment_star_point_count(self, out_root):
+        star_ref = getattr(out_root, "_cb_attachment_star_ref", None) or getattr(out_root, "_cb_attached_star_ref", None)
+        star_model = self._model_by_ref(star_ref) if star_ref is not None else None
+        rows = getattr(star_model, "_cb_star_rows", None) if star_model is not None else None
+        return len(rows) if rows is not None else None
+
     def _attachment_models_state(self, save_dir, session_stem, export_cache):
         items = []
         seen = set()
@@ -6004,6 +6222,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "star_session_id": getattr(out_root, "_cb_attachment_star_session_id", None) or getattr(out_root, "_cb_attachment_star_ref", None),
                         "source_session_id": getattr(out_root, "_cb_attachment_source_session_id", None) or source_ref,
                         "star_name": str(getattr(out_root, "_cb_attachment_star_name", "") or ""),
+                        "star_point_count": self._attachment_star_point_count(out_root),
                         "map_name": str(getattr(out_root, "_cb_attachment_map_name", "") or ""),
                         "map_path": map_path,
                         "fetch_type": fetch_spec.get("fetch_type") if fetch_spec else None,
