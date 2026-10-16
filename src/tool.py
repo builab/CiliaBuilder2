@@ -1882,6 +1882,19 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         str(entry.get("model_id", "") or ""),
                     )
                 )
+                # Keep wrapper groups at their saved positions, but place the
+                # model entries in saved-id order so re-parented models are
+                # numbered in the same order they had when saved.
+                model_slots = [
+                    i for i, entry in enumerate(entries)
+                    if str(entry.get("node_kind", "model") or "model").strip().lower() != "wrapper"
+                ]
+                models_in_id_order = sorted(
+                    (entries[i] for i in model_slots),
+                    key=lambda entry: self._session_id_sort_key(entry.get("model_id", "")),
+                )
+                for slot, entry in zip(model_slots, models_in_id_order):
+                    entries[slot] = entry
                 for entry in entries:
                     child_model = materialize_entry(entry)
                     if child_model is None or child_model is parent_model:
@@ -6315,10 +6328,51 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if not self._select_combo_saved(self.align_z_model, history_selected.get("align_z_model")):
                 self._select_combo_saved(self.align_z_model, payload.get("ui", {}).get("align_z_model"))
 
+    @staticmethod
+    def _session_id_sort_key(value):
+        """Sort key for a saved ChimeraX model id such as "6.2.12".
+
+        Ids compare numerically part by part, so 6.2.2 comes before 6.2.12.
+        Values that are not dotted numbers (fallbacks such as "star_3") sort
+        after all numeric ids; the stable sort keeps them in file order.
+        """
+        text = str(value or "").strip().lstrip("#")
+        try:
+            parts = tuple(int(part) for part in text.split("."))
+        except ValueError:
+            return (1, ())
+        if not parts:
+            return (1, ())
+        return (0, parts)
+
+    def _sorted_by_session_id(self, items, id_key):
+        items = list(items or [])
+        return sorted(items, key=lambda item: self._session_id_sort_key(item.get(id_key, "") if isinstance(item, dict) else ""))
+
+    def _session_payload_in_id_order(self, payload):
+        """Return a shallow copy of payload with model lists sorted by saved model id.
+
+        Models get their ChimeraX numbers in the order they are created on load,
+        so restoring in saved-id order reproduces the saved numbering order
+        (6.2.1 before 6.2.2) instead of the order the entries appear in the file.
+        """
+        ordered = dict(payload or {})
+        for list_key, id_key in (
+            ("attach_sources", "session_source_id"),
+            ("generated_star_models", "session_star_id"),
+            ("generated_membranes", "session_membrane_id"),
+            ("generated_marker_paths", "session_marker_path_id"),
+            ("attachments", "session_attachment_id"),
+        ):
+            if isinstance(ordered.get(list_key, None), list):
+                ordered[list_key] = self._sorted_by_session_id(ordered[list_key], id_key)
+        return ordered
+
     def _apply_session_payload_to_scene(self, payload, base_dir=""):
         self._restored_session_sources = {}
         self._restored_session_stars = {}
         self._restored_session_layout_models = {}
+        payload = self._session_payload_in_id_order(payload)
         source_items = self._history_source_items(payload)
 
         for item in source_items:
