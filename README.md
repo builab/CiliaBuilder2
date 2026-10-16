@@ -2,7 +2,8 @@
 
 ![Ciliabuilder Banner](images/ciliabuilder_banner.jpg)
 
-CiliaBuilder2 is a UCSF ChimeraX bundle for building and placing cilia-related models.
+CiliaBuilder2 is a [UCSF ChimeraX bundle](https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxciliabuilder2) for building and placing cilia-related models.
+
 
 It focuses on a STAR-driven workflow for:
 
