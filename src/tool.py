@@ -795,7 +795,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_retrograde_angle = TypedOnlyDoubleSpinBox(main)
         self.ift_retrograde_angle.setRange(-360.0, 360.0)
         self.ift_retrograde_angle.setDecimals(2)
-        self.ift_retrograde_angle.setValue(3.0)
+        self.ift_retrograde_angle.setValue(0.0)
         self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (deg)", self.ift_retrograde_angle)
         self.ift_type.currentIndexChanged.connect(self._update_ift_type_visibility)
         self.ift_type.currentIndexChanged.connect(self._update_ift_train_default_name)
