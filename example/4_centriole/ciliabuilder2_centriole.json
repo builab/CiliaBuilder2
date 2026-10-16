@@ -88,7 +88,7 @@
     {
       "session_source_id": "5.2.1",
       "name": "proximal_emd_42776.glb",
-      "path": "/Users/kbui2/Documents/GitHub/CiliaBuilder2/example/4_centriole/proximal_emd_42776.glb.gz",
+      "path": "./proximal_emd_42776.glb.gz",
       "fetch_type": null,
       "fetch_id": null,
       "display": false,
@@ -156,7 +156,7 @@
     {
       "session_source_id": "5.2.2",
       "name": "core_emd_42777.glb",
-      "path": "/Users/kbui2/Documents/GitHub/CiliaBuilder2/example/4_centriole/core_emd_42777.glb.gz",
+      "path": "./core_emd_42777.glb.gz",
       "fetch_type": null,
       "fetch_id": null,
       "display": false,
@@ -224,7 +224,7 @@
     {
       "session_source_id": "5.2.3",
       "name": "distal_emd_42778.glb",
-      "path": "/Users/kbui2/Documents/GitHub/CiliaBuilder2/example/4_centriole/distal_emd_42778.glb.gz",
+      "path": "./distal_emd_42778.glb.gz",
       "fetch_type": null,
       "fetch_id": null,
       "display": false,
@@ -292,7 +292,7 @@
     {
       "session_source_id": "5.2.4",
       "name": "cartwheel_emd_2329.glb",
-      "path": "/Users/kbui2/Documents/GitHub/CiliaBuilder2/example/4_centriole/cartwheel_emd_2329.glb.gz",
+      "path": "./cartwheel_emd_2329.glb.gz",
       "fetch_type": null,
       "fetch_id": null,
       "display": false,
