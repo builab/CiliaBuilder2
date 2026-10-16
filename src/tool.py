@@ -795,7 +795,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_retrograde_angle = TypedOnlyDoubleSpinBox(main)
         self.ift_retrograde_angle.setRange(-360.0, 360.0)
         self.ift_retrograde_angle.setDecimals(2)
-        self.ift_retrograde_angle.setValue(-3.0)
+        self.ift_retrograde_angle.setValue(3.0)
         self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (deg)", self.ift_retrograde_angle)
         self.ift_type.currentIndexChanged.connect(self._update_ift_type_visibility)
         self.ift_type.currentIndexChanged.connect(self._update_ift_train_default_name)
@@ -824,12 +824,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_train_doublet.setValidator(QIntValidator(1, 10**9, self.ift_train_doublet))
         self.ift_train_doublet.setText("3")
         train_row_widget("Microtubule number", self.ift_train_doublet)
-
-        self.ift_train_angle = NumericLineEdit(train_page)
-        self.ift_train_angle.setPlaceholderText("required")
-        self.ift_train_angle.setValidator(QDoubleValidator(-1e9, 1e9, 6, self.ift_train_angle))
-        self.ift_train_angle.setText("0")
-        train_row_widget("Angle (deg)", self.ift_train_angle)
 
         self.ift_train_offset = NumericLineEdit(train_page)
         self.ift_train_offset.setPlaceholderText("required")
@@ -5022,7 +5016,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 raise RuntimeError("Target STAR model for the IFT train is not available")
 
             tube_id = self._required_int_edit(self.ift_train_doublet, "Microtubule number")
-            base_angle_deg = self._required_float_edit(self.ift_train_angle, "Angle")
             offset_ang = self._required_float_edit(self.ift_train_offset, "Z offset")
             periodicity_ang = self._required_float_edit(self.ift_train_periodicity, "Periodicity")
             repeat_count = self._required_int_edit(self.ift_train_repeat, "Repeating number")
@@ -5034,8 +5027,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             ift_type = str(self.ift_type.currentData() or "anterograde")
             anterograde_angle = float(self.ift_anterograde_angle.value())
             retrograde_angle = float(self.ift_retrograde_angle.value())
-            type_angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
-            angle_deg = base_angle_deg + type_angle_deg
+            angle_deg = float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
 
             geom = self._ift_train_geometry(star_model, tube_id)
             source_rows = geom["rows"]
@@ -5175,7 +5167,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         ift_type = str(self.ift_type.currentData() or "anterograde")
         anterograde_angle = float(self.ift_anterograde_angle.value())
         retrograde_angle = float(self.ift_retrograde_angle.value())
-        angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
+        angle_deg = float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
         angle_rad = math.radians(angle_deg)
         macro_rot = np.array(
             [
@@ -5283,7 +5275,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         ift_type = str(self.ift_type.currentData() or "anterograde")
         anterograde_angle = float(self.ift_anterograde_angle.value())
         retrograde_angle = float(self.ift_retrograde_angle.value())
-        angle_deg = -float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
+        angle_deg = float(retrograde_angle) if ift_type == "retrograde" else float(anterograde_angle)
         angle_rad = math.radians(angle_deg)
         macro_rot = np.array(
             [
@@ -6385,9 +6377,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "ift_type": str(self.ift_type.currentData() or "anterograde"),
             "ift_anterograde_angle": float(self.ift_anterograde_angle.value()),
             "ift_retrograde_angle": float(self.ift_retrograde_angle.value()),
+            "ift_retrograde_angle_sign": "direct",
             "ift_train_star_model": self._combo_state(self.ift_train_star_model) if hasattr(self, "ift_train_star_model") else {"id": None, "text": ""},
             "ift_train_doublet": self.ift_train_doublet.text().strip(),
-            "ift_train_angle": self.ift_train_angle.text().strip(),
             "ift_train_offset": self.ift_train_offset.text().strip(),
             "ift_train_periodicity": self.ift_train_periodicity.text().strip(),
             "ift_train_repeat": self.ift_train_repeat.text().strip(),
@@ -6486,7 +6478,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if idx >= 0:
                 self.ift_mode.setCurrentIndex(idx)
         self.ift_anterograde_angle.setValue(float(state.get("ift_anterograde_angle", self.ift_anterograde_angle.value())))
-        self.ift_retrograde_angle.setValue(float(state.get("ift_retrograde_angle", self.ift_retrograde_angle.value())))
+        if "ift_retrograde_angle" in state:
+            retro = float(state.get("ift_retrograde_angle"))
+            # Older sessions stored the retrograde angle with the opposite sign
+            # (it was negated when applied). Convert so the geometry is unchanged.
+            if state.get("ift_retrograde_angle_sign") != "direct":
+                retro = -retro
+            self.ift_retrograde_angle.setValue(retro)
         if hasattr(self, "ift_type"):
             idx = self.ift_type.findData(str(state.get("ift_type", self.ift_type.currentData())))
             if idx >= 0:
@@ -6494,7 +6492,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._update_ift_type_visibility()
         if hasattr(self, "ift_train_doublet"):
             self.ift_train_doublet.setText(str(state.get("ift_train_doublet", "") or ""))
-            self.ift_train_angle.setText(str(state.get("ift_train_angle", "") or ""))
             self.ift_train_offset.setText(str(state.get("ift_train_offset", "") or ""))
             self.ift_train_periodicity.setText(str(state.get("ift_train_periodicity", "") or ""))
             self.ift_train_repeat.setText(str(state.get("ift_train_repeat", "") or ""))
