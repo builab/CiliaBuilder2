@@ -1,0 +1,14 @@
+windowsize 1920 1080
+view orient; view name p2; wait;
+zoom 1.8 1; wait;
+view name p1; wait;
+
+movie record supersample 3
+
+fly p1 200 p2; wait 250;
+
+roll y .5 360; wait 370;
+
+movie stop
+
+movie encode output ~/Desktop/CiliaBuilder2_pdb3.mp4 quality highest framerate 50

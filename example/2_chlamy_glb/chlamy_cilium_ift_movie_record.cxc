@@ -1,0 +1,47 @@
+# Start: side view, axoneme only.
+transparency all 0;
+view side; 
+hide #6.2.8-12 models; wait;
+
+# ===================================================================
+movie record supersample 3
+
+# ---------- 1. Establishing shot: whole axoneme --------------
+wait 50
+
+# ---------- 2. Cross-section: the 9+2 axoneme ----------------
+view xsec 150
+wait 225;
+turn z .5 200;
+wait 250;
+
+# ---------- 3. IFT trains appear -----------------------------
+view side_zoom 150
+wait 225
+crossfade 50
+show #6.2.8-12 models
+wait 75
+
+# ---------- 4. Close-ups of each train ----------------------
+transparency #6.2.6,7 70
+wait 115
+view ant1 125
+wait 175
+view ant2 100
+wait 165
+view retro 100
+wait 165
+
+# ---------- 5. Trains in motion -------------------------------
+view side_zoom 125
+wait 166
+#transparency #6.2.6,7 10
+
+# All three moves run at the same time. Distances in Angstrom along the
+# cilium axis; ratio ~1 : 1.6 like Chlamydomonas (~2 vs ~3.5 um/s).
+move z 24 250 models #6.2.8-11 coordinateSystem #6.2.6
+move z -36 250 models #6.2.12 coordinateSystem #6.2.6
+wait 250
+
+# ===================================================================
+movie encode ~/Desktop/chlamy_cilium_ift.mp4 quality higher framerate 50
