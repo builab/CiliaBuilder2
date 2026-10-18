@@ -296,6 +296,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._cb_attachment_clip_states = None
         self._cb_attachment_clip_plane_name = "cb_random_start_clip"
         self._cb_active_attachment_clip = None
+        self._cb_clip_target = None
+        self._cb_clip_handlers = []
         self._known_star_models = []
         self._membrane_counter = 0
         self._last_membrane_model = None
@@ -494,8 +496,23 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         rand_lay.addWidget(QLabel("Random offset", rand_row))
         self.random_enable = QCheckBox("Enable", rand_row)
         rand_lay.addWidget(self.random_enable)
+        rand_lay.addWidget(QLabel("Offset range (\u00c5)", rand_row))
+        self.random_offset_range = TypedOnlyDoubleSpinBox(rand_row)
+        self.random_offset_range.setDecimals(2)
+        self.random_offset_range.setRange(0.0, float(self.spacing.value()))
+        self.random_offset_range.setValue(float(self.spacing.value()))
+        self.random_offset_range.setToolTip(
+            "Full width of the random Z offset per microtubule (offsets fall within "
+            "\u00b1 range/2). Maximum and default = Periodicity (fully random phase)."
+        )
+        self.random_offset_range.setEnabled(False)
+        rand_lay.addWidget(self.random_offset_range)
         rand_lay.addStretch(1)
         outer_layout.addWidget(rand_row)
+        self.random_enable.toggled.connect(self.random_offset_range.setEnabled)
+        self._random_range_follows_spacing = True
+        self.random_offset_range.valueChanged.connect(self._on_random_offset_range_edited)
+        self.spacing.valueChanged.connect(self._sync_random_offset_range_to_spacing)
 
         cont_star_row = QWidget(main)
         cont_star_lay = QHBoxLayout(cont_star_row)
@@ -3439,6 +3456,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 yield model
 
     def _restore_attachment_clip(self):
+        self._clear_cb_end_clip(restore_others=False)
         planes = getattr(self.session.main_view, "clip_planes", None)
         if planes is not None:
             try:
@@ -3461,37 +3479,251 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     def _set_tree_allow_clipping(self, model, allow):
         set_model_clipping(model, allow)
 
-    def _apply_attachment_clip_if_needed(self, out_root, star_model):
-        # Ordinary attachments must respond to ChimeraX clip front/back too.
-        self._set_tree_allow_clipping(out_root, True)
-        clip_info = self._star_random_clip_info(star_model)
-        if clip_info is None:
-            return
+    # ---- Random-offset end clipping -------------------------------------
+    # Random offsets leave the microtubule ends ragged. The ends are trimmed
+    # with ChimeraX's own scene planes "front" and "back" (the same planes as
+    # "clip front" / "clip back"), oriented along the cilium axis at the
+    # latest-starting and earliest-ending microtubule. ChimeraX has only one
+    # front and one back plane, so exactly one object (the clip owner) is
+    # subject to them; every other model has allow_clipping turned off.
+    _CB_CLIP_FRONT = "front"
+    _CB_CLIP_BACK = "back"
 
+    def _star_end_clip_planes(self, star_model):
+        """Front/back clip positions from this STAR's own rows, or None.
+
+        Only a STAR whose own microtubules start at different positions
+        (random offset) gets planes; single-line STARs (central pair) never do.
+        """
+        rows = getattr(star_model, "_cb_star_rows", None) or []
+        by_tube = {}
+        for row in rows:
+            try:
+                tid = int(float(row.get("rlnHelicalTubeID", 0)))
+            except Exception:
+                continue
+            by_tube.setdefault(tid, []).append(np.array(self._row_world_center(row), dtype=float))
+        if len(by_tube) < 2:
+            return None
+        directions = []
+        for pts in by_tube.values():
+            if len(pts) >= 2:
+                vec = pts[-1] - pts[0]
+                norm = float(np.linalg.norm(vec))
+                if norm > 1e-9:
+                    vec = vec / norm
+                    if directions and float(np.dot(vec, directions[0])) < 0.0:
+                        vec = -vec
+                    directions.append(vec)
+        axis = np.sum(directions, axis=0) if directions else np.array([0.0, 0.0, 1.0])
+        norm = float(np.linalg.norm(axis))
+        axis = axis / norm if norm > 1e-9 else np.array([0.0, 0.0, 1.0])
+        starts, ends = [], []
+        for pts in by_tube.values():
+            scalars = [float(np.dot(p, axis)) for p in pts]
+            starts.append(min(scalars))
+            ends.append(max(scalars))
+        if float(max(starts) - min(starts)) <= 1e-6 and float(max(ends) - min(ends)) <= 1e-6:
+            return None
+        front = float(max(starts))
+        back = float(min(ends))
+        if back <= front:
+            return None
+        return {"axis": axis, "front": front, "back": back}
+
+    def _cb_clip_alive_target(self):
+        target = getattr(self, "_cb_clip_target", None)
+        if target is None or getattr(target, "deleted", False):
+            return None
+        return target
+
+    def _model_in_tree(self, model, root):
+        cur = model
+        seen = set()
+        while cur is not None and id(cur) not in seen:
+            if cur is root:
+                return True
+            seen.add(id(cur))
+            cur = getattr(cur, "parent", None)
+        return False
+
+    def _ensure_cb_clip_handlers(self):
+        if getattr(self, "_cb_clip_handlers", None):
+            return
+        from chimerax.core.models import ADD_MODELS, REMOVE_MODELS
+
+        self._cb_clip_handlers = [
+            self.session.triggers.add_handler(ADD_MODELS, self._on_cb_clip_models_added),
+            self.session.triggers.add_handler(REMOVE_MODELS, self._on_cb_clip_models_removed),
+        ]
+
+    def _on_cb_clip_models_added(self, _trigger_name, models):
+        target = self._cb_clip_alive_target()
+        if target is None:
+            return
+        for model in models or []:
+            if not self._model_in_tree(model, target):
+                try:
+                    set_model_clipping(model, False)
+                except Exception:
+                    pass
+
+    def _on_cb_clip_models_removed(self, _trigger_name, models):
+        target = getattr(self, "_cb_clip_target", None)
+        if target is not None and any(m is target for m in (models or [])):
+            # Owner closed: drop its planes and give clipping back to everyone.
+            self._clear_cb_end_clip(restore_others=True)
+
+    def _cb_clip_planes_in_view(self):
+        planes = getattr(self.session.main_view, "clip_planes", None)
+        if planes is None:
+            return None, None
+        return planes.find_plane(self._CB_CLIP_FRONT), planes.find_plane(self._CB_CLIP_BACK)
+
+    def _set_cb_end_clip(self, target, axis, front, back):
+        """Make `target` the only object clipped by front/back planes."""
         from chimerax.graphics import SceneClipPlane
 
-        planes = self.session.main_view.clip_planes
+        axis = np.array(axis, dtype=float)
+        norm = float(np.linalg.norm(axis))
+        axis = axis / norm if norm > 1e-9 else np.array([0.0, 0.0, 1.0])
+        front, back = float(front), float(back)
+
+        previous = self._cb_clip_alive_target()
+        if previous is not None and previous is not target:
+            try:
+                previous._cb_end_clip = None
+            except Exception:
+                pass
+
+        view = self.session.main_view
+        planes = view.clip_planes
+        for name in (self._cb_attachment_clip_plane_name, self._CB_CLIP_FRONT, self._CB_CLIP_BACK):
+            try:
+                planes.remove_plane(name)
+            except Exception:
+                pass
+        # A scene plane keeps the side its normal points to.
+        planes.add_plane(SceneClipPlane(self._CB_CLIP_FRONT, axis, front * axis))
+        planes.add_plane(SceneClipPlane(self._CB_CLIP_BACK, -axis, back * axis))
+
+        # Exempt every model outside the owner's tree (including siblings when
+        # the owner sits inside a group); group ancestors are left alone.
+        for model in self.session.models.list():
+            if self._model_in_tree(model, target) or self._model_in_tree(target, model):
+                continue
+            try:
+                set_model_clipping(model, False)
+            except Exception:
+                pass
+        set_model_clipping(target, True)
+
         try:
-            planes.remove_plane(self._cb_attachment_clip_plane_name)
+            target._cb_end_clip = {"status": "on", "axis": axis.tolist(), "front": front, "back": back}
         except Exception:
             pass
-        plane = SceneClipPlane(
-            self._cb_attachment_clip_plane_name,
-            clip_info["axis"],
-            clip_info["plane_point"],
+        self._cb_clip_target = target
+        self._ensure_cb_clip_handlers()
+        try:
+            from chimerax import surface
+            surface.update_clip_caps(view)
+        except Exception:
+            pass
+        view.redraw_needed = True
+        self.session.logger.info(
+            f"Random-offset clip on {getattr(target, 'name', 'model')}: "
+            f"clip front at {front:.2f}, clip back at {back:.2f} \u00c5 along axis "
+            f"({axis[0]:.3f}, {axis[1]:.3f}, {axis[2]:.3f}); other models are not clipped."
         )
-        planes.add_plane(plane)
-        self._cb_active_attachment_clip = dict(clip_info)
+
+    def _clear_cb_end_clip(self, restore_others=True):
+        target = getattr(self, "_cb_clip_target", None)
+        self._cb_clip_target = None
+        if target is not None:
+            try:
+                target._cb_end_clip = None
+            except Exception:
+                pass
+        planes = getattr(self.session.main_view, "clip_planes", None)
+        if planes is not None:
+            for name in (self._cb_attachment_clip_plane_name, self._CB_CLIP_FRONT, self._CB_CLIP_BACK):
+                try:
+                    planes.remove_plane(name)
+                except Exception:
+                    pass
+        if restore_others:
+            for model in list(self._iter_top_models()):
+                try:
+                    set_model_clipping(model, True)
+                except Exception:
+                    pass
         try:
             from chimerax import surface
             surface.update_clip_caps(self.session.main_view)
         except Exception:
             pass
-        self.session.logger.info(
-            "Applied random-start clip to attached result at "
-            f"{clip_info['clip_start']:.3f} along axis "
-            f"({clip_info['axis'][0]:.3f}, {clip_info['axis'][1]:.3f}, {clip_info['axis'][2]:.3f})."
-        )
+
+    def _cb_end_clip_state(self, out_root):
+        """JSON state for an attachment; reads the live plane positions so
+        manual "clip front/back" adjustments are saved too."""
+        if out_root is None or self._cb_clip_alive_target() is not out_root:
+            return {"status": "off"}
+        info = getattr(out_root, "_cb_end_clip", None) or {}
+        axis = np.array(info.get("axis", (0.0, 0.0, 1.0)), dtype=float)
+        front_plane, back_plane = self._cb_clip_planes_in_view()
+        if front_plane is None and back_plane is None:
+            return {"status": "off"}
+        state = {"status": "on", "axis": axis.tolist(), "front": None, "back": None}
+        if front_plane is not None:
+            state["front"] = float(np.dot(np.array(front_plane.plane_point, dtype=float), axis))
+        if back_plane is not None:
+            state["back"] = float(np.dot(np.array(back_plane.plane_point, dtype=float), axis))
+        return state
+
+    def _restore_cb_end_clip(self, out_root, star_model, clip_state):
+        """Session load. New JSON carries "end_clip"; older JSON recomputes."""
+        if isinstance(clip_state, dict):
+            if clip_state.get("status") == "on":
+                planes = self._star_end_clip_planes(star_model)
+                axis = clip_state.get("axis") or (planes["axis"].tolist() if planes else [0.0, 0.0, 1.0])
+                front = clip_state.get("front")
+                back = clip_state.get("back")
+                if front is None and planes:
+                    front = planes["front"]
+                if back is None and planes:
+                    back = planes["back"]
+                if front is not None and back is not None:
+                    self._set_cb_end_clip(out_root, axis, front, back)
+                    return
+            if self._cb_clip_alive_target() is not None:
+                set_model_clipping(out_root, False)
+            return
+        self._apply_attachment_clip_if_needed(out_root, star_model)
+
+    def _reassert_cb_end_clip(self):
+        """After scene clipping is restored from JSON, drop the legacy start
+        plane and put the owner's front/back planes back."""
+        target = self._cb_clip_alive_target()
+        planes = getattr(self.session.main_view, "clip_planes", None)
+        if planes is not None:
+            try:
+                planes.remove_plane(self._cb_attachment_clip_plane_name)
+            except Exception:
+                pass
+        if target is None:
+            return
+        info = getattr(target, "_cb_end_clip", None) or {}
+        if info.get("status") == "on":
+            self._set_cb_end_clip(target, info["axis"], info["front"], info["back"])
+
+    def _apply_attachment_clip_if_needed(self, out_root, star_model):
+        planes = self._star_end_clip_planes(star_model)
+        if planes is None:
+            # Not a random-offset STAR: not clipped while another object owns
+            # the front/back planes, otherwise ordinary ChimeraX clipping applies.
+            self._set_tree_allow_clipping(out_root, self._cb_clip_alive_target() is None)
+            return
+        self._set_cb_end_clip(out_root, planes["axis"], planes["front"], planes["back"])
 
     def _nearest_generated_attached_root(self, model):
         cur = model
@@ -3668,6 +3900,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             except Exception:
                 pass
         self._delete_selection_handlers = []
+        for handler in getattr(self, "_cb_clip_handlers", None) or []:
+            try:
+                self.session.triggers.remove_handler(handler)
+            except Exception:
+                pass
+        self._cb_clip_handlers = []
         super().delete()
 
     def _selected_star_points_by_model(self):
@@ -5533,6 +5771,38 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         inner_height = max(0.25 * float(thickness), float(outer_height) - float(thickness))
         return float(outer_height), float(inner_height)
 
+    def _sync_random_offset_range_to_spacing(self, _value=None):
+        spacing = max(0.0, float(self.spacing.value()))
+        follow = bool(getattr(self, "_random_range_follows_spacing", True))
+        self._random_range_syncing = True
+        try:
+            self.random_offset_range.setMaximum(spacing)
+            if follow:
+                self.random_offset_range.setValue(spacing)
+        finally:
+            self._random_range_syncing = False
+
+    def _on_random_offset_range_edited(self, value):
+        if getattr(self, "_random_range_syncing", False):
+            return
+        # Typing the periodicity again re-links the range to the periodicity.
+        self._random_range_follows_spacing = abs(float(value) - float(self.spacing.value())) < 1e-6
+
+    def _apply_random_offset_range_state(self, value):
+        spacing = max(0.0, float(self.spacing.value()))
+        self._random_range_syncing = True
+        try:
+            self.random_offset_range.setMaximum(spacing)
+            if value is None:
+                # Older sessions: no saved range, use the default (= periodicity).
+                self.random_offset_range.setValue(spacing)
+            else:
+                self.random_offset_range.setValue(min(max(0.0, float(value)), spacing))
+            self.random_offset_range.setEnabled(bool(self.random_enable.isChecked()))
+        finally:
+            self._random_range_syncing = False
+        self._random_range_follows_spacing = abs(float(self.random_offset_range.value()) - spacing) < 1e-6
+
     def _star_random_clip_info(self, star_model):
         stored = getattr(star_model, "_cb_random_clip_info", None)
         if isinstance(stored, dict):
@@ -6259,6 +6529,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "display": bool(getattr(out_root, "display", True)),
                         "color_state": self._capture_model_color_state(out_root),
                         "clipping_state": capture_model_clipping(out_root),
+                        "end_clip": self._cb_end_clip_state(out_root),
                     }
                 )
             except Exception as e:
@@ -6392,6 +6663,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         except Exception:
             pass
         restore_scene_clipping(self.session.main_view, payload.get("scene_clipping"))
+        self._reassert_cb_end_clip()
 
     def _ui_state(self):
         return {
@@ -6404,6 +6676,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "outer_z_offset": float(self.doublet_offset.value()),
             "outer_twist_per_layer": float(self.outer_twist_per_layer.value()) if hasattr(self, "outer_twist_per_layer") else 0.0,
             "random_enable": bool(self.random_enable.isChecked()),
+            "random_offset_range": float(self.random_offset_range.value()),
             "central_pair_length": float(self.central_pair_length.value()),
             "central_pair_spacing": float(self.central_pair_spacing.value()),
             "central_pair_z_offset": float(self.central_pair_z_offset.value()),
@@ -6469,6 +6742,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         if hasattr(self, "outer_twist_per_layer"):
             self.outer_twist_per_layer.setValue(float(state.get("outer_twist_per_layer", 0.0)))
         self.random_enable.setChecked(bool(state.get("random_enable", self.random_enable.isChecked())))
+        self._apply_random_offset_range_state(state.get("random_offset_range", None))
         self.central_pair_length.setValue(float(state.get("central_pair_length", state.get("centriole_length", self.central_pair_length.value()))))
         self.central_pair_spacing.setValue(float(state.get("central_pair_spacing", state.get("centriole_spacing", self.central_pair_spacing.value()))))
         self.central_pair_z_offset.setValue(float(state.get("central_pair_z_offset", state.get("centriole_z_offset", self.central_pair_z_offset.value()))))
@@ -6893,11 +7167,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     star_model.display = False
                 except Exception:
                     pass
+                restore_model_clipping(existing_out_root, item.get("clipping_state"))
                 try:
-                    self._apply_attachment_clip_if_needed(existing_out_root, star_model)
+                    self._restore_cb_end_clip(existing_out_root, star_model, item.get("end_clip"))
                 except Exception:
                     pass
-                restore_model_clipping(existing_out_root, item.get("clipping_state"))
                 continue
 
             source_color_state = self._capture_model_color_state(map_model)
@@ -6976,11 +7250,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 star_model.display = False
             except Exception:
                 pass
+            restore_model_clipping(out_root, item.get("clipping_state"))
             try:
-                self._apply_attachment_clip_if_needed(out_root, star_model)
+                self._restore_cb_end_clip(out_root, star_model, item.get("end_clip"))
             except Exception:
                 pass
-            restore_model_clipping(out_root, item.get("clipping_state"))
 
     def _save_session_json(self):
         from Qt.QtWidgets import QMessageBox, QFileDialog
@@ -7060,6 +7334,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._geometric_draw_counter = 0
         self._cb_active_attachment_clip = None
         self._cb_attachment_clip_states = None
+        self._cb_clip_target = None
         self._reset_history()
         self._refresh_model_selectors()
         self.session.logger.info("Closed current models before loading CiliaBuilder2 session.")
@@ -7495,7 +7770,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             twist_per_layer = float(self.outer_twist_per_layer.value()) if hasattr(self, "outer_twist_per_layer") else 0.0
 
             random_spacing = bool(self.random_enable.isChecked())
-            random_max_diff = max(0.0, 0.49 * spacing)
+            random_range = min(max(0.0, float(self.random_offset_range.value())), spacing)
+            if random_spacing and random_range <= 0.0:
+                random_spacing = False
             custom_name = self._custom_name_from_edit(
                 getattr(self, "outer_custom_name", None), self._DEFAULT_OUTER_NAME
             )
@@ -7548,7 +7825,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     twist_per_layer=twist_per_layer,
                     pixel_size=pixel_size,
                     random_spacing=random_spacing,
-                    random_max_diff=random_max_diff,
+                    random_range=random_range,
                     show_arrows=True,
                     open_star=True,
                     print_star=False,

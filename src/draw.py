@@ -12,6 +12,23 @@ def _axial_positions(start_z, length_ang, bead_spacing_ang, line_offset):
         current_z += bead_spacing_ang
 
 
+def _random_half_width(bead_spacing_ang, random_max_diff=0.0, random_range=0.0):
+    """Half-width of the uniform random line offset.
+
+    random_range is the full width of the offset window (offsets fall in
+    [-range/2, +range/2]); it is capped at one periodicity, which already
+    gives every possible phase. If random_range is not given, fall back to
+    the legacy random_max_diff half-width (capped at 0.49 x spacing).
+    """
+    spacing = abs(float(bead_spacing_ang))
+    full_range = abs(float(random_range or 0.0))
+    if full_range > 0.0:
+        return 0.5 * min(full_range, spacing)
+    legacy_cap = 0.49 * spacing
+    max_diff = abs(float(random_max_diff or 0.0))
+    return legacy_cap if max_diff <= 0.0 else min(max_diff, legacy_cap)
+
+
 def build_cilia_lines_star_rows(
     n_lines,
     length_ang,
@@ -27,6 +44,7 @@ def build_cilia_lines_star_rows(
     class_number=1,
     random_spacing=False,
     random_max_diff=0.0,
+    random_range=0.0,
     rng_seed=None,
 ):
     """
@@ -54,13 +72,7 @@ def build_cilia_lines_star_rows(
     step_deg = 360.0 / float(n)
 
     use_random = bool(random_spacing)
-    max_diff = abs(float(random_max_diff))
-    if use_random:
-        default_cap = 0.49 * bead_spacing_ang
-        if max_diff <= 0.0:
-            max_diff = default_cap
-        else:
-            max_diff = min(max_diff, default_cap)
+    max_diff = _random_half_width(bead_spacing_ang, random_max_diff, random_range) if use_random else 0.0
 
     if rng_seed is None:
         rng = random.Random()
@@ -116,6 +128,7 @@ def build_central_pair_star_rows(
     class_number=1,
     random_spacing=False,
     random_max_diff=0.0,
+    random_range=0.0,
     rng_seed=None,
     twist_per_layer_deg=0.0,
 ):
@@ -143,13 +156,7 @@ def build_central_pair_star_rows(
         rng = random.Random(int(rng_seed))
 
     use_random = bool(random_spacing)
-    max_diff = abs(float(random_max_diff))
-    if use_random:
-        default_cap = 0.49 * bead_spacing_ang
-        if max_diff <= 0.0:
-            max_diff = default_cap
-        else:
-            max_diff = min(max_diff, default_cap)
+    max_diff = _random_half_width(bead_spacing_ang, random_max_diff, random_range) if use_random else 0.0
     line_offset = rng.uniform(-max_diff, max_diff) if use_random else 0.0
     rows = []
 
