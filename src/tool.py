@@ -645,7 +645,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_distortion = TypedOnlyDoubleSpinBox(main)
         self.membrane_distortion.setRange(0.0, 10.0)
         self.membrane_distortion.setDecimals(2)
-        self.membrane_distortion.setValue(0.60)
+        self.membrane_distortion.setValue(2)
         self.membrane_distortion.setToolTip(
             "Press Enter or leave this field to update the selected membrane, "
             "or the latest membrane if none is selected. Keeps the same random pattern."
