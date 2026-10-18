@@ -367,6 +367,11 @@ def _ring_pole_triangles(ring, pole_index, reverse=False):
     return tris
 
 
+MEMBRANE_DISTORTION_MAX_LEVEL = 10.0
+MEMBRANE_RADIAL_DISTORTION_PER_LEVEL = 18.0 / 2700.0  # fraction of diameter
+MEMBRANE_AXIAL_DISTORTION_PER_LEVEL = 8.0 / 3000.0    # fraction of length
+
+
 def buildmembrane_surface(
     session,
     name,
@@ -390,7 +395,7 @@ def buildmembrane_surface(
     length = float(length)
     diameter = float(diameter)
     thickness = float(thickness)
-    distortion_level = max(0.0, float(distortion_level))
+    distortion_level = min(MEMBRANE_DISTORTION_MAX_LEVEL, max(0.0, float(distortion_level)))
     if length <= 0.0:
         raise ValueError("Membrane length must be > 0")
     if diameter <= 0.0:
@@ -501,8 +506,16 @@ def buildmembrane_surface(
             axis=0,
         )
     rng = np.random.default_rng(distortion_seed)
-    radial_amp = distortion_level * min(0.45 * thickness, 0.05 * diameter)
-    axial_amp = distortion_level * min(0.20 * thickness, 0.015 * length)
+    # Distortion amplitude depends only on the level (0-10) and the membrane's
+    # diameter/length, not its thickness. Inner and outer leaflets receive the
+    # same displacement field, so the bilayer thickness is preserved anyway.
+    # Coefficients are calibrated so the default membrane (diameter 2700 A,
+    # length 3000 A) gives ~18 A radial / ~8 A axial amplitude per level unit.
+    # At level 10 the axial field stays monotonic along z (no mesh folding).
+    radial_amp = distortion_level * MEMBRANE_RADIAL_DISTORTION_PER_LEVEL * diameter
+    axial_amp = distortion_level * MEMBRANE_AXIAL_DISTORTION_PER_LEVEL * length
+    # Safety guard only: never let the inner leaflet collapse through the axis.
+    radial_amp = min(radial_amp, 0.9 * inner_radius)
     distortion_modes = [
         (
             mode,
