@@ -480,7 +480,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.outer_twist_per_layer.setRange(-360.0, 360.0)
         self.outer_twist_per_layer.setDecimals(2)
         self.outer_twist_per_layer.setValue(0.0)
-        outer_row_spin("Twist per layer (deg)", self.outer_twist_per_layer)
+        outer_row_spin("Twist per layer (\u00b0)", self.outer_twist_per_layer)
 
         self.doublet_offset = TypedOnlyDoubleSpinBox(main)
         self.doublet_offset.setRange(-1e9, 1e9)
@@ -491,7 +491,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         rand_row = QWidget(main)
         rand_lay = QHBoxLayout(rand_row)
         rand_lay.setContentsMargins(0, 0, 0, 0)
-        rand_lay.addWidget(QLabel("Random", rand_row))
+        rand_lay.addWidget(QLabel("Random offset", rand_row))
         self.random_enable = QCheckBox("Enable", rand_row)
         rand_lay.addWidget(self.random_enable)
         rand_lay.addStretch(1)
@@ -561,7 +561,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "Extra in-place rotation added at each point along the central pair, "
             "cumulative per layer (layer n is rotated n x this value). Positions do not move."
         )
-        cent_row_spin("Twist per layer (deg)", self.central_pair_twist_per_layer)
+        cent_row_spin("Twist per layer (\u00b0)", self.central_pair_twist_per_layer)
 
         self.central_pair_z_offset = TypedOnlyDoubleSpinBox(main)
         self.central_pair_z_offset.setRange(-1e9, 1e9)
@@ -790,13 +790,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.ift_anterograde_angle.setRange(-360.0, 360.0)
         self.ift_anterograde_angle.setDecimals(2)
         self.ift_anterograde_angle.setValue(-6.0)
-        self.ift_anterograde_angle_row = ift_row_spin("Anterograde angle (deg)", self.ift_anterograde_angle)
+        self.ift_anterograde_angle_row = ift_row_spin("Anterograde angle (\u00b0)", self.ift_anterograde_angle)
 
         self.ift_retrograde_angle = TypedOnlyDoubleSpinBox(main)
         self.ift_retrograde_angle.setRange(-360.0, 360.0)
         self.ift_retrograde_angle.setDecimals(2)
         self.ift_retrograde_angle.setValue(0.0)
-        self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (deg)", self.ift_retrograde_angle)
+        self.ift_retrograde_angle_row = ift_row_spin("Retrograde angle (\u00b0)", self.ift_retrograde_angle)
         self.ift_type.currentIndexChanged.connect(self._update_ift_type_visibility)
         self.ift_type.currentIndexChanged.connect(self._update_ift_train_default_name)
 
@@ -993,7 +993,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_rot_row = QWidget(main)
         attach_rot_lay = QHBoxLayout(attach_rot_row)
         attach_rot_lay.setContentsMargins(0, 0, 0, 0)
-        attach_rot_lay.addWidget(QLabel("Attachment Z rotation (deg)", attach_rot_row))
+        attach_rot_lay.addWidget(QLabel("Attachment Z rotation (\u00b0)", attach_rot_row))
         self.attach_line_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_line_rotation.setRange(-360.0, 360.0)
         self.attach_line_rotation.setDecimals(2)
@@ -1007,7 +1007,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attach_y_row = QWidget(main)
         attach_y_lay = QHBoxLayout(attach_y_row)
         attach_y_lay.setContentsMargins(0, 0, 0, 0)
-        attach_y_lay.addWidget(QLabel("Attachment Y rotation (deg)", attach_y_row))
+        attach_y_lay.addWidget(QLabel("Attachment Y rotation (\u00b0)", attach_y_row))
         self.attach_y_rotation = TypedOnlyDoubleSpinBox(attach_select)
         self.attach_y_rotation.setRange(-360.0, 360.0)
         self.attach_y_rotation.setDecimals(2)
