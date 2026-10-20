@@ -63,13 +63,6 @@ After install, open the tool with the ChimeraX command:
 cbui
 ```
 
-The bundle also exposes these command entry points:
-
-- `cbstraight`
-- `buildcentralpair`
-- `cbui`
-- `cbopenapr`
-
 ## Quick Start
 
 1. Find the CiliaBuilder2 in High-Order Structures
@@ -102,7 +95,7 @@ The session JSON workflow preserves:
 
 - generated STAR models
 - generated membranes
-- attach sources
+- attached sources
 - attachments
 - selected UI state
 
@@ -126,7 +119,3 @@ The `Attach > Geometric drawing` section provides drawing helpers that can be us
 CellPACK-related code paths still exist in the source tree, including local APR helpers and membrane export support, but the visible cellPACK UI is currently hidden.
 
 
-## Development Notes
-
-- This project is packaged as a ChimeraX bundle, not a generic `pyproject.toml` Python package.
-- Use ChimeraX `devel install` / `devel build` instead of `python -m build`.
