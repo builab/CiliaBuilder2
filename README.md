@@ -1,4 +1,4 @@
-# <img src="src/docs/user/CiliaBuilder2-icon.png" width="50" align="left" alt="CiliaBuilder2 logo"> CiliaBuilder2
+# <img src="src/docs/user/CiliaBuilder2-icon.png" width="50" align="left" alt="CiliaBuilder2 logo"> CiliaBuilder2 [![DOI](https://zenodo.org/badge/1115546661.svg)](https://doi.org/10.5281/zenodo.18013502)
 
 ![Ciliabuilder Banner](images/ciliabuilder_banner.jpg)
 
