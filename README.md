@@ -83,7 +83,8 @@ The bundle also exposes these command entry points:
 
 ## Tutorial
 
-Look at the [Tutorial file](https://github.com/builab/CiliaBuilder2/blob/main/CiliaBuilder_Tutorial.pdf) to recreate all the examples below
+- Look at the [Tutorial file](https://github.com/builab/CiliaBuilder2/blob/main/CiliaBuilder_Tutorial.pdf) to recreate all the examples below
+- The [video tutorials on Youtube](https://www.youtube.com/watch?v=1YQKFo09CJo&list=PLTw-5wb_PD1s&pp=sAgC) that go through all the example.
 
 ## Example Files
 
