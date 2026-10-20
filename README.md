@@ -46,7 +46,7 @@ Uninstall the old version in the command line of ChimeraX, type:
 toolshed uninstall CiliaBuilder2
 ```
 
-You can install from ChimeraX Toolshed, Tools / More Tools / CiliaBuilder2
+You can install from ChimeraX Toolshed, `Tools / More Tools / CiliaBuilder2`
 
 Alternatively, download this github and from the ChimeraX command box, install the bundle into ChimeraX with:
 
