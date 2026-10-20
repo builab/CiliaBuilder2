@@ -5,16 +5,11 @@
 CiliaBuilder2 is a [UCSF ChimeraX bundle](https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxciliabuilder2) for building and placing cilia-related models.
 
 
-It focuses on a STAR-driven workflow for:
+## Citation
 
-- microtubule layouts
-- central pair layouts
-- membrane generation
-- IFT placement
-- attaching maps and models onto STAR points
-- geometric drawing helpers
-- session save/load
-- STAR import/export
+Liu, T., Chakraborty, S., Bui, K.H. (2026) CiliaBuilder2: a flexible ChimeraX bundle to visualize cilia and centriole structures in 3D. BioRxiv. 
+https://www.biorxiv.org/content/10.64898/2026.10.15.759410v1
+
 
 ## Current Scope
 
@@ -65,7 +60,7 @@ cbui
 
 ## Quick Start
 
-1. Find the CiliaBuilder2 in High-Order Structures
+1. Find CiliaBuilder2 in High-Order Structures
 2. In `Build > Microtubules`, create a STAR model.
 3. Open or load a source map/model in ChimeraX.
 4. In `Attach`, choose a `STAR model` and `Map model`.
