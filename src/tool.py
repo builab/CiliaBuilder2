@@ -12,6 +12,10 @@ from chimerax.core.commands import run as _run
 from chimerax.core.models import Model
 
 from .history_mixin import HistoryMixin
+from .clipping import (
+    capture_model_clipping, capture_scene_clipping,
+    restore_model_clipping, restore_scene_clipping, set_model_clipping,
+)
 
 
 class EmbeddedModelsBrowser:
@@ -294,6 +298,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self._cb_active_attachment_clip = None
         self._known_star_models = []
         self._membrane_counter = 0
+        self._last_membrane_model = None
         self._ift_target_snapshot = None
         self._ift_pick_pending = False
         self._ift_pick_handlers = []
@@ -614,7 +619,12 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_distortion.setRange(0.0, 10.0)
         self.membrane_distortion.setDecimals(2)
         self.membrane_distortion.setValue(0.60)
-        mem_row_spin("Distortion level (0-1)", self.membrane_distortion)
+        self.membrane_distortion.setToolTip(
+            "Press Enter or leave this field to update the selected membrane, "
+            "or the latest membrane if none is selected. Keeps the same random pattern."
+        )
+        self.membrane_distortion.valueChanged.connect(self._update_membrane_distortion)
+        mem_row_spin("Distortion level (0-10)", self.membrane_distortion)
 
         membrane_tip_dome_row = QWidget(main)
         membrane_tip_dome_lay = QHBoxLayout(membrane_tip_dome_row)
@@ -691,6 +701,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         build_mem_btn = QPushButton("Build membrane", mem_btn_row)
         build_mem_btn.clicked.connect(self._build_membrane)
         mem_btn_lay.addWidget(build_mem_btn)
+        cellpack_mem_btn = QPushButton("cellPACK-style membrane...", mem_btn_row)
+        cellpack_mem_btn.setToolTip("Built-in membrane particle preview and export. No extra installation.")
+        from .membrane_cellpack_ui import show_membrane_cellpack
+        cellpack_mem_btn.clicked.connect(lambda: show_membrane_cellpack(self))
+        mem_btn_lay.addWidget(cellpack_mem_btn)
         mem_tab_layout.addWidget(mem_btn_row)
         mem_tab_layout.addStretch(1)
         panels.addTab(mem_tab, "Membrane")
@@ -1601,7 +1616,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         attachment_id = str(item.get("session_attachment_id", "") or "").strip()
         if attachment_id:
             model = self._model_by_ref(attachment_id)
-            if model is not None:
+            # IDs are reused when a saved source is reopened/reparented.
+            if (model is not None and getattr(model, "_cb_generated_attached", False)
+                    and str(model.name) == str(item.get("name", "") or "")):
                 return model
         name = str(item.get("name", "") or "").strip()
         if name:
@@ -1904,6 +1921,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             if ext in (".glb", ".gltf"):
                 from chimerax.gltf.gltf import write_gltf
                 write_gltf(self.session, filename=out_path, models=[model], center=False)
+                from .glb_anchor import preserve_export_anchor
+                preserve_export_anchor(self.session, out_path, model)
             elif ext == ".stl":
                 from chimerax.stl.stl import write_stl
                 write_stl(self.session, out_path, [model])
@@ -2583,7 +2602,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             self._refresh_fixed_center_map_selector()
         except Exception:
             pass
-        star_current =self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
+        star_current = self.sel_star_model.currentData() if hasattr(self, "sel_star_model") else None
         map_current = self.sel_map_model.currentData() if hasattr(self, "sel_map_model") else None
         continue_outer_current = self.continue_outer_star_model.currentData() if hasattr(self, "continue_outer_star_model") else None
         export_star_current = self.export_star_model.currentData() if hasattr(self, "export_star_model") else None
@@ -3343,19 +3362,14 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             pass
 
     def _set_tree_allow_clipping(self, model, allow):
-        for child in self._iter_model_tree(model):
-            try:
-                child.allow_clipping = bool(allow)
-            except Exception:
-                pass
+        set_model_clipping(model, allow)
 
     def _apply_attachment_clip_if_needed(self, out_root, star_model):
+        # Ordinary attachments must respond to ChimeraX clip front/back too.
+        self._set_tree_allow_clipping(out_root, True)
         clip_info = self._star_random_clip_info(star_model)
         if clip_info is None:
-            self._set_tree_allow_clipping(out_root, False)
             return
-
-        self._set_tree_allow_clipping(out_root, True)
 
         from chimerax.graphics import SceneClipPlane
 
@@ -6500,6 +6514,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
                         "clip_info": getattr(model, "_cb_random_clip_info", None),
+                        "clipping_state": capture_model_clipping(model),
                         "under_cb_star_group": self._is_under_cb_group(model, "star_models"),
                     }
                 )
@@ -6526,6 +6541,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
+                        "clipping_state": capture_model_clipping(model),
                     }
                 )
             except Exception as e:
@@ -6551,6 +6567,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "state": state,
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
+                        "clipping_state": capture_model_clipping(model),
                     }
                 )
             except Exception as e:
@@ -6561,6 +6578,8 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         return out
 
     def _attach_source_models_state(self, save_dir, session_stem, export_cache):
+        from .glb_anchor import volume_glb_anchor
+
         out = []
         seen_paths = set()
         seen_fetches = set()
@@ -6601,8 +6620,13 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         "display": bool(getattr(model, "display", True)),
                         "color_state": self._capture_model_color_state(model),
                         "under_cb_map_group": self._is_under_cb_group(model, "maps"),
+                        "clipping_state": capture_model_clipping(model),
                     }
                 )
+                if self._is_glb_like(model):
+                    anchor = volume_glb_anchor(self.session, model)
+                    if anchor is not None:
+                        out[-1]["glb_volume_anchor"] = anchor.tolist()
             except Exception as e:
                 self.session.logger.warning(f"Skipping attach source during JSON save: {getattr(model, 'name', '(unnamed)')} ({e})")
         self._log_skipped_outside("map/model source(s)", skipped)
@@ -6663,6 +6687,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                         ),
                         "display": bool(getattr(out_root, "display", True)),
                         "color_state": self._capture_model_color_state(out_root),
+                        "clipping_state": capture_model_clipping(out_root),
                     }
                 )
             except Exception as e:
@@ -6709,6 +6734,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             "generated_marker_paths": generated_marker_paths,
             "attachments": attachments,
             "model_structure": model_structure,
+            "scene_clipping": capture_scene_clipping(self.session.main_view),
         }
         if include_history_selected:
             payload["history_selected"] = self._history_selected_state()
@@ -6753,6 +6779,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             _run(self.session, "view orient")
         except Exception:
             pass
+        restore_scene_clipping(self.session.main_view, payload.get("scene_clipping"))
 
     def _ui_state(self):
         return {
@@ -6843,7 +6870,11 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
         self.membrane_radius.setValue(float(membrane_radius))
         self.membrane_thickness.setValue(float(state.get("membrane_thickness", self.membrane_thickness.value())))
         self.membrane_offset.setValue(float(state.get("membrane_offset", self.membrane_offset.value())))
-        self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
+        blocked = self.membrane_distortion.blockSignals(True)
+        try:
+            self.membrane_distortion.setValue(float(state.get("membrane_distortion", self.membrane_distortion.value())))
+        finally:
+            self.membrane_distortion.blockSignals(blocked)
         self.membrane_tip_dome.setChecked(bool(state.get("membrane_tip_dome", self.membrane_tip_dome.isChecked())))
         self.membrane_particle_receptors_pct.setValue(
             float(state.get("membrane_particle_receptors_pct", self.membrane_particle_receptors_pct.value()))
@@ -6947,6 +6978,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
             cmd._render_star_model(self.session, created, rows, True)
             self._remember_restored_session_star(created, item)
             self._apply_model_color_state(created, item.get("color_state", []))
+            restore_model_clipping(created, item.get("clipping_state"))
             try:
                 created.display = bool(item.get("display", True))
             except Exception:
@@ -6972,14 +7004,6 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 if getattr(model, "_cb_generated_membrane", False) and str(getattr(model, "name", "") or "") == name:
                     existing = model
                     break
-            if existing is not None:
-                self._remember_restored_session_layout_model("membrane", session_membrane_id, existing)
-                self._apply_model_color_state(existing, item.get("color_state", []))
-                try:
-                    existing.display = bool(item.get("display", True))
-                except Exception:
-                    pass
-                continue
             try:
                 created = cmd.buildmembrane_surface(
                     self.session,
@@ -6994,6 +7018,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     tip_dome_enabled=bool(state.get("tip_dome_enabled", False)),
                     tip_dome_outer_height=state.get("tip_dome_outer_height", None),
                     tip_dome_inner_height=state.get("tip_dome_inner_height", None),
+                    existing_surface=existing,
                 )
                 try:
                     created_state = getattr(created, "_cb_membrane_state", None) or {}
@@ -7002,8 +7027,21 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 except Exception:
                     pass
                 self._remember_restored_session_layout_model("membrane", session_membrane_id, created)
+                if state.get("cellpack_packing"):
+                    from .membrane_cellpack import clear_packing, restore_packing
+                    try:
+                        restore_packing(created, state["cellpack_packing"])
+                    except (ValueError, TypeError, KeyError) as error:
+                        clear_packing(created)
+                        self.session.logger.warning(f"Restored membrane without invalid cellPACK preview: {error}")
                 self._apply_model_color_state(created, item.get("color_state", []))
+                restore_model_clipping(created, item.get("clipping_state"))
                 created.display = bool(item.get("display", True))
+                if existing is None:
+                    self._last_membrane_model = created
+                if (getattr(self, "_history_replaying", False)
+                        and self._membrane_distortion_target() is created):
+                    self.membrane_distortion.setValue(created._cb_membrane_state["distortion_level"])
             except Exception:
                 pass
 
@@ -7034,6 +7072,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 except Exception:
                     pass
                 self._apply_model_color_state(existing, item.get("color_state", []))
+                restore_model_clipping(existing, item.get("clipping_state"))
                 try:
                     existing.display = bool(item.get("display", True))
                 except Exception:
@@ -7064,6 +7103,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     pass
                 self._remember_restored_session_layout_model("marker_path", session_marker_path_id, created)
                 self._apply_model_color_state(created, item.get("color_state", []))
+                restore_model_clipping(created, item.get("clipping_state"))
                 created.display = bool(item.get("display", True))
             except Exception:
                 pass
@@ -7104,6 +7144,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
 
     def _restore_attach_source_models(self, models_state, base_dir=""):
         from .cmd import _add_to_cb_map_group
+        from .glb_anchor import validated_anchor
 
         for item in models_state or []:
             source_model = self._open_saved_source_item(item, base_dir=base_dir)
@@ -7117,6 +7158,9 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     f"Session load: source {item.get('name', '(unnamed)')} resolved to a CiliaBuilder2 group; ignored"
                 )
                 continue
+            anchor = validated_anchor(item.get("glb_volume_anchor"))
+            if anchor is not None and self._is_glb_like(source_model):
+                source_model._cb_glb_volume_anchor = anchor.tolist()
             # Register first, so attachments can always find the source even if a
             # cosmetic step below fails.
             try:
@@ -7136,6 +7180,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 source_model.display = bool(item.get("display", True))
                 self._zero_map_origin_index(source_model)
                 self._apply_model_color_state(source_model, item.get("color_state", []))
+                restore_model_clipping(source_model, item.get("clipping_state"))
             except Exception as err:
                 self.session.logger.warning(f"Session load: could not restore display of {item.get('name', '')}: {err}")
 
@@ -7219,6 +7264,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                     self._apply_attachment_clip_if_needed(existing_out_root, star_model)
                 except Exception:
                     pass
+                restore_model_clipping(existing_out_root, item.get("clipping_state"))
                 continue
 
             source_color_state = self._capture_model_color_state(map_model)
@@ -7301,6 +7347,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 self._apply_attachment_clip_if_needed(out_root, star_model)
             except Exception:
                 pass
+            restore_model_clipping(out_root, item.get("clipping_state"))
 
     def _save_session_json(self):
         from Qt.QtWidgets import QMessageBox, QFileDialog
@@ -7916,6 +7963,47 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
     def _build_centriole(self):
         return self._build_central_pair()
 
+    def _membrane_distortion_target(self):
+        models = [model for model in self._all_session_models()
+                  if getattr(model, "_cb_generated_membrane", False)
+                  and getattr(model, "_cb_membrane_state", None)]
+        selected = [model for model in models if model.selected]
+        candidates = selected or models
+        latest = getattr(self, "_last_membrane_model", None)
+        if latest in candidates:
+            return latest
+        return candidates[-1] if candidates else None
+
+    def _update_membrane_distortion(self, _value=None):
+        from . import cmd
+
+        if getattr(self, "_history_replaying", False):
+            return
+        model = self._membrane_distortion_target()
+        if model is None:
+            return
+        state = model._cb_membrane_state
+        level = float(self.membrane_distortion.value())
+        if level == float(state.get("distortion_level", 1.0)):
+            return
+        history_before = self._begin_history_action()
+        try:
+            # Rebuild from the model, not unrelated pending build-field edits.
+            cmd.buildmembrane_surface(
+                self.session, name=model.name, center=state["center"], axis=state["axis"],
+                length=state["length"], diameter=state["diameter"], thickness=state["thickness"],
+                distortion_level=level, distortion_seed=state.get("distortion_seed"),
+                tip_dome_enabled=state.get("tip_dome_enabled", False),
+                tip_dome_outer_height=state.get("tip_dome_outer_height"),
+                tip_dome_inner_height=state.get("tip_dome_inner_height"),
+                existing_surface=model,
+            )
+            self.session.logger.info(f"Updated {model.name} distortion level to {level:g}.")
+        except Exception as error:
+            self.session.logger.error(f"Could not update membrane distortion: {error}")
+        finally:
+            self._commit_history_action(history_before)
+
     def _build_membrane(self):
         from Qt.QtWidgets import QMessageBox
         from . import cmd
@@ -7974,6 +8062,7 @@ class CiliaBuilder2Tool(HistoryMixin, ToolInstance):
                 tip_dome_inner_height=tip_dome_inner_height,
             )
             self._membrane_counter = getattr(self, "_membrane_counter", 0) + 1
+            self._last_membrane_model = model
             try:
                 state = getattr(model, "_cb_membrane_state", None) or {}
                 state["offset"] = float(offset)

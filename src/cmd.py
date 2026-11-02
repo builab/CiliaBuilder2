@@ -381,6 +381,7 @@ def buildmembrane_surface(
     tip_dome_outer_height=None,
     tip_dome_inner_height=None,
     color=(180, 180, 190, 180),
+    existing_surface=None,
 ):
     from chimerax.core.models import Surface
     from chimerax.shape.shape import cylinder_geometry
@@ -437,6 +438,7 @@ def buildmembrane_surface(
     outer_cap_extra_range = None
     inner_cap_extra_range = None
     top_tris = []
+    outer_dome_triangle_count = 0
     if tip_dome_enabled:
         base_top_z = 0.5 * length
 
@@ -471,6 +473,7 @@ def buildmembrane_surface(
             prev_outer_ring = next_outer_ring
         outer_pole = append_pole(base_top_z + outer_cap_height)
         top_tris.extend(_ring_pole_triangles(prev_outer_ring, outer_pole, reverse=False))
+        outer_dome_triangle_count = len(top_tris)
         outer_cap_extra_range = (outer_cap_extra_start, len(extra_vertices))
 
         inner_cap_extra_start = len(extra_vertices)
@@ -582,15 +585,40 @@ def buildmembrane_surface(
     vertices = (vertices @ R.T) + np.array(center, dtype=float)
     normals = normals @ R.T
 
-    surface = Surface(name, session)
-    surface.set_geometry(vertices.astype(np.float32), normals.astype(np.float32), triangles.astype(np.int32))
-    try:
-        surface.color = color
-    except Exception:
-        pass
+    surface = Surface(name, session) if existing_surface is None else existing_surface
+    # Distortion edits keep topology, so retain per-vertex colors and masks.
+    same_topology = existing_surface is not None and np.array_equal(surface.triangles, triangles)
+    vertex_colors = surface.vertex_colors if same_topology else None
+    edge_mask = surface.edge_mask if same_topology else None
+    triangle_mask = surface.triangle_mask if same_topology else None
+    surface.set_geometry(vertices.astype(np.float32), normals.astype(np.float32), triangles.astype(np.int32),
+                         edge_mask=edge_mask, triangle_mask=triangle_mask)
+    if vertex_colors is not None:
+        surface.vertex_colors = vertex_colors
+    if existing_surface is not None and surface._cb_membrane_state.get("cellpack_packing"):
+        # A regenerated shape invalidates its old surface packing; history can restore it.
+        from .membrane_cellpack import clear_packing
+        clear_packing(surface)
+    if existing_surface is None:
+        try:
+            surface.color = color
+        except Exception:
+            pass
     surface._cb_generated_membrane = True
+    # Packing distinguishes the two leaflets; rim triangles are not membrane sites.
+    outer_faces = np.zeros(len(triangles), dtype=bool)
+    outer_faces[:len(outer_t)] = True
+    dome_start = len(outer_t) + len(inner_t) + len(bottom_tris)
+    outer_faces[dome_start:dome_start + outer_dome_triangle_count] = True
+    inner_faces = np.zeros(len(triangles), dtype=bool)
+    inner_faces[len(outer_t):len(outer_t) + len(inner_t)] = True
+    if tip_dome_enabled:
+        inner_faces[dome_start + outer_dome_triangle_count:] = True
+    surface._cb_membrane_outer_faces = outer_faces
+    surface._cb_membrane_inner_faces = inner_faces
     surface._cb_attach_source = False
-    surface._cb_membrane_state = {
+    state = dict(getattr(surface, "_cb_membrane_state", {}) or {})
+    state.update({
         "center": [float(v) for v in center],
         "axis": [float(v) for v in axis],
         "length": float(length),
@@ -601,8 +629,10 @@ def buildmembrane_surface(
         "tip_dome_enabled": bool(tip_dome_enabled),
         "tip_dome_outer_height": float(outer_cap_height) if tip_dome_enabled else None,
         "tip_dome_inner_height": float(inner_cap_height) if tip_dome_enabled else None,
-    }
-    _add_to_cb_membrane_group(session, surface)
+    })
+    surface._cb_membrane_state = state
+    if existing_surface is None:
+        _add_to_cb_membrane_group(session, surface)
     return surface
 
 
@@ -947,6 +977,11 @@ buildcentralpair_desc = CmdDesc(
     ],
     synopsis="Build central pair STAR only (single center line).",
 )
+
+
+# Keep the real signature: ChimeraX inspects it when registering the command.
+buildcentriole = buildcentralpair
+buildcentriole_desc = buildcentralpair_desc
 
 
 def buildift(

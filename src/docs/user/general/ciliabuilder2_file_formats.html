@@ -135,9 +135,15 @@
   </div>
 
   <ul>
-    <li>Without a fixed centre, each copy is placed by the centre of the GLB's bounding box.</li>
-    <li>When a session is saved, GLB files are exported next to the JSON file with their
-      current colouring, so the session folder can be moved to another computer.</li>
+    <li>Without a fixed centre, volume-derived GLBs use their retained map grid centre
+      when available; other GLBs use their own geometry centre. Saving with
+      <b>center false</b> while CiliaBuilder2 is running records the grid centre when
+      the export matches an open map. An older export needs its matching map open
+      once, or an explicit fixed centre.</li>
+    <li>Session JSON references a file-backed GLB's original path, including .glb.gz;
+      it does not overwrite or copy that file. Colours and recovered grid centres
+      are saved separately in JSON. Keep the original files available when moving
+      a session. STL and in-memory geometry without a known path receive copies.</li>
     <li>Drawings made on the <a href="../tools/ciliabuilder2_tools.html#drawing">Geometric
       drawing</a> page are saved in the same way (<b>Save drawing as GLB</b>).</li>
     <li>STL surfaces (.stl) can be attached in the same way.</li>
@@ -202,6 +208,8 @@ TS_001 735.402665 617.076105 0.000000 50.000000 0.000000 0.000000 1.000000 2 1
     <li>the attachment sources (maps, atomic models, GLB files), recorded by EMDB/PDB ID
       when fetched, or by file path otherwise;</li>
     <li>each attachment, with its rotation and fixed-centre settings, display state and colours;</li>
+    <li>front/back scene clipping planes and per-model clipping permissions, restored
+      after <b>view orient</b> (camera-relative near/far planes are not saved);</li>
     <li>the arrangement of the models in the ChimeraX model panel.</li>
   </ul>
   <p>

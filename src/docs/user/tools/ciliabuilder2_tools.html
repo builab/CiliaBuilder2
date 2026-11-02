@@ -108,10 +108,101 @@
     <tr><td><b>Radius (&Aring;)</b></td><td>Radius of the membrane tube.</td></tr>
     <tr><td><b>Thickness (&Aring;)</b></td><td>Thickness of the bilayer.</td></tr>
     <tr><td><b>Z offset (&Aring;)</b></td><td>Z position where the membrane starts.</td></tr>
-    <tr><td><b>Distortion level (0&ndash;1)</b></td><td>How far the surface departs from a perfect cylinder; 0 gives a smooth tube, larger values give a more irregular membrane.</td></tr>
+    <tr><td><b>Distortion level (0&ndash;10)</b></td><td>How far the surface departs from a perfect cylinder; 0 gives a smooth tube, larger values give a more irregular membrane. Press Enter or leave the field to update the selected membrane in place, or the latest built/restored membrane if none is selected. The random pattern and other model settings are retained. These edits support Undo/Redo and session JSON.</td></tr>
     <tr><td><b>Tip dome cap</b></td><td>Close the distal end of the membrane with a dome.</td></tr>
   </table>
   <p>Press <b>Build membrane</b> to create the surface.</p>
+  <p>
+    <b>cellPACK-style membrane...</b> opens the built-in particle preview for the
+    selected membrane, or the latest membrane if none is selected. Choose a
+    different <b>Target membrane</b> by name and ID in the same window. Each target
+    loads its own saved settings; unfinished edits are retained per membrane
+    until the window closes. New targets use thickness-based default bead radii.
+    The list updates when membranes are added, renamed or closed. Switching
+    targets does not move or repack existing particles; it is disabled during
+    preparation/packing, so cancel first to switch. Packing and export act only
+    on the chosen membrane. The window has a short linked cellPACK acknowledgment
+    instead of explanatory paragraphs. The ingredient
+    table lets you enable, add, rename or remove lipid beads, proteins and other
+    beads. Each protein has its own <b>PDB ID</b> (for example 1AFO) and outward
+    axis. Lipids have a <b>Source</b> choice: <b>Bead</b>, <b>PDB ID</b> or
+    <b>Local file</b>. Enter an ID or use <b>Browse...</b> for a PDB, mmCIF, MOL2
+    or SDF file (compressed PDB/CIF also supported). Molecular lipids use the
+    atomic van der Waals shape and source dimensions, not a single bead;
+    their Radius field is disabled. Choose the outward axis toward the leaflet
+    exterior; the outermost atomic envelope sits on the leaflet and the molecule
+    extends into the wall. One non-water, non-polymer residue from the first
+    model supplies the template. Enter its <b>Residue</b> name if there are several
+    component types, for example <b>DGA</b> in
+    <a href="https://www.rcsb.org/structure/1K4C">PDB 1K4C</a>. Repeated copies
+    of that residue are not duplicated inside the template. This selector does
+    not chemically identify lipids. Only enabled positive-amount entries are packed. <b>Amount (%)</b> means
+    nominal outer-surface coverage for proteins (total at most 100%), and relative
+    area share for lipids/other beads, normalized on each leaflet after reserving protein area.
+    Beads can use both, outer or inner leaflets and have editable radii; proteins
+    keep their PDB dimensions. Disable proteins for offline bead-only packing.
+    Leave <b>Automatic dense-fill budget</b> enabled, choose a seed, then choose
+    <b>Pack membrane</b>. The particle target grows as beads get smaller; halving
+    radius needs roughly four times as many beads. The former 50,000 cap no
+    longer thins these layers. Automatic targets above 1,000,000 are rejected
+    with advice to increase bead size or reduce membrane area, rather than
+    silently producing a sparse layer. Large populations take more time/memory.
+    Disable automatic budgeting only for a deliberately sparse preview using
+    <b>Manual preview limit</b>; the dialog warns when this prevents dense filling.
+    Repack existing membranes to apply the change; saved layouts are not altered on load.
+    The smooth shell is hidden: only lipid beads/molecules and PDB-derived protein
+    surfaces remain visible. Packing follows both leaflets and any distorted
+    dome, not the flat end rims. Proteins span the wall mid-plane and use their
+    original Angstrom dimensions; lipid bead centers lie on the two leaflets.
+    Random area-weighted seeds and neighbor-contact gap filling replace global
+    rows. Face-plane intersections and projection constrain candidates to the
+    curved mesh, with random protein spins. Each ingredient uses one shared mesh duplicated
+    through ChimeraX instancing, not separate atomic models per site.
+  </p>
+  <p>
+    The protein ratio is nominal coverage by projected bounding disks, not
+    particle count. Overlap rejection and safety limits can lower the achieved
+    ratio, which is reported after packing. Counts are area-derived, and the
+    search effort also scales with population. Lipid targets estimate 90%
+    coverage; this is not guaranteed.
+    Lipid-protein collision checks use the <b>same triangle mesh as the displayed
+    protein</b>. Enclosing boxes are only a quick preliminary filter, not excluded
+    volume. Surface-distance and closed-mesh inside/outside checks allow beads
+    beside irregular proteins without intersections. Cached mesh indices and
+    bounded extra gap-search passes help fill isolated pockets. Invalid open or
+    inconsistent protein surfaces fail safely. Protein-protein checks still use
+    conservative enclosing spheres. Repack to apply the new checks; loading an
+    old layout does not change its saved positions or particle sizes.
+    Protein geometry is fetched once from RCSB and represented
+    by a shared 6-Angstrom Gaussian surface from the first deposited model's
+    protein atoms. Initial fetching needs internet or a cached file and completes
+    before cancellable packing starts. No extra installation is required.
+    This is independent geometric packing informed by
+    <a href="https://doi.org/10.1038/nmeth.3204">Johnson et al., cellPACK (2015)</a>,
+    not the upstream engine, a globally optimal solver, or an atomic bilayer.
+    Bead lipids/other beads are coarse proxies; molecular lipids use their atoms'
+    default van der Waals radii. Atom-to-atom and atom-to-bead collision tests
+    reject overlaps without reserving one large sphere around a long lipid;
+    lipid atoms are also checked against the displayed protein mesh. Outward
+    axes and head/tail embedding are manual assumptions, not inferred biology.
+    Up to 500 atoms and 200-Angstrom source extent per lipid are supported.
+    The ten-million instanced-triangle budget applies to all molecular entries;
+    reaching it is reported and can reduce coverage.
+  </p>
+  <p>
+    <b>Export package...</b> saves just this membrane and its preview to a unique
+    folder with APR/CPR JSON, meshes, ingredients and a pseudo-site mmCIF. All asset
+    references are relative. Open the APR with <b>cbopenapr</b> or open the CIF
+    directly. APR includes full protein/lipid meshes and beads, with the shell
+    hidden; CIF contains particle centers, not replicated atoms.
+    Packing supports Undo/Redo and session JSON, including embedded protein
+    and molecular lipid geometry, ingredient recipes and random spins for offline
+    restoration/repacking. Original lipid files are not required once their
+    templates are embedded. Changing membrane distortion clears stale
+    particles and reveals the guide again; pack again or Undo to recover them.
+    Old saved packings retain their exact positions. Choose <b>Pack membrane</b>
+    again to replace one with the new stochastic layout.
+  </p>
 
   <h4><a name="ift">IFT</a></h4>
   <p>
@@ -166,6 +257,23 @@
     To place a GLB at the same position as its source map, the GLB must be saved
     in the map's coordinates; see
     <a href="../general/ciliabuilder2_file_formats.html#glb">GLB files</a>.
+    When CiliaBuilder2 has retained the source volume's grid-center metadata, that
+    center is used automatically. An explicitly checked fixed center overrides it.
+  </p>
+
+  <h4><a name="clipping">Front / back clipping</a></h4>
+  <p>
+    Attachments support ChimeraX <b>clip front</b> and <b>clip back</b>.
+    <b>Save session JSON</b> records the scene cut planes and each model's
+    clipping permissions. Loading restores the attachments, runs <b>view orient</b>,
+    and reapplies the cuts. <b>clip off</b> and <b>clip model #... false</b>
+    are preserved as well. These are scene-wide planes, not separate cuts for
+    each attachment. Camera-relative <b>clip near</b> and <b>clip far</b> are not saved.
+  </p>
+  <p>
+    Older JSON files did not record manual cuts: reapply the cuts and save again.
+    If an existing attachment does not respond to clipping, reload or reattach it
+    after updating CiliaBuilder2.
   </p>
 
   <h4><a name="drawing">Geometric drawing</a></h4>
@@ -191,7 +299,8 @@
   <h3><a name="saveload">Save/Load</a></h3>
   <ul>
     <li><b>Save session JSON</b> &ndash; save the whole CiliaBuilder2 model (STAR models,
-      membranes, drawings, attachment sources, attachments and the tool settings) to a
+      membranes, drawings, attachment sources, attachments, front/back clipping
+      and the tool settings) to a
       <a href="../general/ciliabuilder2_file_formats.html#json">session JSON file</a>.</li>
     <li><b>Load session JSON</b> &ndash; restore a saved session. Maps fetched from EMDB are
       fetched again; if a local file has moved, you are asked to locate it.</li>

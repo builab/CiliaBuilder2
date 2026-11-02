@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Command: buildcentriole</title>
+<style>body{font:16px/1.5 sans-serif;max-width:950px;margin:2em auto;padding:0 1em}code{background:#f3f3f3;padding:.1em .3em}table{border-collapse:collapse;width:100%}th,td{padding:.4em .6em;border:1px solid #ccc;text-align:left;vertical-align:top}</style></head>
+<body>
+<h1>Command: buildcentriole</h1>
+<p><code>buildcentriole [keyword value ...]</code></p>
+<p>Build a single central-pair STAR line under <b>CiliaBuilder2 &gt; STAR Models</b>.
+The command retains its legacy name. For separate C1 and C2 lines, use
+<b>Build &gt; Central Pair &gt; C1 + C2 lines</b> in the
+<a href="../tools/ciliabuilder2.html">graphical tool</a>.</p>
+<p>All arguments are optional keywords. Lengths use angstroms. These command
+defaults differ from the tool's startup length and periodicity.</p>
+<table>
+<tr><th>Keyword</th><th>Default</th><th>Meaning</th></tr>
+<tr><td><code>length</code></td><td>2000</td><td>Axial length.</td></tr>
+<tr><td><code>spacing</code></td><td>320</td><td>Positive axial periodicity.</td></tr>
+<tr><td><code>zOffset</code></td><td>0</td><td>Starting axial offset.</td></tr>
+<tr><td><code>xOffset</code></td><td>0</td><td>Position of the line along X.</td></tr>
+<tr><td><code>tubeId</code></td><td>100</td><td>STAR helical tube identifier.</td></tr>
+<tr><td><code>randomSpacing</code></td><td>false</td><td>Randomly shift the whole line in Z.</td></tr>
+<tr><td><code>randomMaxDiff</code></td><td>0</td><td>Maximum random shift; zero uses 0.49 times spacing. Larger values are capped at that limit.</td></tr>
+<tr><td><code>showArrows</code></td><td>false</td><td>Display particle orientation arrows.</td></tr>
+<tr><td><code>tomoName</code></td><td>TS_001</td><td>STAR tomogram name.</td></tr>
+<tr><td><code>pixelSize</code></td><td>1</td><td>Positive angstroms per pixel; STAR coordinates are stored in pixels.</td></tr>
+<tr><td><code>openStar</code></td><td>true</td><td>Render STAR points and orient the view. False still creates a model containing the rows.</td></tr>
+<tr><td><code>starFormat</code></td><td>relion</td><td>Retained compatibility argument; output uses RELION-style STAR rows.</td></tr>
+<tr><td><code>printStar</code></td><td>false</td><td>Print STAR text to the ChimeraX Log.</td></tr>
+<tr><td><code>namePrefix</code></td><td>Central pair STAR</td><td>Model name prefix; quote values containing spaces.</td></tr>
+</table>
+<p>Example:</p>
+<pre>buildcentriole length 9000 spacing 333 xOffset -50 namePrefix "C1 STAR"</pre>
+</body>
+</html>

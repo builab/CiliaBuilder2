@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Command: cbopenapr</title>
+<style>body{font:16px/1.5 sans-serif;max-width:850px;margin:2em auto;padding:0 1em}code{background:#f3f3f3;padding:.1em .3em}</style></head>
+<body>
+<h1>Command: cbopenapr</h1>
+<p><code>cbopenapr <i>file</i> [name <i>model-name</i>]</code></p>
+<p>Open a local cellPACK-style package and group the loaded models under
+<b>CiliaBuilder2 &gt; Maps/Models</b>. The required file can be an APR results
+file (<code>*.apr.json</code>), a CiliaBuilder2
+<code>ciliabuilder_manifest.json</code>, or its exported <code>recipe.json</code>.
+Keep the package's referenced assets and directory structure together.</p>
+<p>The optional <code>name</code> keyword overrides the model name. Quote paths
+and names containing spaces.</p>
+<pre>cbopenapr "/path/to/package/ciliabuilder_manifest.json" name "Cilium package"</pre>
+<p>The cellPACK load and export buttons are currently hidden in the
+<a href="../tools/ciliabuilder2.html">CiliaBuilder2 tool</a>; this command
+provides the local package-loading entry point. Use <b>Load session JSON</b>
+in the tool for CiliaBuilder2 session JSON files.</p>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Command: cbstraight</title>
+<style>body{font:16px/1.5 sans-serif;max-width:950px;margin:2em auto;padding:0 1em}code{background:#f3f3f3;padding:.1em .3em}table{border-collapse:collapse;width:100%}th,td{padding:.4em .6em;border:1px solid #ccc;text-align:left;vertical-align:top}</style></head>
+<body>
+<h1>Command: cbstraight</h1>
+<p><code>cbstraight [keyword value ...]</code></p>
+<p>Build an outer microtubule STAR model under <b>CiliaBuilder2 &gt; STAR Models</b>.
+All arguments are optional keywords. Lengths use angstroms and angles use degrees.
+The command defaults below differ from some startup values in the
+<a href="../tools/ciliabuilder2.html">graphical tool</a>.</p>
+<table>
+<tr><th>Keyword</th><th>Default</th><th>Meaning</th></tr>
+<tr><td><code>length</code></td><td>9000</td><td>Axial length.</td></tr>
+<tr><td><code>nDoublet</code></td><td>9</td><td>Number of filaments, limited to 1&ndash;9.</td></tr>
+<tr><td><code>radius</code></td><td>700</td><td>Radius of the filament ring.</td></tr>
+<tr><td><code>spacing</code></td><td>960</td><td>Positive axial periodicity.</td></tr>
+<tr><td><code>zOffset</code></td><td>0</td><td>Starting axial offset.</td></tr>
+<tr><td><code>angleSet</code></td><td>0</td><td>Rotation of the ring layout.</td></tr>
+<tr><td><code>doubletOffset</code></td><td>0</td><td>Base particle orientation offset, in degrees.</td></tr>
+<tr><td><code>twistPerLayer</code></td><td>0</td><td>Additional local rotation at each successive axial layer; filament centers remain fixed in X/Y.</td></tr>
+<tr><td><code>randomSpacing</code></td><td>false</td><td>Randomly shift each whole filament in Z.</td></tr>
+<tr><td><code>randomMaxDiff</code></td><td>0</td><td>Maximum random shift; zero uses 0.49 times spacing. Larger values are capped at that limit.</td></tr>
+<tr><td><code>showArrows</code></td><td>false</td><td>Display particle orientation arrows.</td></tr>
+<tr><td><code>tomoName</code></td><td>TS_001</td><td>STAR tomogram name.</td></tr>
+<tr><td><code>pixelSize</code></td><td>1</td><td>Positive angstroms per pixel; STAR coordinates are stored in pixels.</td></tr>
+<tr><td><code>openStar</code></td><td>true</td><td>Render the generated STAR points and orient the view. False still creates a model containing the rows.</td></tr>
+<tr><td><code>starFormat</code></td><td>relion</td><td>Retained compatibility argument; output uses RELION-style STAR rows.</td></tr>
+<tr><td><code>printStar</code></td><td>false</td><td>Print STAR text to the ChimeraX Log.</td></tr>
+</table>
+<p>Example matching the tool's default dimensions:</p>
+<pre>cbstraight length 9000 nDoublet 9 radius 960 spacing 1000 showArrows true</pre>
+<p>Export the result using <b>Save/Load &gt; Export STAR file</b> in the tool.</p>
+</body>
+</html>

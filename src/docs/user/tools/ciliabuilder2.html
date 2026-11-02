@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CiliaBuilder2</title>
+<style>body{font:16px/1.5 sans-serif;max-width:850px;margin:2em auto;padding:0 1em;color:#222}h1,h2{line-height:1.2}code{background:#f3f3f3;padding:.1em .3em}li{margin:.4em 0}a{color:#1767a0}</style>
+</head>
+<body>
+<h1>CiliaBuilder2</h1>
+<p>CiliaBuilder2 builds STAR-guided cilia geometry and places maps or models on
+STAR points in UCSF ChimeraX. Open it from <b>Tools &gt; Higher-Order Structure
+&gt; CiliaBuilder2</b>, or enter <a href="../commands/cbui.html"><code>cbui</code></a>.</p>
+<h2>Quick start</h2>
+<ol>
+<li>In <b>Build &gt; Microtubules</b>, set the length, number of doublets,
+radius, and periodicity, then click <b>Build microtubules</b>.</li>
+<li>Open a source map or model in ChimeraX. Supported sources include MRC maps,
+STL, GLB/GLTF, PDB, and mmCIF models.</li>
+<li>In <b>Attach &gt; Attachment</b>, choose the <b>STAR model</b> and
+<b>Map model</b>, then click <b>Attach selected STAR + map</b>.</li>
+<li>Use <b>Save/Load &gt; Save session JSON</b> to save the CiliaBuilder2 setup.</li>
+</ol>
+<h2>Build</h2>
+<p>Lengths, radii, spacing, and axial offsets use angstroms; angles use degrees.</p>
+<ul>
+<li><b>Microtubules:</b> the default layout uses length 9000, nine doublets,
+radius 960, and periodicity 1000. <b>Twist per layer</b> changes particle
+orientation at successive layers without moving the filament around the ring.
+<b>Z offset</b> moves the filament axially. <b>Random</b> shifts whole filaments
+in Z.</li>
+<li><b>Continue microtubules:</b> select a source in <b>Continue from STAR</b>.
+The continuation is a new segment model; the source remains available.</li>
+<li><b>Substitute filament:</b> pick a displayed STAR point in the temporary
+window, edit the replacement values, confirm the edit with Enter or focus loss,
+then apply. The replaced filament is separated into its own STAR model.</li>
+<li><b>Central Pair:</b> choose <b>Singlet line</b> or <b>C1 + C2 lines</b>.
+The latter creates separate C1 and C2 models at minus and plus half the
+<b>C1/C2 distance</b>, so they can use different attachments.</li>
+<li><b>Membrane:</b> set length, radius, thickness, axial offset, and distortion.
+<b>Radius</b> is the cylinder radius. <b>Tip dome cap</b> adds a distal dome.</li>
+<li><b>IFT:</b> choose <b>Train</b> to build repeating placements on a target
+STAR microtubule, or <b>Pick STAR point</b> to place IFT from a clicked STAR
+point. Both modes offer anterograde and retrograde types.</li>
+</ul>
+<h2>Attachment</h2>
+<p><b>Attachment Z offset (deg)</b> rotates attached geometry about each
+filament's own line while keeping STAR centers fixed. <b>Attachment Y rotation
+(deg)</b> adjusts local model orientation. The optional <b>Advanced options</b>
+checkbox applies a 90-degree clockwise local Y rotation before that adjustment.</p>
+<p>After attachment, the source is archived under <b>CiliaBuilder2 &gt;
+Maps/Models</b> for reuse and the used STAR is usually hidden. STAR particles,
+membranes, and generated drawing guides are excluded from the source selector.</p>
+<p>For a GLB exported from a volume, use <code>save test.glb models #1 center false</code>
+with CiliaBuilder2 running. Replace <code>#1</code> with the map ID. The export
+preserves the volume's grid-center attachment pivot, so the map and GLB overlap
+on identical STAR placements. For an older GLB without this metadata, keep its
+matching original map open once; session JSON retains the recovered center.
+Ordinary meshes still use their own geometry centers.</p>
+<p>Use ChimeraX <code>clip front</code> and <code>clip back</code> on attached
+maps and models. Session JSON saves the scene cut planes and restores them
+after rebuilding attachments and applying <code>view orient</code>.
+<code>clip off</code> and per-model <code>clip model #... false</code> settings
+are preserved. Older JSON files need to be saved again after setting the cuts.
+Camera-relative near/far planes are not part of this scene-cut state.</p>
+<h2>Geometric drawing</h2>
+<p>Under <b>Attach &gt; Geometric drawing</b>, choose Point, Sphere, Cylinder,
+Curve, or Line and select <b>Draw on model</b>. Start drawing, then click on the
+model. Point and Sphere need one point; Cylinder needs two. Curve and Line use
+<b>No. of markers</b> and <b>Tube radius</b>; primitives use <b>Primitive
+radius</b>. The result appears after the required number of points is placed.</p>
+<p>Choose the result in <b>Drawing model</b> and click <b>Save drawing as GLB</b>.
+The saved GLB is reopened and selected as an attachable source.</p>
+<h2>Save, load, and undo</h2>
+<p><b>Load STAR file</b> imports external STAR placements. <b>Export STAR file</b>
+writes the current rows of the selected <b>Export STAR model</b>, including
+edits made after import.</p>
+<p><b>Save session JSON</b> and <b>Load session JSON</b> preserve CiliaBuilder2
+models, attachments, colors, and UI settings. File-backed GLB/GLTF sources are
+referenced at their original paths without exporting additional copies.
+A compressed <b>name.glb.gz</b> displays as <b>name.glb</b> in Models, but its
+saved path still refers to the original compressed file. Keep the original
+sources accessible and keep any copied STL or in-memory assets with the JSON;
+loading prompts for a replacement when a source path is missing.</p>
+<p>The tool's <b>Undo</b> and <b>Redo</b> buttons cover managed build,
+attachment, and drawing actions, with up to 30 history steps. Loading a session
+or STAR file resets this history.</p>
+<h2>Commands</h2>
+<p><a href="../commands/cbui.html">cbui</a> &middot;
+<a href="../commands/cbstraight.html">cbstraight</a> &middot;
+<a href="../commands/buildcentriole.html">buildcentriole</a> &middot;
+<a href="../commands/cbopenapr.html">cbopenapr</a></p>
+<p>Project and source: <a href="https://github.com/builab/CiliaBuilder2">CiliaBuilder2 on GitHub</a>.</p>
+</body>
+</html>
